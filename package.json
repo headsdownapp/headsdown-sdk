@@ -19,6 +19,7 @@
     "test:watch": "vitest",
     "lint": "prettier --check 'src/**/*.ts' 'test/**/*.ts'",
     "format": "prettier --write 'src/**/*.ts' 'test/**/*.ts'",
+    "prepare": "npm run build",
     "prepublishOnly": "npm run build",
     "clean": "rm -rf dist"
   },
