@@ -287,7 +287,14 @@ function stripUndefined(obj: Record<string, unknown>): Record<string, unknown> {
 }
 
 function randomHex(bytes: number): string {
-  const array = new Uint8Array(bytes);
-  crypto.getRandomValues(array);
-  return Array.from(array, (b) => b.toString(16).padStart(2, "0")).join("");
+  try {
+    // Node 19+ and browsers have globalThis.crypto
+    const array = new Uint8Array(bytes);
+    globalThis.crypto.getRandomValues(array);
+    return Array.from(array, (b) => b.toString(16).padStart(2, "0")).join("");
+  } catch {
+    // Fallback for Node 18 where globalThis.crypto may not exist
+    const { randomBytes } = require("node:crypto") as typeof import("node:crypto");
+    return randomBytes(bytes).toString("hex");
+  }
 }
