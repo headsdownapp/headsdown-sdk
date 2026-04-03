@@ -27,6 +27,14 @@ export type DayName =
   | "saturday"
   | "sunday";
 
+/** Outcome of an agent task after receiving a verdict. */
+export type TaskOutcomeResult =
+  | "completed"
+  | "failed"
+  | "partially_completed"
+  | "cancelled"
+  | "timed_out";
+
 // === API Response Types ===
 
 /** The user's active availability contract. */
@@ -108,6 +116,25 @@ export interface UserProfile {
   location: string | null;
 }
 
+/** A recorded task outcome with calibration data. */
+export interface TaskOutcome {
+  id: string;
+  outcome: TaskOutcomeResult;
+  actualDurationMinutes: number | null;
+  filesModified: number | null;
+  linesChanged: number | null;
+  errorCategory: string | null;
+  testsPassed: boolean | null;
+  tokensUsed: number | null;
+  retryCount: number | null;
+  turnCount: number | null;
+  scopeChanged: boolean | null;
+  redirectCount: number | null;
+  distinctTaskCount: number | null;
+  dataQualityScore: number | null;
+  insertedAt: string;
+}
+
 // === Input Types ===
 
 /** Input for submitting a task proposal. */
@@ -148,6 +175,38 @@ export interface ListProposalsOptions {
   verdict?: VerdictDecision;
   /** Limit to N most recent proposals. */
   latest?: number;
+}
+
+/** Input for reporting a task outcome. */
+export interface OutcomeInput {
+  /** ID of the proposal this outcome is for. */
+  proposalId: string;
+  /** What happened: completed, failed, partially_completed, cancelled, timed_out. */
+  outcome: TaskOutcomeResult;
+  /** Actual time spent in minutes. */
+  actualDurationMinutes?: number;
+  /** Number of files actually modified. */
+  filesModified?: number;
+  /** Number of lines changed. */
+  linesChanged?: number;
+  /** Category of error if failed (e.g., "compilation_error", "test_failure"). */
+  errorCategory?: string;
+  /** Whether the agent's changes passed tests. */
+  testsPassed?: boolean;
+  /** Number of tokens consumed. */
+  tokensUsed?: number;
+  /** Number of retries the agent needed. */
+  retryCount?: number;
+  /** Number of conversational turns in the session. */
+  turnCount?: number;
+  /** Whether the developer redirected the agent from the original task. */
+  scopeChanged?: boolean;
+  /** How many times the developer changed direction. */
+  redirectCount?: number;
+  /** Agent's assessment of how many logical tasks were in this session. */
+  distinctTaskCount?: number;
+  /** Arbitrary metadata. */
+  metadata?: Record<string, unknown>;
 }
 
 // === Auth Types ===

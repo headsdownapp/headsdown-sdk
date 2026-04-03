@@ -12,6 +12,10 @@ export type { HeadsDownConfig, TrustLevel } from "./config.js";
 export { ProposalStateStore } from "./proposals.js";
 export type { StoredProposal } from "./proposals.js";
 
+// Calibration
+export { CalibrationTracker } from "./calibration.js";
+export type { CalibrationTrackerOptions } from "./calibration.js";
+
 // Errors
 export { HeadsDownError, AuthError, ApiError, NetworkError, ValidationError } from "./errors.js";
 
@@ -23,17 +27,20 @@ export type {
   AlertLevel,
   PresenceLevel,
   DayName,
+  TaskOutcomeResult,
   // Response types
   Contract,
   Calendar,
   Preset,
   Verdict,
   TaskProposal,
+  TaskOutcome,
   UserProfile,
   // Input types
   ProposalInput,
   ContractInput,
   ListProposalsOptions,
+  OutcomeInput,
   // Auth types
   DeviceAuthorization,
   Credentials,

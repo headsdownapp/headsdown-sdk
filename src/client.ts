@@ -10,6 +10,7 @@ import {
   LIST_PRESETS_QUERY,
   LIST_PROPOSALS_QUERY,
   PROFILE_QUERY,
+  REPORT_OUTCOME_MUTATION,
   SUBMIT_PROPOSAL_MUTATION,
 } from "./queries.js";
 import type {
@@ -20,8 +21,10 @@ import type {
   DeviceAuthorization,
   DeviceFlowOptions,
   ListProposalsOptions,
+  OutcomeInput,
   Preset,
   ProposalInput,
+  TaskOutcome,
   TaskProposal,
   UserProfile,
   Verdict,
@@ -267,6 +270,47 @@ export class HeadsDownClient {
   async getProfile(): Promise<UserProfile> {
     const data = await this.graphql.request<{ profile: UserProfile }>(PROFILE_QUERY);
     return data.profile;
+  }
+
+  // === Calibration ===
+
+  /**
+   * Report a task outcome (insert or update).
+   * First call for a proposal creates the outcome. Subsequent calls update it.
+   * This supports checkpoint-and-update semantics for reliable reporting.
+   */
+  async reportOutcome(input: OutcomeInput): Promise<TaskOutcome> {
+    if (!input.proposalId?.trim()) {
+      throw new ValidationError("Proposal ID is required.", "proposalId");
+    }
+    if (!input.outcome?.trim()) {
+      throw new ValidationError("Outcome is required.", "outcome");
+    }
+
+    const variables = {
+      input: stripUndefined({
+        proposalId: input.proposalId,
+        outcome: toGraphQLEnum(input.outcome),
+        actualDurationMinutes: input.actualDurationMinutes,
+        filesModified: input.filesModified,
+        linesChanged: input.linesChanged,
+        errorCategory: input.errorCategory,
+        testsPassed: input.testsPassed,
+        tokensUsed: input.tokensUsed,
+        retryCount: input.retryCount,
+        turnCount: input.turnCount,
+        scopeChanged: input.scopeChanged,
+        redirectCount: input.redirectCount,
+        distinctTaskCount: input.distinctTaskCount,
+        metadata: input.metadata,
+      }),
+    };
+
+    const data = await this.graphql.request<{ reportOutcome: TaskOutcome }>(
+      REPORT_OUTCOME_MUTATION,
+      variables,
+    );
+    return data.reportOutcome;
   }
 }
 

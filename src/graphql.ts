@@ -111,6 +111,7 @@ const ENUM_FIELDS = new Set([
   "presence",
   "day",
   "nextWorkday",
+  "outcome",
 ]);
 
 /** Convert SCREAMING_CASE enum values to lowercase in a response object. */

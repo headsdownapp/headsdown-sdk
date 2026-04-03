@@ -176,3 +176,26 @@ export const PROFILE_QUERY = `
     }
   }
 `;
+
+/** Report a task outcome (insert or update). */
+export const REPORT_OUTCOME_MUTATION = `
+  mutation ReportOutcome($input: OutcomeInput!) {
+    reportOutcome(input: $input) {
+      id
+      outcome
+      actualDurationMinutes
+      filesModified
+      linesChanged
+      errorCategory
+      testsPassed
+      tokensUsed
+      retryCount
+      turnCount
+      scopeChanged
+      redirectCount
+      distinctTaskCount
+      dataQualityScore
+      insertedAt
+    }
+  }
+`;

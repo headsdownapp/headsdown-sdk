@@ -23,6 +23,9 @@ export interface HeadsDownConfig {
    * regardless of trust level or proposal status.
    */
   sensitivePaths: string[];
+
+  /** Whether calibration reporting is enabled. Default: true. */
+  calibration: boolean;
 }
 
 const VALID_TRUST_LEVELS: TrustLevel[] = ["advisory", "active", "guarded"];
@@ -49,6 +52,7 @@ export const DEFAULT_SENSITIVE_PATHS: string[] = [
 export const DEFAULT_CONFIG: HeadsDownConfig = {
   trustLevel: "advisory",
   sensitivePaths: DEFAULT_SENSITIVE_PATHS,
+  calibration: true,
 };
 
 /**
@@ -74,6 +78,8 @@ export class ConfigStore {
         sensitivePaths: Array.isArray(parsed.sensitivePaths)
           ? parsed.sensitivePaths.filter((p): p is string => typeof p === "string")
           : DEFAULT_CONFIG.sensitivePaths,
+        calibration:
+          typeof parsed.calibration === "boolean" ? parsed.calibration : DEFAULT_CONFIG.calibration,
       };
     } catch {
       return { ...DEFAULT_CONFIG };
