@@ -18,28 +18,49 @@ export const ACTIVE_CONTRACT_QUERY = `
   }
 `;
 
-/** Get the user's current work schedule. */
-export const CALENDAR_QUERY = `
-  query Calendar($at: DateTime) {
-    calendar(at: $at) {
-      automateEndOfDay
-      automateStartOfDay
-      day
-      endsAt
-      nextWorkday
-      nextWorkdayStartsAt
-      now
-      offHours
-      startsAt
-      workHours
-      working
+/** Get the user's current schedule resolution. */
+export const SCHEDULE_QUERY = `
+  query Schedule($at: DateTime) {
+    schedule: availability(at: $at) {
+      inReachableHours
+      nextTransitionAt
+      activeWindow {
+        id
+        label
+        priority
+        startTime
+        endTime
+        days
+        mode
+        alertsPolicy
+        snooze
+        status
+        statusEmoji
+        statusText
+        autoActivate
+      }
+      nextWindow {
+        id
+        label
+        priority
+        startTime
+        endTime
+        days
+        mode
+        alertsPolicy
+        snooze
+        status
+        statusEmoji
+        statusText
+        autoActivate
+      }
     }
   }
 `;
 
-/** Get both contract and calendar in a single request. */
+/** Get both contract and schedule in a single request. */
 export const AVAILABILITY_QUERY = `
-  query Availability {
+  query Availability($at: DateTime) {
     activeContract {
       id
       mode
@@ -54,18 +75,39 @@ export const AVAILABILITY_QUERY = `
       expiresAt
       insertedAt
     }
-    calendar {
-      automateEndOfDay
-      automateStartOfDay
-      day
-      endsAt
-      nextWorkday
-      nextWorkdayStartsAt
-      now
-      offHours
-      startsAt
-      workHours
-      working
+    schedule: availability(at: $at) {
+      inReachableHours
+      nextTransitionAt
+      activeWindow {
+        id
+        label
+        priority
+        startTime
+        endTime
+        days
+        mode
+        alertsPolicy
+        snooze
+        status
+        statusEmoji
+        statusText
+        autoActivate
+      }
+      nextWindow {
+        id
+        label
+        priority
+        startTime
+        endTime
+        days
+        mode
+        alertsPolicy
+        snooze
+        status
+        statusEmoji
+        statusText
+        autoActivate
+      }
     }
   }
 `;
@@ -254,39 +296,6 @@ export const UPDATE_VERDICT_SETTINGS_MUTATION = `
   }
 `;
 
-/** Get the user's calendar at a specific time (combined query). */
-export const AVAILABILITY_AT_QUERY = `
-  query AvailabilityAt($at: DateTime) {
-    activeContract {
-      id
-      mode
-      status
-      statusEmoji
-      statusText
-      autoRespond
-      lock
-      duration
-      ruleSetType
-      ruleSetParams
-      expiresAt
-      insertedAt
-    }
-    calendar(at: $at) {
-      automateEndOfDay
-      automateStartOfDay
-      day
-      endsAt
-      nextWorkday
-      nextWorkdayStartsAt
-      now
-      offHours
-      startsAt
-      workHours
-      working
-    }
-  }
-`;
-
 /** List digest summaries (notifications aggregated during focus time). */
 export const DIGEST_SUMMARIES_QUERY = `
   query DigestSummaries($latest: Int) {
@@ -325,48 +334,6 @@ export const DISMISS_DIGEST_ENTRY_MUTATION = `
       entryCount
       firstEventAt
       lastEventAt
-    }
-  }
-`;
-
-/** List API keys for the current user. */
-export const API_KEYS_QUERY = `
-  query ApiKeys {
-    apiKeys {
-      id
-      prefix
-      label
-      lastUsedAt
-      insertedAt
-    }
-  }
-`;
-
-/** Create a new API key. */
-export const CREATE_API_KEY_MUTATION = `
-  mutation CreateApiKey($label: String!) {
-    createApiKey(label: $label) {
-      rawKey
-      apiKey {
-        id
-        prefix
-        label
-        lastUsedAt
-        insertedAt
-      }
-    }
-  }
-`;
-
-/** Revoke an API key by id. */
-export const REVOKE_API_KEY_MUTATION = `
-  mutation RevokeApiKey($id: ID!) {
-    revokeApiKey(id: $id) {
-      id
-      prefix
-      label
-      lastUsedAt
-      insertedAt
     }
   }
 `;

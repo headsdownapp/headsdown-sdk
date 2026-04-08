@@ -1,10 +1,8 @@
 import type {
-  ApiKey,
-  ApiKeyWithRaw,
   AutoResponderSettings,
   Company,
   Contract,
-  Calendar,
+  ScheduleResolution,
   CalibrationProfile,
   DigestSummary,
   InterruptResult,
@@ -50,32 +48,46 @@ export const NORMALIZED_CONTRACT: Contract = {
   insertedAt: "2025-06-15T16:00:00Z",
 };
 
-export const RAW_CALENDAR = {
-  automateEndOfDay: true,
-  automateStartOfDay: true,
-  day: "WEDNESDAY",
-  endsAt: "2025-06-15T17:00:00-06:00",
-  nextWorkday: "THURSDAY",
-  nextWorkdayStartsAt: "2025-06-16T09:00:00-06:00",
-  now: "2025-06-15T14:30:00-06:00",
-  offHours: false,
-  startsAt: "2025-06-15T09:00:00-06:00",
-  workHours: true,
-  working: true,
+export const RAW_SCHEDULE = {
+  inReachableHours: true,
+  nextTransitionAt: "2025-06-15T17:00:00-06:00",
+  activeWindow: {
+    id: "window-1",
+    label: "Work Hours",
+    priority: 1,
+    startTime: "09:00:00",
+    endTime: "17:00:00",
+    days: ["monday", "tuesday", "wednesday", "thursday", "friday"],
+    mode: "ONLINE",
+    alertsPolicy: "INTERRUPTABLE",
+    snooze: false,
+    status: true,
+    statusEmoji: "💻",
+    statusText: "Working",
+    autoActivate: true,
+  },
+  nextWindow: null,
 };
 
-export const NORMALIZED_CALENDAR: Calendar = {
-  automateEndOfDay: true,
-  automateStartOfDay: true,
-  day: "wednesday",
-  endsAt: "2025-06-15T17:00:00-06:00",
-  nextWorkday: "thursday",
-  nextWorkdayStartsAt: "2025-06-16T09:00:00-06:00",
-  now: "2025-06-15T14:30:00-06:00",
-  offHours: false,
-  startsAt: "2025-06-15T09:00:00-06:00",
-  workHours: true,
-  working: true,
+export const NORMALIZED_SCHEDULE: ScheduleResolution = {
+  inReachableHours: true,
+  nextTransitionAt: "2025-06-15T17:00:00-06:00",
+  activeWindow: {
+    id: "window-1",
+    label: "Work Hours",
+    priority: 1,
+    startTime: "09:00:00",
+    endTime: "17:00:00",
+    days: ["monday", "tuesday", "wednesday", "thursday", "friday"],
+    mode: "online",
+    alertsPolicy: "interruptable",
+    snooze: false,
+    status: true,
+    statusEmoji: "💻",
+    statusText: "Working",
+    autoActivate: true,
+  },
+  nextWindow: null,
 };
 
 export const RAW_VERDICT_APPROVED = {
@@ -268,26 +280,6 @@ export const RAW_DIGEST_SUMMARY = {
 };
 
 export const NORMALIZED_DIGEST_SUMMARY: DigestSummary = { ...RAW_DIGEST_SUMMARY };
-
-export const RAW_API_KEY = {
-  id: "key-1",
-  prefix: "hd_abc",
-  label: "CLI",
-  lastUsedAt: "2025-06-15T12:00:00Z",
-  insertedAt: "2025-06-01T10:00:00Z",
-};
-
-export const NORMALIZED_API_KEY: ApiKey = { ...RAW_API_KEY };
-
-export const RAW_API_KEY_WITH_RAW = {
-  rawKey: "hd_full_secret_value",
-  apiKey: RAW_API_KEY,
-};
-
-export const NORMALIZED_API_KEY_WITH_RAW: ApiKeyWithRaw = {
-  rawKey: "hd_full_secret_value",
-  apiKey: NORMALIZED_API_KEY,
-};
 
 export const RAW_AUTO_RESPONDER_SETTINGS = {
   id: "ars-1",

@@ -3,14 +3,11 @@ import { ApiError, AuthError, ValidationError } from "./errors.js";
 import { GraphQLClient, toGraphQLEnum } from "./graphql.js";
 import {
   ACTIVE_CONTRACT_QUERY,
-  API_KEYS_QUERY,
   APPLY_PRESET_MUTATION,
   AUTO_RESPONDER_SETTINGS_QUERY,
   AVAILABILITY_QUERY,
-  CALENDAR_QUERY,
   CALIBRATION_PROFILES_QUERY,
   COMPANY_QUERY,
-  CREATE_API_KEY_MUTATION,
   CREATE_CONTRACT_MUTATION,
   DIGEST_SUMMARIES_QUERY,
   DISMISS_DIGEST_ENTRY_MUTATION,
@@ -20,7 +17,7 @@ import {
   OVERRIDE_VERDICT_MUTATION,
   PROFILE_QUERY,
   REPORT_OUTCOME_MUTATION,
-  REVOKE_API_KEY_MUTATION,
+  SCHEDULE_QUERY,
   SUBMIT_PROPOSAL_MUTATION,
   TEAM_PRESENCE_QUERY,
   TEAMS_QUERY,
@@ -29,10 +26,7 @@ import {
   VERDICT_SETTINGS_QUERY,
 } from "./queries.js";
 import type {
-  ApiKey,
-  ApiKeyWithRaw,
   AutoResponderSettings,
-  Calendar,
   CalibrationProfile,
   ClientOptions,
   Company,
@@ -49,6 +43,7 @@ import type {
   OverrideInput,
   Preset,
   ProposalInput,
+  ScheduleResolution,
   TaskOutcome,
   TaskProposal,
   Team,
@@ -61,14 +56,11 @@ import type {
 } from "./types.js";
 import type {
   ActiveContractQuery,
-  ApiKeysQuery,
   ApplyPresetMutation,
   AutoResponderSettingsQuery,
   AvailabilityQuery,
-  CalendarQuery,
   CalibrationProfilesQuery,
   CompanyQuery,
-  CreateApiKeyMutation,
   CreateContractMutation,
   DigestSummariesQuery,
   DismissDigestEntryMutation,
@@ -78,7 +70,7 @@ import type {
   ProfileQuery,
   ProposalsQuery,
   ReportOutcomeMutation,
-  RevokeApiKeyMutation,
+  ScheduleQuery,
   SubmitProposalMutation,
   TeamPresenceQuery,
   TeamsQuery,
@@ -100,7 +92,7 @@ import type {
  * const client = await HeadsDownClient.fromCredentials();
  *
  * // Check availability
- * const { contract, calendar } = await client.getAvailability();
+ * const { contract, schedule } = await client.getAvailability();
  * ```
  */
 export class HeadsDownClient {
@@ -198,39 +190,38 @@ export class HeadsDownClient {
     }
   }
 
-  /** Get the user's current work schedule context. Optionally pass an ISO 8601 datetime to check at a specific time. */
-  async getCalendar(options?: { at?: string }): Promise<Calendar> {
+  /** Get the user's current schedule resolution. Optionally pass an ISO 8601 datetime to check at a specific time. */
+  async getSchedule(options?: { at?: string }): Promise<ScheduleResolution> {
     const variables = options?.at ? { at: options.at } : undefined;
-    const data = await this.graphql.request<CalendarQuery>(CALENDAR_QUERY, variables);
-    if (!data.calendar) {
-      throw new ApiError("HeadsDown API returned no calendar data.");
+    const data = await this.graphql.request<ScheduleQuery>(SCHEDULE_QUERY, variables);
+    if (!data.schedule) {
+      throw new ApiError("HeadsDown API returned no schedule data.");
     }
-    return data.calendar as Calendar;
+    return data.schedule as ScheduleResolution;
   }
 
   /**
-   * Get both contract and calendar in a single request.
+   * Get both contract and schedule in a single request.
    * This is the recommended way to check availability before starting work.
-   * Optionally pass an ISO 8601 datetime to check the calendar at a specific time.
+   * Optionally pass an ISO 8601 datetime to check at a specific time.
    */
   async getAvailability(options?: {
     at?: string;
-  }): Promise<{ contract: Contract | null; calendar: Calendar }> {
+  }): Promise<{ contract: Contract | null; schedule: ScheduleResolution }> {
     try {
       const variables = options?.at ? { at: options.at } : undefined;
       const data = await this.graphql.request<AvailabilityQuery>(AVAILABILITY_QUERY, variables);
-      if (!data.calendar) {
-        throw new ApiError("HeadsDown API returned no calendar data.");
+      if (!data.schedule) {
+        throw new ApiError("HeadsDown API returned no schedule data.");
       }
       return {
         contract: data.activeContract as Contract | null,
-        calendar: data.calendar as Calendar,
+        schedule: data.schedule as ScheduleResolution,
       };
     } catch (error) {
       if (error instanceof Error && error.message.includes("No active contract")) {
-        // Fall back to calendar-only when no contract exists.
-        const calendar = await this.getCalendar(options);
-        return { contract: null, calendar };
+        const schedule = await this.getSchedule(options);
+        return { contract: null, schedule };
       }
       throw error;
     }
@@ -434,44 +425,6 @@ export class HeadsDownClient {
       throw new ApiError("HeadsDown API returned no dismissDigestEntry data.");
     }
     return data.dismissDigestEntry as DigestSummary;
-  }
-
-  // === API Keys ===
-
-  /** List API keys for the current user. */
-  async listApiKeys(): Promise<ApiKey[]> {
-    const data = await this.graphql.request<ApiKeysQuery>(API_KEYS_QUERY);
-    return (data.apiKeys ?? []) as ApiKey[];
-  }
-
-  /** Create a new API key with a label. The raw key is returned once. */
-  async createApiKey(label: string): Promise<ApiKeyWithRaw> {
-    if (!label?.trim()) {
-      throw new ValidationError("API key label is required.", "label");
-    }
-
-    const data = await this.graphql.request<CreateApiKeyMutation>(CREATE_API_KEY_MUTATION, {
-      label,
-    });
-    if (!data.createApiKey) {
-      throw new ApiError("HeadsDown API returned no createApiKey data.");
-    }
-    return data.createApiKey as ApiKeyWithRaw;
-  }
-
-  /** Revoke an API key by id. */
-  async revokeApiKey(id: string): Promise<ApiKey> {
-    if (!id?.trim()) {
-      throw new ValidationError("API key ID is required.", "id");
-    }
-
-    const data = await this.graphql.request<RevokeApiKeyMutation>(REVOKE_API_KEY_MUTATION, {
-      id,
-    });
-    if (!data.revokeApiKey) {
-      throw new ApiError("HeadsDown API returned no revokeApiKey data.");
-    }
-    return data.revokeApiKey as ApiKey;
   }
 
   // === Auto Responder ===

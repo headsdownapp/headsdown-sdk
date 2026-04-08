@@ -64,15 +64,15 @@ await store.save(apiKey, "My Tool");
 The primary use case: check whether the user is available before starting work.
 
 ```typescript
-const { contract, calendar } = await client.getAvailability();
+const { contract, schedule } = await client.getAvailability();
 
 if (contract?.mode === "busy") {
   console.log(`User is in focus mode: ${contract.statusText}`);
   console.log(`Expires at: ${contract.expiresAt}`);
 }
 
-if (calendar.offHours) {
-  console.log(`Off hours. Next workday: ${calendar.nextWorkday}`);
+if (!schedule.inReachableHours) {
+  console.log(`Not currently reachable. Next transition: ${schedule.nextTransitionAt}`);
 }
 ```
 
@@ -145,7 +145,12 @@ if (!interrupt.allowed) {
 }
 
 const settings = await client.getVerdictSettings();
-const updated = await client.updateVerdictSettings({ online: 60, busy: 15, limited: 5, offline: 0 });
+const updated = await client.updateVerdictSettings({
+  online: 60,
+  busy: 15,
+  limited: 5,
+  offline: 0,
+});
 
 const profiles = await client.listCalibrationProfiles();
 ```
@@ -183,26 +188,26 @@ try {
 
 ```typescript
 const client = new HeadsDownClient({
-  apiKey: "hd_...",                           // API key (or set HEADSDOWN_API_KEY)
-  baseUrl: "https://headsdown.app",           // API base URL
-  timeout: 30000,                             // Request timeout in ms
-  fetch: customFetch,                         // Custom fetch implementation
-  retry: { retries: 2, retryDelayMs: 250 },  // Transient failure retries
+  apiKey: "hd_...", // API key (or set HEADSDOWN_API_KEY)
+  baseUrl: "https://headsdown.app", // API base URL
+  timeout: 30000, // Request timeout in ms
+  fetch: customFetch, // Custom fetch implementation
+  retry: { retries: 2, retryDelayMs: 250 }, // Transient failure retries
   hooks: {
     onRetry: ({ attempt, reason }) => console.log(`retry #${attempt + 1}: ${reason}`),
   },
 });
 ```
 
-| Option | Default | Description |
-|--------|---------|-------------|
-| `apiKey` | `HEADSDOWN_API_KEY` env var | HeadsDown API key (`hd_` prefix) |
-| `baseUrl` | `https://headsdown.app` | API endpoint |
-| `timeout` | `30000` | Request timeout in milliseconds |
-| `fetch` | `globalThis.fetch` | Custom fetch (for testing or proxies) |
-| `retry.retries` | `2` | Number of retries for transient failures |
-| `retry.retryDelayMs` | `250` | Base retry delay in ms (exponential backoff) |
-| `hooks` | `undefined` | Optional onRequest/onResponse/onRetry hooks |
+| Option               | Default                     | Description                                  |
+| -------------------- | --------------------------- | -------------------------------------------- |
+| `apiKey`             | `HEADSDOWN_API_KEY` env var | HeadsDown API key (`hd_` prefix)             |
+| `baseUrl`            | `https://headsdown.app`     | API endpoint                                 |
+| `timeout`            | `30000`                     | Request timeout in milliseconds              |
+| `fetch`              | `globalThis.fetch`          | Custom fetch (for testing or proxies)        |
+| `retry.retries`      | `2`                         | Number of retries for transient failures     |
+| `retry.retryDelayMs` | `250`                       | Base retry delay in ms (exponential backoff) |
+| `hooks`              | `undefined`                 | Optional onRequest/onResponse/onRetry hooks  |
 
 ## Data Transparency
 
@@ -210,7 +215,7 @@ This SDK sends requests only to the HeadsDown API (`https://headsdown.app/graphq
 
 **What is sent:** Your API key, and the specific query/mutation being executed (availability checks, task proposals, preset operations, verdict settings, interrupt evaluation).
 
-**What is received:** Your availability status, calendar schedule, task verdicts, calibration data, and preset configurations.
+**What is received:** Your availability status, schedule resolution, task verdicts, calibration data, and preset configurations.
 
 **What is stored locally:** Your API key at `~/.config/headsdown/credentials.json` (file permissions: 0600, user-only read/write).
 

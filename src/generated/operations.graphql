@@ -15,23 +15,44 @@ query ActiveContract {
     }
   }
 
-query Calendar($at: DateTime) {
-    calendar(at: $at) {
-      automateEndOfDay
-      automateStartOfDay
-      day
-      endsAt
-      nextWorkday
-      nextWorkdayStartsAt
-      now
-      offHours
-      startsAt
-      workHours
-      working
+query Schedule($at: DateTime) {
+    schedule: availability(at: $at) {
+      inReachableHours
+      nextTransitionAt
+      activeWindow {
+        id
+        label
+        priority
+        startTime
+        endTime
+        days
+        mode
+        alertsPolicy
+        snooze
+        status
+        statusEmoji
+        statusText
+        autoActivate
+      }
+      nextWindow {
+        id
+        label
+        priority
+        startTime
+        endTime
+        days
+        mode
+        alertsPolicy
+        snooze
+        status
+        statusEmoji
+        statusText
+        autoActivate
+      }
     }
   }
 
-query Availability {
+query Availability($at: DateTime) {
     activeContract {
       id
       mode
@@ -46,18 +67,39 @@ query Availability {
       expiresAt
       insertedAt
     }
-    calendar {
-      automateEndOfDay
-      automateStartOfDay
-      day
-      endsAt
-      nextWorkday
-      nextWorkdayStartsAt
-      now
-      offHours
-      startsAt
-      workHours
-      working
+    schedule: availability(at: $at) {
+      inReachableHours
+      nextTransitionAt
+      activeWindow {
+        id
+        label
+        priority
+        startTime
+        endTime
+        days
+        mode
+        alertsPolicy
+        snooze
+        status
+        statusEmoji
+        statusText
+        autoActivate
+      }
+      nextWindow {
+        id
+        label
+        priority
+        startTime
+        endTime
+        days
+        mode
+        alertsPolicy
+        snooze
+        status
+        statusEmoji
+        statusText
+        autoActivate
+      }
     }
   }
 
@@ -212,36 +254,6 @@ mutation UpdateVerdictSettings($modeThresholds: JSON!) {
     }
   }
 
-query AvailabilityAt($at: DateTime) {
-    activeContract {
-      id
-      mode
-      status
-      statusEmoji
-      statusText
-      autoRespond
-      lock
-      duration
-      ruleSetType
-      ruleSetParams
-      expiresAt
-      insertedAt
-    }
-    calendar(at: $at) {
-      automateEndOfDay
-      automateStartOfDay
-      day
-      endsAt
-      nextWorkday
-      nextWorkdayStartsAt
-      now
-      offHours
-      startsAt
-      workHours
-      working
-    }
-  }
-
 query DigestSummaries($latest: Int) {
     digestSummaries(latest: $latest) {
       id
@@ -275,39 +287,6 @@ mutation DismissDigestEntry($id: ID!) {
       entryCount
       firstEventAt
       lastEventAt
-    }
-  }
-
-query ApiKeys {
-    apiKeys {
-      id
-      prefix
-      label
-      lastUsedAt
-      insertedAt
-    }
-  }
-
-mutation CreateApiKey($label: String!) {
-    createApiKey(label: $label) {
-      rawKey
-      apiKey {
-        id
-        prefix
-        label
-        lastUsedAt
-        insertedAt
-      }
-    }
-  }
-
-mutation RevokeApiKey($id: ID!) {
-    revokeApiKey(id: $id) {
-      id
-      prefix
-      label
-      lastUsedAt
-      insertedAt
     }
   }
 

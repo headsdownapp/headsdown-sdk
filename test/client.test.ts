@@ -10,7 +10,7 @@ import {
   mockGraphQLError,
   mockHttpError,
   RAW_CONTRACT,
-  RAW_CALENDAR,
+  RAW_SCHEDULE,
   RAW_VERDICT_APPROVED,
   RAW_VERDICT_DEFERRED,
   RAW_PROPOSAL,
@@ -22,14 +22,12 @@ import {
   RAW_CALIBRATION_PROFILE,
   RAW_VERDICT_SETTINGS,
   RAW_DIGEST_SUMMARY,
-  RAW_API_KEY,
-  RAW_API_KEY_WITH_RAW,
   RAW_AUTO_RESPONDER_SETTINGS,
   RAW_TEAM,
   RAW_COMPANY,
   RAW_TEAM_PRESENCE,
   NORMALIZED_CONTRACT,
-  NORMALIZED_CALENDAR,
+  NORMALIZED_SCHEDULE,
   NORMALIZED_VERDICT_APPROVED,
   NORMALIZED_PRESET,
   NORMALIZED_PROFILE,
@@ -37,8 +35,6 @@ import {
   NORMALIZED_CALIBRATION_PROFILE,
   NORMALIZED_VERDICT_SETTINGS,
   NORMALIZED_DIGEST_SUMMARY,
-  NORMALIZED_API_KEY,
-  NORMALIZED_API_KEY_WITH_RAW,
   NORMALIZED_AUTO_RESPONDER_SETTINGS,
   NORMALIZED_TEAM,
   NORMALIZED_COMPANY,
@@ -145,40 +141,40 @@ describe("HeadsDownClient", () => {
     });
   });
 
-  // === getCalendar ===
+  // === getSchedule ===
 
-  describe("getCalendar", () => {
-    it("returns calendar with normalized day enums", async () => {
+  describe("getSchedule", () => {
+    it("returns schedule with normalized enums", async () => {
       const client = new HeadsDownClient({
         ...CLIENT_OPTS,
-        fetch: mockGraphQL({ calendar: RAW_CALENDAR }),
+        fetch: mockGraphQL({ schedule: RAW_SCHEDULE }),
       });
 
-      const calendar = await client.getCalendar();
-      expect(calendar).toEqual(NORMALIZED_CALENDAR);
-      expect(calendar.day).toBe("wednesday");
-      expect(calendar.nextWorkday).toBe("thursday");
+      const schedule = await client.getSchedule();
+      expect(schedule).toEqual(NORMALIZED_SCHEDULE);
+      expect(schedule.activeWindow?.mode).toBe("online");
+      expect(schedule.activeWindow?.alertsPolicy).toBe("interruptable");
     });
   });
 
   // === getAvailability ===
 
   describe("getAvailability", () => {
-    it("returns both contract and calendar", async () => {
+    it("returns both contract and schedule", async () => {
       const client = new HeadsDownClient({
         ...CLIENT_OPTS,
         fetch: mockGraphQL({
           activeContract: RAW_CONTRACT,
-          calendar: RAW_CALENDAR,
+          schedule: RAW_SCHEDULE,
         }),
       });
 
       const result = await client.getAvailability();
       expect(result.contract).toEqual(NORMALIZED_CONTRACT);
-      expect(result.calendar).toEqual(NORMALIZED_CALENDAR);
+      expect(result.schedule).toEqual(NORMALIZED_SCHEDULE);
     });
 
-    it("returns null contract when none is active, still gets calendar", async () => {
+    it("returns null contract when none is active, still gets schedule", async () => {
       let callCount = 0;
       const fetchFn = (() => {
         callCount++;
@@ -195,7 +191,7 @@ describe("HeadsDownClient", () => {
         return Promise.resolve({
           ok: true,
           status: 200,
-          json: () => Promise.resolve({ data: { calendar: RAW_CALENDAR } }),
+          json: () => Promise.resolve({ data: { schedule: RAW_SCHEDULE } }),
         });
       }) as unknown as typeof globalThis.fetch;
 
@@ -203,7 +199,7 @@ describe("HeadsDownClient", () => {
       const result = await client.getAvailability();
 
       expect(result.contract).toBeNull();
-      expect(result.calendar).toEqual(NORMALIZED_CALENDAR);
+      expect(result.schedule).toEqual(NORMALIZED_SCHEDULE);
     });
   });
 
@@ -633,63 +629,6 @@ describe("HeadsDownClient", () => {
     });
   });
 
-  // === api keys ===
-
-  describe("listApiKeys", () => {
-    it("returns api keys", async () => {
-      const client = new HeadsDownClient({
-        ...CLIENT_OPTS,
-        fetch: mockGraphQL({ apiKeys: [RAW_API_KEY] }),
-      });
-
-      const keys = await client.listApiKeys();
-      expect(keys).toEqual([NORMALIZED_API_KEY]);
-    });
-  });
-
-  describe("createApiKey", () => {
-    it("creates an api key", async () => {
-      let capturedBody: string | undefined;
-      const fetchFn = ((_url: string, init: RequestInit) => {
-        capturedBody = init.body as string;
-        return Promise.resolve({
-          ok: true,
-          status: 200,
-          json: () => Promise.resolve({ data: { createApiKey: RAW_API_KEY_WITH_RAW } }),
-        });
-      }) as unknown as typeof globalThis.fetch;
-
-      const client = new HeadsDownClient({ ...CLIENT_OPTS, fetch: fetchFn });
-      const created = await client.createApiKey("CLI");
-
-      expect(created).toEqual(NORMALIZED_API_KEY_WITH_RAW);
-      const body = JSON.parse(capturedBody!);
-      expect(body.variables.label).toBe("CLI");
-    });
-
-    it("throws ValidationError for empty label", async () => {
-      const client = new HeadsDownClient({ ...CLIENT_OPTS, fetch: mockGraphQL({}) });
-      await expect(client.createApiKey("")).rejects.toThrow(ValidationError);
-    });
-  });
-
-  describe("revokeApiKey", () => {
-    it("revokes an api key", async () => {
-      const client = new HeadsDownClient({
-        ...CLIENT_OPTS,
-        fetch: mockGraphQL({ revokeApiKey: RAW_API_KEY }),
-      });
-
-      const revoked = await client.revokeApiKey("key-1");
-      expect(revoked).toEqual(NORMALIZED_API_KEY);
-    });
-
-    it("throws ValidationError for empty key id", async () => {
-      const client = new HeadsDownClient({ ...CLIENT_OPTS, fetch: mockGraphQL({}) });
-      await expect(client.revokeApiKey("")).rejects.toThrow(ValidationError);
-    });
-  });
-
   // === auto responder ===
 
   describe("getAutoResponderSettings", () => {
@@ -792,9 +731,9 @@ describe("HeadsDownClient", () => {
     });
   });
 
-  // === calendar with at parameter ===
+  // === schedule with at parameter ===
 
-  describe("getCalendar with at parameter", () => {
+  describe("getSchedule with at parameter", () => {
     it("passes at variable when provided", async () => {
       let capturedBody: string | undefined;
       const fetchFn = ((_url: string, init: RequestInit) => {
@@ -802,12 +741,12 @@ describe("HeadsDownClient", () => {
         return Promise.resolve({
           ok: true,
           status: 200,
-          json: () => Promise.resolve({ data: { calendar: RAW_CALENDAR } }),
+          json: () => Promise.resolve({ data: { schedule: RAW_SCHEDULE } }),
         });
       }) as unknown as typeof globalThis.fetch;
 
       const client = new HeadsDownClient({ ...CLIENT_OPTS, fetch: fetchFn });
-      await client.getCalendar({ at: "2025-06-16T09:00:00Z" });
+      await client.getSchedule({ at: "2025-06-16T09:00:00Z" });
 
       const body = JSON.parse(capturedBody!);
       expect(body.variables.at).toBe("2025-06-16T09:00:00Z");
@@ -820,12 +759,12 @@ describe("HeadsDownClient", () => {
         return Promise.resolve({
           ok: true,
           status: 200,
-          json: () => Promise.resolve({ data: { calendar: RAW_CALENDAR } }),
+          json: () => Promise.resolve({ data: { schedule: RAW_SCHEDULE } }),
         });
       }) as unknown as typeof globalThis.fetch;
 
       const client = new HeadsDownClient({ ...CLIENT_OPTS, fetch: fetchFn });
-      await client.getCalendar();
+      await client.getSchedule();
 
       const body = JSON.parse(capturedBody!);
       expect(body.variables).toBeUndefined();

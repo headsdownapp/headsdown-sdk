@@ -29,19 +29,12 @@ export type AlertValues =
   | "OFF"
   | "TAKE_A_NUMBER";
 
-export type ApiKey = {
-  id: Scalars["ID"]["output"];
-  insertedAt: Scalars["DateTime"]["output"];
-  label: Scalars["String"]["output"];
-  lastUsedAt: Maybe<Scalars["DateTime"]["output"]>;
-  prefix: Scalars["String"]["output"];
-};
-
-/** Returned once at creation time. The raw_key is never visible again. */
-export type ApiKeyWithRaw = {
-  apiKey: ApiKey;
-  rawKey: Scalars["String"]["output"];
-};
+export type AlertsPolicy =
+  | "AFTER_HOURS"
+  | "DO_NOT_DISTURB"
+  | "INTERRUPTABLE"
+  | "OFF"
+  | "TAKE_A_NUMBER";
 
 export type AutoResponderSettings = {
   busyText: Scalars["String"]["output"];
@@ -52,18 +45,12 @@ export type AutoResponderSettings = {
   updatedAt: Scalars["DateTime"]["output"];
 };
 
-export type Calendar = {
-  automateEndOfDay: Scalars["Boolean"]["output"];
-  automateStartOfDay: Scalars["Boolean"]["output"];
-  day: DayName;
-  endsAt: Scalars["DateTime"]["output"];
-  nextWorkday: DayName;
-  nextWorkdayStartsAt: Scalars["DateTime"]["output"];
-  now: Scalars["DateTime"]["output"];
-  offHours: Scalars["Boolean"]["output"];
-  startsAt: Scalars["DateTime"]["output"];
-  workHours: Scalars["Boolean"]["output"];
-  working: Scalars["Boolean"]["output"];
+/** Availability resolution for the current user at a point in time */
+export type AvailabilityResolution = {
+  activeWindow: Maybe<ReachabilityWindow>;
+  inReachableHours: Scalars["Boolean"]["output"];
+  nextTransitionAt: Maybe<Scalars["DateTime"]["output"]>;
+  nextWindow: Maybe<ReachabilityWindow>;
 };
 
 export type CalibrationProfile = {
@@ -137,16 +124,6 @@ export type ContractInput = {
   statusText: InputMaybe<Scalars["String"]["input"]>;
 };
 
-/** Days of the week */
-export type DayName =
-  | "FRIDAY"
-  | "MONDAY"
-  | "SATURDAY"
-  | "SUNDAY"
-  | "THURSDAY"
-  | "TUESDAY"
-  | "WEDNESDAY";
-
 export type DeviceTypes = "ANDROID" | "IOS";
 
 export type DigestEvent = {
@@ -215,12 +192,23 @@ export type OverrideInput = {
   reason: InputMaybe<Scalars["String"]["input"]>;
 };
 
+/** Status derived from the active reachability window's notification policy. */
+export type PolicyStatus =
+  /** Messages queued for later review */
+  | "AWAY"
+  /** Urgent items only (deep work) */
+  | "FOCUSED"
+  /** Unavailable, no notifications */
+  | "OFFLINE"
+  /** Fully available, all notifications enabled */
+  | "ONLINE";
+
 export type PresenceValues = "AFK" | "DISTRACTED" | "ON_KEYS";
 
 export type Preset = {
   /** @deprecated Use rule_set_type on contracts instead. Maps to interrupt policy. */
   alerts: AlertValues;
-  /** Duration of this mode, when null ends at workday */
+  /** Duration of this mode, when null, ends at next window transition */
   duration: Maybe<Scalars["Int"]["output"]>;
   id: Scalars["ID"]["output"];
   /** Creation timestamp */
@@ -266,12 +254,60 @@ export type PublicPageSettingsInput = {
   visibilityLevel: InputMaybe<VisibilityLevel>;
 };
 
+/** A named time window defining when a user is reachable and what policy applies. */
+export type ReachabilityWindow = {
+  alertsPolicy: AlertsPolicy;
+  autoActivate: Scalars["Boolean"]["output"];
+  days: Array<Scalars["String"]["output"]>;
+  endTime: Scalars["Time"]["output"];
+  id: Scalars["ID"]["output"];
+  label: Scalars["String"]["output"];
+  mode: Mode;
+  priority: Scalars["Int"]["output"];
+  snooze: Scalars["Boolean"]["output"];
+  startTime: Scalars["Time"]["output"];
+  status: Scalars["Boolean"]["output"];
+  statusEmoji: Maybe<Scalars["String"]["output"]>;
+  statusText: Maybe<Scalars["String"]["output"]>;
+};
+
+export type ReachabilityWindowInput = {
+  alertsPolicy: InputMaybe<AlertsPolicy>;
+  autoActivate: InputMaybe<Scalars["Boolean"]["input"]>;
+  days: Array<Scalars["String"]["input"]>;
+  endTime: Scalars["Time"]["input"];
+  label: Scalars["String"]["input"];
+  mode: InputMaybe<Mode>;
+  priority: InputMaybe<Scalars["Int"]["input"]>;
+  snooze: InputMaybe<Scalars["Boolean"]["input"]>;
+  startTime: Scalars["Time"]["input"];
+  status: InputMaybe<Scalars["Boolean"]["input"]>;
+  statusEmoji: InputMaybe<Scalars["String"]["input"]>;
+  statusText: InputMaybe<Scalars["String"]["input"]>;
+};
+
+export type ReachabilityWindowUpdateInput = {
+  alertsPolicy: InputMaybe<AlertsPolicy>;
+  autoActivate: InputMaybe<Scalars["Boolean"]["input"]>;
+  days: InputMaybe<Array<Scalars["String"]["input"]>>;
+  endTime: InputMaybe<Scalars["Time"]["input"]>;
+  label: InputMaybe<Scalars["String"]["input"]>;
+  mode: InputMaybe<Mode>;
+  priority: InputMaybe<Scalars["Int"]["input"]>;
+  snooze: InputMaybe<Scalars["Boolean"]["input"]>;
+  startTime: InputMaybe<Scalars["Time"]["input"]>;
+  status: InputMaybe<Scalars["Boolean"]["input"]>;
+  statusEmoji: InputMaybe<Scalars["String"]["input"]>;
+  statusText: InputMaybe<Scalars["String"]["input"]>;
+};
+
 export type RootMutationType = {
   applyPreset: Maybe<Contract>;
-  createApiKey: Maybe<ApiKeyWithRaw>;
   createContract: Maybe<Contract>;
   createPreset: Maybe<Preset>;
+  createReachabilityWindow: Maybe<ReachabilityWindow>;
   deletePreset: Maybe<Preset>;
+  deleteReachabilityWindow: Maybe<ReachabilityWindow>;
   dismissDigestEntry: Maybe<DigestSummary>;
   overrideVerdict: Maybe<VerdictOverride>;
   registerMobileClient: Maybe<MobileClient>;
@@ -283,21 +319,17 @@ export type RootMutationType = {
    * long sessions (checkpoint) and once on session exit (final report).
    */
   reportOutcome: Maybe<TaskOutcome>;
-  revokeApiKey: Maybe<ApiKey>;
   submitProposal: Maybe<Verdict>;
   updateAutoResponderSettings: Maybe<AutoResponderSettings>;
   updateMobileClient: Maybe<MobileClient>;
   updatePreset: Maybe<Preset>;
   updatePublicPageSettings: Maybe<User>;
+  updateReachabilityWindow: Maybe<ReachabilityWindow>;
   updateVerdictSettings: Maybe<VerdictSettings>;
 };
 
 export type RootMutationTypeApplyPresetArgs = {
   id: Scalars["ID"]["input"];
-};
-
-export type RootMutationTypeCreateApiKeyArgs = {
-  label: Scalars["String"]["input"];
 };
 
 export type RootMutationTypeCreateContractArgs = {
@@ -308,7 +340,15 @@ export type RootMutationTypeCreatePresetArgs = {
   input: PresetInput;
 };
 
+export type RootMutationTypeCreateReachabilityWindowArgs = {
+  input: ReachabilityWindowInput;
+};
+
 export type RootMutationTypeDeletePresetArgs = {
+  id: Scalars["ID"]["input"];
+};
+
+export type RootMutationTypeDeleteReachabilityWindowArgs = {
   id: Scalars["ID"]["input"];
 };
 
@@ -326,10 +366,6 @@ export type RootMutationTypeRegisterMobileClientArgs = {
 
 export type RootMutationTypeReportOutcomeArgs = {
   input: OutcomeInput;
-};
-
-export type RootMutationTypeRevokeApiKeyArgs = {
-  id: Scalars["ID"]["input"];
 };
 
 export type RootMutationTypeSubmitProposalArgs = {
@@ -356,15 +392,19 @@ export type RootMutationTypeUpdatePublicPageSettingsArgs = {
   input: PublicPageSettingsInput;
 };
 
+export type RootMutationTypeUpdateReachabilityWindowArgs = {
+  id: Scalars["ID"]["input"];
+  input: ReachabilityWindowUpdateInput;
+};
+
 export type RootMutationTypeUpdateVerdictSettingsArgs = {
   modeThresholds: Scalars["JSON"]["input"];
 };
 
 export type RootQueryType = {
   activeContract: Maybe<Contract>;
-  apiKeys: Maybe<Array<ApiKey>>;
   autoResponderSettings: Maybe<AutoResponderSettings>;
-  calendar: Maybe<Calendar>;
+  availability: Maybe<AvailabilityResolution>;
   /**
    * List calibration profiles for the current user.
    *
@@ -380,12 +420,14 @@ export type RootQueryType = {
   presets: Maybe<Array<Preset>>;
   profile: Maybe<User>;
   proposals: Maybe<Array<TaskProposal>>;
+  reachabilityWindow: Maybe<ReachabilityWindow>;
+  reachabilityWindows: Maybe<Array<ReachabilityWindow>>;
   teamPresence: Maybe<Array<TeamPresence>>;
   teams: Maybe<Array<Team>>;
   verdictSettings: Maybe<VerdictSettings>;
 };
 
-export type RootQueryTypeCalendarArgs = {
+export type RootQueryTypeAvailabilityArgs = {
   at: InputMaybe<Scalars["DateTime"]["input"]>;
 };
 
@@ -404,6 +446,10 @@ export type RootQueryTypePresetArgs = {
 export type RootQueryTypeProposalsArgs = {
   latest: InputMaybe<Scalars["Int"]["input"]>;
   verdict: InputMaybe<VerdictDecision>;
+};
+
+export type RootQueryTypeReachabilityWindowArgs = {
+  id: Scalars["ID"]["input"];
 };
 
 export type RootQueryTypeTeamPresenceArgs = {
@@ -494,8 +540,8 @@ export type TeamMember = {
   id: Scalars["ID"]["output"];
   location: Maybe<Scalars["String"]["output"]>;
   name: Maybe<Scalars["String"]["output"]>;
+  reachabilityWindows: Maybe<Array<ReachabilityWindow>>;
   teams: Maybe<Array<Team>>;
-  workweek: Maybe<Workweek>;
 };
 
 export type TeamPresence = {
@@ -522,6 +568,10 @@ export type User = {
 export type Verdict = {
   decision: VerdictDecision;
   evaluatedAt: Scalars["DateTime"]["output"];
+  /** Active window's notification policy */
+  policy: Maybe<AlertsPolicy>;
+  /** Derived availability status */
+  policyStatus: Maybe<PolicyStatus>;
   proposalId: Scalars["ID"]["output"];
   reason: Scalars["String"]["output"];
 };
@@ -553,29 +603,6 @@ export type VisibilityLevel =
   /** Exact return time and full timezone */
   | "PRECISE";
 
-/**
- * Private type: contains full schedule details (timezone, exact start/end times,
- * every day of the week). Must never be exposed through unauthenticated queries.
- * All queries resolving this type must pass through the Authentication middleware.
- * For public-facing availability data, use the :public_availability type instead.
- */
-export type Workweek = {
-  autoEnd: Scalars["Boolean"]["output"];
-  autoStart: Scalars["Boolean"]["output"];
-  endTime: Scalars["Time"]["output"];
-  friday: Scalars["Boolean"]["output"];
-  id: Scalars["ID"]["output"];
-  monday: Scalars["Boolean"]["output"];
-  saturday: Scalars["Boolean"]["output"];
-  startTime: Scalars["Time"]["output"];
-  sunday: Scalars["Boolean"]["output"];
-  thursday: Scalars["Boolean"]["output"];
-  tuesday: Scalars["Boolean"]["output"];
-  tz: Scalars["String"]["output"];
-  user: User;
-  wednesday: Scalars["Boolean"]["output"];
-};
-
 export type ActiveContractQueryVariables = Exact<{ [key: string]: never }>;
 
 export type ActiveContractQuery = {
@@ -595,27 +622,50 @@ export type ActiveContractQuery = {
   } | null;
 };
 
-export type CalendarQueryVariables = Exact<{
+export type ScheduleQueryVariables = Exact<{
   at: InputMaybe<Scalars["DateTime"]["input"]>;
 }>;
 
-export type CalendarQuery = {
-  calendar: {
-    automateEndOfDay: boolean;
-    automateStartOfDay: boolean;
-    day: DayName;
-    endsAt: string;
-    nextWorkday: DayName;
-    nextWorkdayStartsAt: string;
-    now: string;
-    offHours: boolean;
-    startsAt: string;
-    workHours: boolean;
-    working: boolean;
+export type ScheduleQuery = {
+  schedule: {
+    inReachableHours: boolean;
+    nextTransitionAt: string | null;
+    activeWindow: {
+      id: string;
+      label: string;
+      priority: number;
+      startTime: string;
+      endTime: string;
+      days: Array<string>;
+      mode: Mode;
+      alertsPolicy: AlertsPolicy;
+      snooze: boolean;
+      status: boolean;
+      statusEmoji: string | null;
+      statusText: string | null;
+      autoActivate: boolean;
+    } | null;
+    nextWindow: {
+      id: string;
+      label: string;
+      priority: number;
+      startTime: string;
+      endTime: string;
+      days: Array<string>;
+      mode: Mode;
+      alertsPolicy: AlertsPolicy;
+      snooze: boolean;
+      status: boolean;
+      statusEmoji: string | null;
+      statusText: string | null;
+      autoActivate: boolean;
+    } | null;
   } | null;
 };
 
-export type AvailabilityQueryVariables = Exact<{ [key: string]: never }>;
+export type AvailabilityQueryVariables = Exact<{
+  at: InputMaybe<Scalars["DateTime"]["input"]>;
+}>;
 
 export type AvailabilityQuery = {
   activeContract: {
@@ -632,18 +682,39 @@ export type AvailabilityQuery = {
     expiresAt: string;
     insertedAt: string;
   } | null;
-  calendar: {
-    automateEndOfDay: boolean;
-    automateStartOfDay: boolean;
-    day: DayName;
-    endsAt: string;
-    nextWorkday: DayName;
-    nextWorkdayStartsAt: string;
-    now: string;
-    offHours: boolean;
-    startsAt: string;
-    workHours: boolean;
-    working: boolean;
+  schedule: {
+    inReachableHours: boolean;
+    nextTransitionAt: string | null;
+    activeWindow: {
+      id: string;
+      label: string;
+      priority: number;
+      startTime: string;
+      endTime: string;
+      days: Array<string>;
+      mode: Mode;
+      alertsPolicy: AlertsPolicy;
+      snooze: boolean;
+      status: boolean;
+      statusEmoji: string | null;
+      statusText: string | null;
+      autoActivate: boolean;
+    } | null;
+    nextWindow: {
+      id: string;
+      label: string;
+      priority: number;
+      startTime: string;
+      endTime: string;
+      days: Array<string>;
+      mode: Mode;
+      alertsPolicy: AlertsPolicy;
+      snooze: boolean;
+      status: boolean;
+      statusEmoji: string | null;
+      statusText: string | null;
+      autoActivate: boolean;
+    } | null;
   } | null;
 };
 
@@ -831,40 +902,6 @@ export type UpdateVerdictSettingsMutation = {
   } | null;
 };
 
-export type AvailabilityAtQueryVariables = Exact<{
-  at: InputMaybe<Scalars["DateTime"]["input"]>;
-}>;
-
-export type AvailabilityAtQuery = {
-  activeContract: {
-    id: string;
-    mode: Mode;
-    status: boolean;
-    statusEmoji: string | null;
-    statusText: string | null;
-    autoRespond: boolean;
-    lock: boolean | null;
-    duration: number | null;
-    ruleSetType: string | null;
-    ruleSetParams: Record<string, unknown> | null;
-    expiresAt: string;
-    insertedAt: string;
-  } | null;
-  calendar: {
-    automateEndOfDay: boolean;
-    automateStartOfDay: boolean;
-    day: DayName;
-    endsAt: string;
-    nextWorkday: DayName;
-    nextWorkdayStartsAt: string;
-    now: string;
-    offHours: boolean;
-    startsAt: string;
-    workHours: boolean;
-    working: boolean;
-  } | null;
-};
-
 export type DigestSummariesQueryVariables = Exact<{
   latest: InputMaybe<Scalars["Int"]["input"]>;
 }>;
@@ -900,49 +937,6 @@ export type DismissDigestEntryMutation = {
     firstEventAt: string;
     lastEventAt: string;
     events: Array<{ description: string; insertedAt: string }>;
-  } | null;
-};
-
-export type ApiKeysQueryVariables = Exact<{ [key: string]: never }>;
-
-export type ApiKeysQuery = {
-  apiKeys: Array<{
-    id: string;
-    prefix: string;
-    label: string;
-    lastUsedAt: string | null;
-    insertedAt: string;
-  }> | null;
-};
-
-export type CreateApiKeyMutationVariables = Exact<{
-  label: Scalars["String"]["input"];
-}>;
-
-export type CreateApiKeyMutation = {
-  createApiKey: {
-    rawKey: string;
-    apiKey: {
-      id: string;
-      prefix: string;
-      label: string;
-      lastUsedAt: string | null;
-      insertedAt: string;
-    };
-  } | null;
-};
-
-export type RevokeApiKeyMutationVariables = Exact<{
-  id: Scalars["ID"]["input"];
-}>;
-
-export type RevokeApiKeyMutation = {
-  revokeApiKey: {
-    id: string;
-    prefix: string;
-    label: string;
-    lastUsedAt: string | null;
-    insertedAt: string;
   } | null;
 };
 

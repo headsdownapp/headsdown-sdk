@@ -66,21 +66,6 @@ export interface ListDigestOptions {
   latest?: number;
 }
 
-/** A user API key (without raw secret). */
-export interface ApiKey {
-  id: string;
-  prefix: string;
-  label: string;
-  lastUsedAt: string | null;
-  insertedAt: string;
-}
-
-/** API key creation payload containing the one-time raw key. */
-export interface ApiKeyWithRaw {
-  rawKey: string;
-  apiKey: ApiKey;
-}
-
 /** Auto-responder message templates for non-online modes. */
 export interface AutoResponderSettings {
   id: string;
@@ -141,19 +126,29 @@ export interface Contract {
   insertedAt: string;
 }
 
-/** The user's current work schedule context. */
-export interface Calendar {
-  automateEndOfDay: boolean;
-  automateStartOfDay: boolean;
-  day: DayName;
-  endsAt: string;
-  nextWorkday: DayName;
-  nextWorkdayStartsAt: string;
-  now: string;
-  offHours: boolean;
-  startsAt: string;
-  workHours: boolean;
-  working: boolean;
+/** Reachability window resolved by the scheduler. */
+export interface ReachabilityWindow {
+  id: string;
+  label: string;
+  priority: number;
+  startTime: string;
+  endTime: string;
+  days: string[];
+  mode: Mode;
+  alertsPolicy: AlertsPolicy;
+  snooze: boolean;
+  status: boolean;
+  statusEmoji: string | null;
+  statusText: string | null;
+  autoActivate: boolean;
+}
+
+/** Current schedule resolution for the authenticated user. */
+export interface ScheduleResolution {
+  inReachableHours: boolean;
+  nextTransitionAt: string | null;
+  activeWindow: ReachabilityWindow | null;
+  nextWindow: ReachabilityWindow | null;
 }
 
 /** A saved availability preset. */

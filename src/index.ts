@@ -31,7 +31,8 @@ export type {
   TaskOutcomeResult,
   // Response types
   Contract,
-  Calendar,
+  ScheduleResolution,
+  ReachabilityWindow,
   Preset,
   Verdict,
   VerdictOverride,
@@ -40,8 +41,6 @@ export type {
   CalibrationProfile,
   DigestSummary,
   DigestEvent,
-  ApiKey,
-  ApiKeyWithRaw,
   AutoResponderSettings,
   Team,
   TeamMember,
