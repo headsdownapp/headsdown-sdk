@@ -64,16 +64,22 @@ await store.save(apiKey, "My Tool");
 The primary use case: check whether the user is available before starting work.
 
 ```typescript
-const { contract, calendar } = await client.getAvailability();
+const { contract, schedule } = await client.getAvailability();
 
 if (contract?.mode === "busy") {
   console.log(`User is in focus mode: ${contract.statusText}`);
   console.log(`Expires at: ${contract.expiresAt}`);
 }
 
-if (calendar.offHours) {
-  console.log(`Off hours. Next workday: ${calendar.nextWorkday}`);
+if (!schedule.inReachableHours) {
+  console.log(`Not currently reachable. Next transition: ${schedule.nextTransitionAt}`);
 }
+```
+
+You can also check availability at a specific point in time:
+
+```typescript
+const later = await client.getAvailability({ at: "2025-06-16T09:00:00Z" });
 ```
 
 ### Submit a Task Proposal
@@ -120,13 +126,33 @@ const contract = await client.applyPreset(presets[0].id);
 ```typescript
 const contract = await client.createContract({
   mode: "busy",
-  afk: false,
   autoRespond: true,
   status: true,
   statusText: "Deep work",
   statusEmoji: "🔨",
   duration: 120, // minutes
+  ruleSetType: "focus",
+  ruleSetParams: { maxInterruptions: 0 },
 });
+```
+
+### Verdict and Calibration Utilities
+
+```typescript
+const interrupt = await client.evaluateInterrupt("brezn");
+if (!interrupt.allowed) {
+  console.log(interrupt.autoResponse ?? interrupt.reason);
+}
+
+const settings = await client.getVerdictSettings();
+const updated = await client.updateVerdictSettings({
+  online: 60,
+  busy: 15,
+  limited: 5,
+  offline: 0,
+});
+
+const profiles = await client.listCalibrationProfiles();
 ```
 
 ### User Profile
@@ -162,31 +188,69 @@ try {
 
 ```typescript
 const client = new HeadsDownClient({
-  apiKey: "hd_...",                           // API key (or set HEADSDOWN_API_KEY)
-  baseUrl: "https://headsdown.app",           // API base URL
-  timeout: 30000,                             // Request timeout in ms
-  fetch: customFetch,                         // Custom fetch implementation
+  apiKey: "hd_...", // API key (or set HEADSDOWN_API_KEY)
+  baseUrl: "https://headsdown.app", // API base URL
+  timeout: 30000, // Request timeout in ms
+  fetch: customFetch, // Custom fetch implementation
+  retry: { retries: 2, retryDelayMs: 250 }, // Transient failure retries
+  hooks: {
+    onRetry: ({ attempt, reason }) => console.log(`retry #${attempt + 1}: ${reason}`),
+  },
 });
 ```
 
-| Option | Default | Description |
-|--------|---------|-------------|
-| `apiKey` | `HEADSDOWN_API_KEY` env var | HeadsDown API key (`hd_` prefix) |
-| `baseUrl` | `https://headsdown.app` | API endpoint |
-| `timeout` | `30000` | Request timeout in milliseconds |
-| `fetch` | `globalThis.fetch` | Custom fetch (for testing or proxies) |
+| Option               | Default                     | Description                                  |
+| -------------------- | --------------------------- | -------------------------------------------- |
+| `apiKey`             | `HEADSDOWN_API_KEY` env var | HeadsDown API key (`hd_` prefix)             |
+| `baseUrl`            | `https://headsdown.app`     | API endpoint                                 |
+| `timeout`            | `30000`                     | Request timeout in milliseconds              |
+| `fetch`              | `globalThis.fetch`          | Custom fetch (for testing or proxies)        |
+| `retry.retries`      | `2`                         | Number of retries for transient failures     |
+| `retry.retryDelayMs` | `250`                       | Base retry delay in ms (exponential backoff) |
+| `hooks`              | `undefined`                 | Optional onRequest/onResponse/onRetry hooks  |
 
 ## Data Transparency
 
 This SDK sends requests only to the HeadsDown API (`https://headsdown.app/graphql` by default). Every request includes your API key as a Bearer token. The exact GraphQL queries are in [`src/queries.ts`](src/queries.ts), readable in full.
 
-**What is sent:** Your API key, and the specific query/mutation being executed (availability checks, task proposals, preset operations).
+**What is sent:** Your API key, and the specific query/mutation being executed (availability checks, task proposals, preset operations, verdict settings, interrupt evaluation).
 
-**What is received:** Your availability status, calendar schedule, task verdicts, and preset configurations.
+**What is received:** Your availability status, schedule resolution, task verdicts, calibration data, and preset configurations.
 
 **What is stored locally:** Your API key at `~/.config/headsdown/credentials.json` (file permissions: 0600, user-only read/write).
 
 No telemetry. No analytics. No third-party requests.
+
+## Schema Sync
+
+The app repo is the source of truth for the GraphQL schema, and this SDK only consumes a pushed schema file.
+
+When the app exports a new schema, import it here:
+
+```bash
+npm run schema:sync -- --source /absolute/path/to/schema.json
+```
+
+(Equivalent env var form: `HEADSDOWN_SCHEMA_SOURCE=/absolute/path/to/schema.json npm run schema:sync`.)
+
+Then regenerate operation and variable types:
+
+```bash
+npm run codegen:types
+```
+
+The schema compatibility test uses this local snapshot to make drift obvious in CI.
+
+## Releases
+
+Releases are tag-driven. Push a tag like `v0.1.0` and GitHub Actions will run tests, verify the tag matches `package.json`, and publish to npm using trusted publishing.
+
+```bash
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+Before the first publish, configure npm trusted publishing for this repository and make sure the package version matches the tag.
 
 ## License
 

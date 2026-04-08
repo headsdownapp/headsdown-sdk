@@ -1,6 +1,4 @@
-/** Get the user's active availability contract. */
-export const ACTIVE_CONTRACT_QUERY = `
-  query ActiveContract {
+query ActiveContract {
     activeContract {
       id
       mode
@@ -16,11 +14,8 @@ export const ACTIVE_CONTRACT_QUERY = `
       insertedAt
     }
   }
-`;
 
-/** Get the user's current schedule resolution. */
-export const SCHEDULE_QUERY = `
-  query Schedule($at: DateTime) {
+query Schedule($at: DateTime) {
     schedule: availability(at: $at) {
       inReachableHours
       nextTransitionAt
@@ -56,11 +51,8 @@ export const SCHEDULE_QUERY = `
       }
     }
   }
-`;
 
-/** Get both contract and schedule in a single request. */
-export const AVAILABILITY_QUERY = `
-  query Availability($at: DateTime) {
+query Availability($at: DateTime) {
     activeContract {
       id
       mode
@@ -110,11 +102,8 @@ export const AVAILABILITY_QUERY = `
       }
     }
   }
-`;
 
-/** Submit a task proposal for verdict evaluation. */
-export const SUBMIT_PROPOSAL_MUTATION = `
-  mutation SubmitProposal($input: ProposalInput!) {
+mutation SubmitProposal($input: ProposalInput!) {
     submitProposal(input: $input) {
       decision
       reason
@@ -122,11 +111,8 @@ export const SUBMIT_PROPOSAL_MUTATION = `
       evaluatedAt
     }
   }
-`;
 
-/** List previously submitted proposals. */
-export const LIST_PROPOSALS_QUERY = `
-  query Proposals($verdict: VerdictDecision, $latest: Int) {
+query Proposals($verdict: VerdictDecision, $latest: Int) {
     proposals(verdict: $verdict, latest: $latest) {
       id
       agentRef
@@ -142,11 +128,8 @@ export const LIST_PROPOSALS_QUERY = `
       insertedAt
     }
   }
-`;
 
-/** List saved availability presets. */
-export const LIST_PRESETS_QUERY = `
-  query Presets {
+query Presets {
     presets {
       id
       name
@@ -158,11 +141,8 @@ export const LIST_PRESETS_QUERY = `
       updatedAt
     }
   }
-`;
 
-/** Apply a preset to create a new contract. */
-export const APPLY_PRESET_MUTATION = `
-  mutation ApplyPreset($id: ID!) {
+mutation ApplyPreset($id: ID!) {
     applyPreset(id: $id) {
       id
       mode
@@ -178,11 +158,8 @@ export const APPLY_PRESET_MUTATION = `
       insertedAt
     }
   }
-`;
 
-/** Create a new availability contract. */
-export const CREATE_CONTRACT_MUTATION = `
-  mutation CreateContract($input: ContractInput!) {
+mutation CreateContract($input: ContractInput!) {
     createContract(input: $input) {
       id
       mode
@@ -198,11 +175,8 @@ export const CREATE_CONTRACT_MUTATION = `
       insertedAt
     }
   }
-`;
 
-/** Get the authenticated user's profile. */
-export const PROFILE_QUERY = `
-  query Profile {
+query Profile {
     profile {
       id
       name
@@ -218,11 +192,8 @@ export const PROFILE_QUERY = `
       updatedAt
     }
   }
-`;
 
-/** Override a verdict decision. */
-export const OVERRIDE_VERDICT_MUTATION = `
-  mutation OverrideVerdict($input: OverrideInput!) {
+mutation OverrideVerdict($input: OverrideInput!) {
     overrideVerdict(input: $input) {
       id
       originalVerdict
@@ -232,22 +203,16 @@ export const OVERRIDE_VERDICT_MUTATION = `
       insertedAt
     }
   }
-`;
 
-/** Evaluate whether interrupting a user is allowed. */
-export const EVALUATE_INTERRUPT_QUERY = `
-  query EvaluateInterrupt($handle: String!) {
+query EvaluateInterrupt($handle: String!) {
     evaluateInterrupt(handle: $handle) {
       allowed
       reason
       autoResponse
     }
   }
-`;
 
-/** List calibration profiles for the current user. */
-export const CALIBRATION_PROFILES_QUERY = `
-  query CalibrationProfiles {
+query CalibrationProfiles {
     calibrationProfiles {
       id
       model
@@ -270,11 +235,8 @@ export const CALIBRATION_PROFILES_QUERY = `
       updatedAt
     }
   }
-`;
 
-/** Get the current verdict evaluation settings. */
-export const VERDICT_SETTINGS_QUERY = `
-  query VerdictSettings {
+query VerdictSettings {
     verdictSettings {
       id
       modeThresholds
@@ -282,11 +244,8 @@ export const VERDICT_SETTINGS_QUERY = `
       updatedAt
     }
   }
-`;
 
-/** Update verdict evaluation settings. */
-export const UPDATE_VERDICT_SETTINGS_MUTATION = `
-  mutation UpdateVerdictSettings($modeThresholds: JSON!) {
+mutation UpdateVerdictSettings($modeThresholds: JSON!) {
     updateVerdictSettings(modeThresholds: $modeThresholds) {
       id
       modeThresholds
@@ -294,11 +253,8 @@ export const UPDATE_VERDICT_SETTINGS_MUTATION = `
       updatedAt
     }
   }
-`;
 
-/** List digest summaries (notifications aggregated during focus time). */
-export const DIGEST_SUMMARIES_QUERY = `
-  query DigestSummaries($latest: Int) {
+query DigestSummaries($latest: Int) {
     digestSummaries(latest: $latest) {
       id
       actorRef
@@ -315,11 +271,8 @@ export const DIGEST_SUMMARIES_QUERY = `
       lastEventAt
     }
   }
-`;
 
-/** Dismiss a digest summary entry. */
-export const DISMISS_DIGEST_ENTRY_MUTATION = `
-  mutation DismissDigestEntry($id: ID!) {
+mutation DismissDigestEntry($id: ID!) {
     dismissDigestEntry(id: $id) {
       id
       actorRef
@@ -336,11 +289,8 @@ export const DISMISS_DIGEST_ENTRY_MUTATION = `
       lastEventAt
     }
   }
-`;
 
-/** Get current auto-responder settings. */
-export const AUTO_RESPONDER_SETTINGS_QUERY = `
-  query AutoResponderSettings {
+query AutoResponderSettings {
     autoResponderSettings {
       id
       busyText
@@ -350,11 +300,8 @@ export const AUTO_RESPONDER_SETTINGS_QUERY = `
       updatedAt
     }
   }
-`;
 
-/** Update auto-responder settings. */
-export const UPDATE_AUTO_RESPONDER_SETTINGS_MUTATION = `
-  mutation UpdateAutoResponderSettings($busyText: String, $limitedText: String, $offlineText: String) {
+mutation UpdateAutoResponderSettings($busyText: String, $limitedText: String, $offlineText: String) {
     updateAutoResponderSettings(busyText: $busyText, limitedText: $limitedText, offlineText: $offlineText) {
       id
       busyText
@@ -364,11 +311,8 @@ export const UPDATE_AUTO_RESPONDER_SETTINGS_MUTATION = `
       updatedAt
     }
   }
-`;
 
-/** List teams for current user, optionally filtered by team id. */
-export const TEAMS_QUERY = `
-  query Teams($id: ID) {
+query Teams($id: ID) {
     teams(id: $id) {
       id
       name
@@ -383,11 +327,8 @@ export const TEAMS_QUERY = `
       }
     }
   }
-`;
 
-/** Get company for current user. */
-export const COMPANY_QUERY = `
-  query Company {
+query Company {
     company {
       id
       name
@@ -399,22 +340,16 @@ export const COMPANY_QUERY = `
       }
     }
   }
-`;
 
-/** List currently online presence entries for a team. */
-export const TEAM_PRESENCE_QUERY = `
-  query TeamPresence($teamId: ID!) {
+query TeamPresence($teamId: ID!) {
     teamPresence(teamId: $teamId) {
       userId
       onlineAt
       connectionType
     }
   }
-`;
 
-/** Report a task outcome (insert or update). */
-export const REPORT_OUTCOME_MUTATION = `
-  mutation ReportOutcome($input: OutcomeInput!) {
+mutation ReportOutcome($input: OutcomeInput!) {
     reportOutcome(input: $input) {
       id
       outcome
@@ -433,4 +368,3 @@ export const REPORT_OUTCOME_MUTATION = `
       insertedAt
     }
   }
-`;

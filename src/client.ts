@@ -1,34 +1,83 @@
 import { CredentialStore, DeviceFlow } from "./auth.js";
-import { AuthError, ValidationError } from "./errors.js";
+import { ApiError, AuthError, ValidationError } from "./errors.js";
 import { GraphQLClient, toGraphQLEnum } from "./graphql.js";
 import {
   ACTIVE_CONTRACT_QUERY,
   APPLY_PRESET_MUTATION,
+  AUTO_RESPONDER_SETTINGS_QUERY,
   AVAILABILITY_QUERY,
-  CALENDAR_QUERY,
+  CALIBRATION_PROFILES_QUERY,
+  COMPANY_QUERY,
   CREATE_CONTRACT_MUTATION,
+  DIGEST_SUMMARIES_QUERY,
+  DISMISS_DIGEST_ENTRY_MUTATION,
+  EVALUATE_INTERRUPT_QUERY,
   LIST_PRESETS_QUERY,
   LIST_PROPOSALS_QUERY,
+  OVERRIDE_VERDICT_MUTATION,
   PROFILE_QUERY,
   REPORT_OUTCOME_MUTATION,
+  SCHEDULE_QUERY,
   SUBMIT_PROPOSAL_MUTATION,
+  TEAM_PRESENCE_QUERY,
+  TEAMS_QUERY,
+  UPDATE_AUTO_RESPONDER_SETTINGS_MUTATION,
+  UPDATE_VERDICT_SETTINGS_MUTATION,
+  VERDICT_SETTINGS_QUERY,
 } from "./queries.js";
 import type {
-  Calendar,
+  AutoResponderSettings,
+  CalibrationProfile,
   ClientOptions,
+  Company,
   Contract,
   ContractInput,
   DeviceAuthorization,
   DeviceFlowOptions,
+  DigestSummary,
+  InterruptResult,
+  ListDigestOptions,
   ListProposalsOptions,
+  ListTeamsOptions,
   OutcomeInput,
+  OverrideInput,
   Preset,
   ProposalInput,
+  ScheduleResolution,
   TaskOutcome,
   TaskProposal,
+  Team,
+  TeamPresence,
+  UpdateAutoResponderInput,
   UserProfile,
   Verdict,
+  VerdictOverride,
+  VerdictSettings,
 } from "./types.js";
+import type {
+  ActiveContractQuery,
+  ApplyPresetMutation,
+  AutoResponderSettingsQuery,
+  AvailabilityQuery,
+  CalibrationProfilesQuery,
+  CompanyQuery,
+  CreateContractMutation,
+  DigestSummariesQuery,
+  DismissDigestEntryMutation,
+  EvaluateInterruptQuery,
+  OverrideVerdictMutation,
+  PresetsQuery,
+  ProfileQuery,
+  ProposalsQuery,
+  ReportOutcomeMutation,
+  ScheduleQuery,
+  SubmitProposalMutation,
+  TeamPresenceQuery,
+  TeamsQuery,
+  UpdateAutoResponderSettingsMutation,
+  UpdateVerdictSettingsMutation,
+  VerdictSettingsQuery,
+} from "./generated/graphql-types.js";
 
 /**
  * HeadsDown API client. Provides typed methods for all API operations:
@@ -43,7 +92,7 @@ import type {
  * const client = await HeadsDownClient.fromCredentials();
  *
  * // Check availability
- * const { contract, calendar } = await client.getAvailability();
+ * const { contract, schedule } = await client.getAvailability();
  * ```
  */
 export class HeadsDownClient {
@@ -63,6 +112,9 @@ export class HeadsDownClient {
       baseUrl: options.baseUrl,
       fetch: options.fetch,
       timeout: options.timeout,
+      retries: options.retry?.retries,
+      retryDelayMs: options.retry?.retryDelayMs,
+      hooks: options.hooks,
     });
   }
 
@@ -127,8 +179,8 @@ export class HeadsDownClient {
   /** Get the user's active availability contract. Returns null if no contract is set. */
   async getActiveContract(): Promise<Contract | null> {
     try {
-      const data = await this.graphql.request<{ activeContract: Contract }>(ACTIVE_CONTRACT_QUERY);
-      return data.activeContract;
+      const data = await this.graphql.request<ActiveContractQuery>(ACTIVE_CONTRACT_QUERY);
+      return data.activeContract as Contract | null;
     } catch (error) {
       // The API returns a GraphQL error when no contract exists.
       if (error instanceof Error && error.message.includes("No active contract")) {
@@ -138,28 +190,38 @@ export class HeadsDownClient {
     }
   }
 
-  /** Get the user's current work schedule context. */
-  async getCalendar(): Promise<Calendar> {
-    const data = await this.graphql.request<{ calendar: Calendar }>(CALENDAR_QUERY);
-    return data.calendar;
+  /** Get the user's current schedule resolution. Optionally pass an ISO 8601 datetime to check at a specific time. */
+  async getSchedule(options?: { at?: string }): Promise<ScheduleResolution> {
+    const variables = options?.at ? { at: options.at } : undefined;
+    const data = await this.graphql.request<ScheduleQuery>(SCHEDULE_QUERY, variables);
+    if (!data.schedule) {
+      throw new ApiError("HeadsDown API returned no schedule data.");
+    }
+    return data.schedule as ScheduleResolution;
   }
 
   /**
-   * Get both contract and calendar in a single request.
+   * Get both contract and schedule in a single request.
    * This is the recommended way to check availability before starting work.
+   * Optionally pass an ISO 8601 datetime to check at a specific time.
    */
-  async getAvailability(): Promise<{ contract: Contract | null; calendar: Calendar }> {
+  async getAvailability(options?: {
+    at?: string;
+  }): Promise<{ contract: Contract | null; schedule: ScheduleResolution }> {
     try {
-      const data = await this.graphql.request<{
-        activeContract: Contract;
-        calendar: Calendar;
-      }>(AVAILABILITY_QUERY);
-      return { contract: data.activeContract, calendar: data.calendar };
+      const variables = options?.at ? { at: options.at } : undefined;
+      const data = await this.graphql.request<AvailabilityQuery>(AVAILABILITY_QUERY, variables);
+      if (!data.schedule) {
+        throw new ApiError("HeadsDown API returned no schedule data.");
+      }
+      return {
+        contract: data.activeContract as Contract | null,
+        schedule: data.schedule as ScheduleResolution,
+      };
     } catch (error) {
       if (error instanceof Error && error.message.includes("No active contract")) {
-        // Fall back to calendar-only when no contract exists.
-        const calendar = await this.getCalendar();
-        return { contract: null, calendar };
+        const schedule = await this.getSchedule(options);
+        return { contract: null, schedule };
       }
       throw error;
     }
@@ -197,11 +259,41 @@ export class HeadsDownClient {
       }),
     };
 
-    const data = await this.graphql.request<{ submitProposal: Verdict }>(
+    const data = await this.graphql.request<SubmitProposalMutation>(
       SUBMIT_PROPOSAL_MUTATION,
       variables,
     );
-    return data.submitProposal;
+    if (!data.submitProposal) {
+      throw new ApiError("HeadsDown API returned no submitProposal data.");
+    }
+    return data.submitProposal as Verdict;
+  }
+
+  /**
+   * Override a verdict decision.
+   * Lets a user change a deferred verdict to approved, or vice versa.
+   */
+  async overrideVerdict(input: OverrideInput): Promise<VerdictOverride> {
+    if (!input.proposalId?.trim()) {
+      throw new ValidationError("Proposal ID is required.", "proposalId");
+    }
+
+    const variables = {
+      input: stripUndefined({
+        proposalId: input.proposalId,
+        overrideVerdict: toGraphQLEnum(input.overrideVerdict),
+        reason: input.reason,
+      }),
+    };
+
+    const data = await this.graphql.request<OverrideVerdictMutation>(
+      OVERRIDE_VERDICT_MUTATION,
+      variables,
+    );
+    if (!data.overrideVerdict) {
+      throw new ApiError("HeadsDown API returned no overrideVerdict data.");
+    }
+    return data.overrideVerdict as VerdictOverride;
   }
 
   /** List previously submitted proposals, optionally filtered by verdict or limited. */
@@ -210,19 +302,19 @@ export class HeadsDownClient {
     if (options?.verdict) variables.verdict = toGraphQLEnum(options.verdict);
     if (options?.latest !== undefined) variables.latest = options.latest;
 
-    const data = await this.graphql.request<{ proposals: TaskProposal[] }>(
+    const data = await this.graphql.request<ProposalsQuery>(
       LIST_PROPOSALS_QUERY,
       Object.keys(variables).length > 0 ? variables : undefined,
     );
-    return data.proposals;
+    return (data.proposals ?? []) as TaskProposal[];
   }
 
   // === Presets ===
 
   /** List the user's saved availability presets. */
   async listPresets(): Promise<Preset[]> {
-    const data = await this.graphql.request<{ presets: Preset[] }>(LIST_PRESETS_QUERY);
-    return data.presets;
+    const data = await this.graphql.request<PresetsQuery>(LIST_PRESETS_QUERY);
+    return (data.presets ?? []) as Preset[];
   }
 
   /** Apply a preset to create a new availability contract. */
@@ -231,10 +323,13 @@ export class HeadsDownClient {
       throw new ValidationError("Preset ID is required.", "presetId");
     }
 
-    const data = await this.graphql.request<{ applyPreset: Contract }>(APPLY_PRESET_MUTATION, {
+    const data = await this.graphql.request<ApplyPresetMutation>(APPLY_PRESET_MUTATION, {
       id: presetId,
     });
-    return data.applyPreset;
+    if (!data.applyPreset) {
+      throw new ApiError("HeadsDown API returned no applyPreset data.");
+    }
+    return data.applyPreset as Contract;
   }
 
   // === Contracts ===
@@ -247,29 +342,180 @@ export class HeadsDownClient {
     const variables = {
       input: stripUndefined({
         mode: toGraphQLEnum(input.mode),
-        afk: input.afk,
         autoRespond: input.autoRespond,
         status: input.status,
         statusEmoji: input.statusEmoji,
         statusText: input.statusText,
         lock: input.lock,
         duration: input.duration,
+        ruleSetType: input.ruleSetType,
+        ruleSetParams: input.ruleSetParams,
       }),
     };
 
-    const data = await this.graphql.request<{ createContract: Contract }>(
+    const data = await this.graphql.request<CreateContractMutation>(
       CREATE_CONTRACT_MUTATION,
       variables,
     );
-    return data.createContract;
+    if (!data.createContract) {
+      throw new ApiError("HeadsDown API returned no createContract data.");
+    }
+    return data.createContract as Contract;
   }
 
   // === Profile ===
 
   /** Get the authenticated user's profile. Useful for verifying authentication. */
   async getProfile(): Promise<UserProfile> {
-    const data = await this.graphql.request<{ profile: UserProfile }>(PROFILE_QUERY);
-    return data.profile;
+    const data = await this.graphql.request<ProfileQuery>(PROFILE_QUERY);
+    if (!data.profile) {
+      throw new ApiError("HeadsDown API returned no profile data.");
+    }
+    return data.profile as UserProfile;
+  }
+
+  // === Interrupts ===
+
+  /**
+   * Evaluate whether interrupting a user is allowed based on their current availability.
+   * Returns whether the interrupt is allowed, the reason, and an optional auto-response message.
+   */
+  async evaluateInterrupt(handle: string): Promise<InterruptResult> {
+    if (!handle?.trim()) {
+      throw new ValidationError("Handle is required.", "handle");
+    }
+
+    const data = await this.graphql.request<EvaluateInterruptQuery>(EVALUATE_INTERRUPT_QUERY, {
+      handle,
+    });
+    if (!data.evaluateInterrupt) {
+      throw new ApiError("HeadsDown API returned no evaluateInterrupt data.");
+    }
+    return data.evaluateInterrupt as InterruptResult;
+  }
+
+  // === Digest ===
+
+  /**
+   * List digest summaries: aggregated notifications that arrived while the user was in focus mode.
+   * Each summary groups events from the same actor and source.
+   */
+  async listDigestSummaries(options?: ListDigestOptions): Promise<DigestSummary[]> {
+    const variables: Record<string, unknown> = {};
+    if (options?.latest !== undefined) variables.latest = options.latest;
+
+    const data = await this.graphql.request<DigestSummariesQuery>(
+      DIGEST_SUMMARIES_QUERY,
+      Object.keys(variables).length > 0 ? variables : undefined,
+    );
+    return (data.digestSummaries ?? []) as DigestSummary[];
+  }
+
+  /** Dismiss a digest summary entry by id. */
+  async dismissDigestEntry(id: string): Promise<DigestSummary> {
+    if (!id?.trim()) {
+      throw new ValidationError("Digest entry ID is required.", "id");
+    }
+
+    const data = await this.graphql.request<DismissDigestEntryMutation>(
+      DISMISS_DIGEST_ENTRY_MUTATION,
+      { id },
+    );
+    if (!data.dismissDigestEntry) {
+      throw new ApiError("HeadsDown API returned no dismissDigestEntry data.");
+    }
+    return data.dismissDigestEntry as DigestSummary;
+  }
+
+  // === Auto Responder ===
+
+  /** Get auto-responder message templates. */
+  async getAutoResponderSettings(): Promise<AutoResponderSettings> {
+    const data = await this.graphql.request<AutoResponderSettingsQuery>(
+      AUTO_RESPONDER_SETTINGS_QUERY,
+    );
+    if (!data.autoResponderSettings) {
+      throw new ApiError("HeadsDown API returned no autoResponderSettings data.");
+    }
+    return data.autoResponderSettings as AutoResponderSettings;
+  }
+
+  /** Update auto-responder message templates. */
+  async updateAutoResponderSettings(
+    input: UpdateAutoResponderInput,
+  ): Promise<AutoResponderSettings> {
+    const variables = stripUndefined({
+      busyText: input.busyText,
+      limitedText: input.limitedText,
+      offlineText: input.offlineText,
+    });
+
+    const data = await this.graphql.request<UpdateAutoResponderSettingsMutation>(
+      UPDATE_AUTO_RESPONDER_SETTINGS_MUTATION,
+      Object.keys(variables).length > 0 ? variables : undefined,
+    );
+    if (!data.updateAutoResponderSettings) {
+      throw new ApiError("HeadsDown API returned no updateAutoResponderSettings data.");
+    }
+    return data.updateAutoResponderSettings as AutoResponderSettings;
+  }
+
+  // === Teams ===
+
+  /** List teams for the current user, optionally filtered by team id. */
+  async listTeams(options?: ListTeamsOptions): Promise<Team[]> {
+    const variables = options?.id ? { id: options.id } : undefined;
+    const data = await this.graphql.request<TeamsQuery>(TEAMS_QUERY, variables);
+    return (data.teams ?? []) as Team[];
+  }
+
+  /** Get the current user's company and teams. */
+  async getCompany(): Promise<Company | null> {
+    const data = await this.graphql.request<CompanyQuery>(COMPANY_QUERY);
+    return data.company as Company | null;
+  }
+
+  /** List currently online members for a team. */
+  async listTeamPresence(teamId: string): Promise<TeamPresence[]> {
+    if (!teamId?.trim()) {
+      throw new ValidationError("Team ID is required.", "teamId");
+    }
+
+    const data = await this.graphql.request<TeamPresenceQuery>(TEAM_PRESENCE_QUERY, {
+      teamId,
+    });
+    return (data.teamPresence ?? []) as TeamPresence[];
+  }
+
+  // === Calibration Profiles ===
+
+  /** List calibration profiles for the current user's model/framework pairs. */
+  async listCalibrationProfiles(): Promise<CalibrationProfile[]> {
+    const data = await this.graphql.request<CalibrationProfilesQuery>(CALIBRATION_PROFILES_QUERY);
+    return (data.calibrationProfiles ?? []) as CalibrationProfile[];
+  }
+
+  // === Verdict Settings ===
+
+  /** Get the current verdict evaluation settings. */
+  async getVerdictSettings(): Promise<VerdictSettings> {
+    const data = await this.graphql.request<VerdictSettingsQuery>(VERDICT_SETTINGS_QUERY);
+    if (!data.verdictSettings) {
+      throw new ApiError("HeadsDown API returned no verdictSettings data.");
+    }
+    return data.verdictSettings as VerdictSettings;
+  }
+
+  /** Update the verdict evaluation mode thresholds. */
+  async updateVerdictSettings(modeThresholds: Record<string, unknown>): Promise<VerdictSettings> {
+    const data = await this.graphql.request<UpdateVerdictSettingsMutation>(
+      UPDATE_VERDICT_SETTINGS_MUTATION,
+      { modeThresholds },
+    );
+    if (!data.updateVerdictSettings) {
+      throw new ApiError("HeadsDown API returned no updateVerdictSettings data.");
+    }
+    return data.updateVerdictSettings as VerdictSettings;
   }
 
   // === Calibration ===
@@ -306,11 +552,14 @@ export class HeadsDownClient {
       }),
     };
 
-    const data = await this.graphql.request<{ reportOutcome: TaskOutcome }>(
+    const data = await this.graphql.request<ReportOutcomeMutation>(
       REPORT_OUTCOME_MUTATION,
       variables,
     );
-    return data.reportOutcome;
+    if (!data.reportOutcome) {
+      throw new ApiError("HeadsDown API returned no reportOutcome data.");
+    }
+    return data.reportOutcome as TaskOutcome;
   }
 }
 

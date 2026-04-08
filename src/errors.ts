@@ -28,15 +28,22 @@ export class ApiError extends HeadsDownError {
   readonly status?: number;
   /** GraphQL error details, if available. */
   readonly graphqlErrors?: Array<{ message: string; path?: string[] }>;
+  /** Upstream request id for support/debug correlation, if provided by the API. */
+  readonly requestId?: string;
 
   constructor(
     message: string,
-    options?: { status?: number; graphqlErrors?: Array<{ message: string; path?: string[] }> },
+    options?: {
+      status?: number;
+      graphqlErrors?: Array<{ message: string; path?: string[] }>;
+      requestId?: string;
+    },
   ) {
     super(message);
     this.name = "ApiError";
     this.status = options?.status;
     this.graphqlErrors = options?.graphqlErrors;
+    this.requestId = options?.requestId;
   }
 }
 

@@ -10,17 +10,35 @@ import {
   mockGraphQLError,
   mockHttpError,
   RAW_CONTRACT,
-  RAW_CALENDAR,
+  RAW_SCHEDULE,
   RAW_VERDICT_APPROVED,
   RAW_VERDICT_DEFERRED,
   RAW_PROPOSAL,
   RAW_PRESET,
   RAW_PROFILE,
+  RAW_VERDICT_OVERRIDE,
+  RAW_INTERRUPT_ALLOWED,
+  RAW_INTERRUPT_DENIED,
+  RAW_CALIBRATION_PROFILE,
+  RAW_VERDICT_SETTINGS,
+  RAW_DIGEST_SUMMARY,
+  RAW_AUTO_RESPONDER_SETTINGS,
+  RAW_TEAM,
+  RAW_COMPANY,
+  RAW_TEAM_PRESENCE,
   NORMALIZED_CONTRACT,
-  NORMALIZED_CALENDAR,
+  NORMALIZED_SCHEDULE,
   NORMALIZED_VERDICT_APPROVED,
   NORMALIZED_PRESET,
   NORMALIZED_PROFILE,
+  NORMALIZED_VERDICT_OVERRIDE,
+  NORMALIZED_CALIBRATION_PROFILE,
+  NORMALIZED_VERDICT_SETTINGS,
+  NORMALIZED_DIGEST_SUMMARY,
+  NORMALIZED_AUTO_RESPONDER_SETTINGS,
+  NORMALIZED_TEAM,
+  NORMALIZED_COMPANY,
+  NORMALIZED_TEAM_PRESENCE,
 } from "./fixtures.js";
 
 const CLIENT_OPTS = { apiKey: "hd_test_key", baseUrl: "https://test.headsdown.app" };
@@ -123,40 +141,40 @@ describe("HeadsDownClient", () => {
     });
   });
 
-  // === getCalendar ===
+  // === getSchedule ===
 
-  describe("getCalendar", () => {
-    it("returns calendar with normalized day enums", async () => {
+  describe("getSchedule", () => {
+    it("returns schedule with normalized enums", async () => {
       const client = new HeadsDownClient({
         ...CLIENT_OPTS,
-        fetch: mockGraphQL({ calendar: RAW_CALENDAR }),
+        fetch: mockGraphQL({ schedule: RAW_SCHEDULE }),
       });
 
-      const calendar = await client.getCalendar();
-      expect(calendar).toEqual(NORMALIZED_CALENDAR);
-      expect(calendar.day).toBe("wednesday");
-      expect(calendar.nextWorkday).toBe("thursday");
+      const schedule = await client.getSchedule();
+      expect(schedule).toEqual(NORMALIZED_SCHEDULE);
+      expect(schedule.activeWindow?.mode).toBe("online");
+      expect(schedule.activeWindow?.alertsPolicy).toBe("interruptable");
     });
   });
 
   // === getAvailability ===
 
   describe("getAvailability", () => {
-    it("returns both contract and calendar", async () => {
+    it("returns both contract and schedule", async () => {
       const client = new HeadsDownClient({
         ...CLIENT_OPTS,
         fetch: mockGraphQL({
           activeContract: RAW_CONTRACT,
-          calendar: RAW_CALENDAR,
+          schedule: RAW_SCHEDULE,
         }),
       });
 
       const result = await client.getAvailability();
       expect(result.contract).toEqual(NORMALIZED_CONTRACT);
-      expect(result.calendar).toEqual(NORMALIZED_CALENDAR);
+      expect(result.schedule).toEqual(NORMALIZED_SCHEDULE);
     });
 
-    it("returns null contract when none is active, still gets calendar", async () => {
+    it("returns null contract when none is active, still gets schedule", async () => {
       let callCount = 0;
       const fetchFn = (() => {
         callCount++;
@@ -173,7 +191,7 @@ describe("HeadsDownClient", () => {
         return Promise.resolve({
           ok: true,
           status: 200,
-          json: () => Promise.resolve({ data: { calendar: RAW_CALENDAR } }),
+          json: () => Promise.resolve({ data: { schedule: RAW_SCHEDULE } }),
         });
       }) as unknown as typeof globalThis.fetch;
 
@@ -181,7 +199,7 @@ describe("HeadsDownClient", () => {
       const result = await client.getAvailability();
 
       expect(result.contract).toBeNull();
-      expect(result.calendar).toEqual(NORMALIZED_CALENDAR);
+      expect(result.schedule).toEqual(NORMALIZED_SCHEDULE);
     });
   });
 
@@ -357,8 +375,6 @@ describe("HeadsDownClient", () => {
       const presets = await client.listPresets();
       expect(presets).toHaveLength(1);
       expect(presets[0]).toEqual(NORMALIZED_PRESET);
-      expect(presets[0].alerts).toBe("do_not_disturb");
-      expect(presets[0].presence).toBe("on_keys");
     });
   });
 
@@ -398,7 +414,6 @@ describe("HeadsDownClient", () => {
       const client = new HeadsDownClient({ ...CLIENT_OPTS, fetch: fetchFn });
       const contract = await client.createContract({
         mode: "busy",
-        afk: false,
         autoRespond: true,
         status: true,
         statusText: "Deep work",
@@ -424,6 +439,335 @@ describe("HeadsDownClient", () => {
 
       const profile = await client.getProfile();
       expect(profile).toEqual(NORMALIZED_PROFILE);
+    });
+  });
+
+  // === overrideVerdict ===
+
+  describe("overrideVerdict", () => {
+    it("overrides a verdict and returns the override", async () => {
+      let capturedBody: string | undefined;
+      const fetchFn = ((_url: string, init: RequestInit) => {
+        capturedBody = init.body as string;
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ data: { overrideVerdict: RAW_VERDICT_OVERRIDE } }),
+        });
+      }) as unknown as typeof globalThis.fetch;
+
+      const client = new HeadsDownClient({ ...CLIENT_OPTS, fetch: fetchFn });
+      const override = await client.overrideVerdict({
+        proposalId: "proposal-def-456",
+        overrideVerdict: "approved",
+        reason: "Urgent hotfix needed",
+      });
+
+      expect(override).toEqual(NORMALIZED_VERDICT_OVERRIDE);
+
+      const body = JSON.parse(capturedBody!);
+      expect(body.variables.input.overrideVerdict).toBe("APPROVED");
+    });
+
+    it("throws ValidationError for empty proposal ID", async () => {
+      const client = new HeadsDownClient({ ...CLIENT_OPTS, fetch: mockGraphQL({}) });
+      await expect(
+        client.overrideVerdict({ proposalId: "", overrideVerdict: "approved" }),
+      ).rejects.toThrow(ValidationError);
+    });
+  });
+
+  // === evaluateInterrupt ===
+
+  describe("evaluateInterrupt", () => {
+    it("returns allowed interrupt result", async () => {
+      const client = new HeadsDownClient({
+        ...CLIENT_OPTS,
+        fetch: mockGraphQL({ evaluateInterrupt: RAW_INTERRUPT_ALLOWED }),
+      });
+
+      const result = await client.evaluateInterrupt("testuser");
+      expect(result.allowed).toBe(true);
+      expect(result.reason).toBe("User is online and interruptable");
+      expect(result.autoResponse).toBeNull();
+    });
+
+    it("returns denied interrupt result with auto-response", async () => {
+      const client = new HeadsDownClient({
+        ...CLIENT_OPTS,
+        fetch: mockGraphQL({ evaluateInterrupt: RAW_INTERRUPT_DENIED }),
+      });
+
+      const result = await client.evaluateInterrupt("busyuser");
+      expect(result.allowed).toBe(false);
+      expect(result.autoResponse).toBeTruthy();
+    });
+
+    it("passes handle as variable", async () => {
+      let capturedBody: string | undefined;
+      const fetchFn = ((_url: string, init: RequestInit) => {
+        capturedBody = init.body as string;
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ data: { evaluateInterrupt: RAW_INTERRUPT_ALLOWED } }),
+        });
+      }) as unknown as typeof globalThis.fetch;
+
+      const client = new HeadsDownClient({ ...CLIENT_OPTS, fetch: fetchFn });
+      await client.evaluateInterrupt("targethandle");
+
+      const body = JSON.parse(capturedBody!);
+      expect(body.variables.handle).toBe("targethandle");
+    });
+
+    it("throws ValidationError for empty handle", async () => {
+      const client = new HeadsDownClient({ ...CLIENT_OPTS, fetch: mockGraphQL({}) });
+      await expect(client.evaluateInterrupt("")).rejects.toThrow(ValidationError);
+    });
+  });
+
+  // === listCalibrationProfiles ===
+
+  describe("listCalibrationProfiles", () => {
+    it("returns calibration profiles with normalized enums", async () => {
+      const client = new HeadsDownClient({
+        ...CLIENT_OPTS,
+        fetch: mockGraphQL({ calibrationProfiles: [RAW_CALIBRATION_PROFILE] }),
+      });
+
+      const profiles = await client.listCalibrationProfiles();
+      expect(profiles).toHaveLength(1);
+      expect(profiles[0]).toEqual(NORMALIZED_CALIBRATION_PROFILE);
+      expect(profiles[0].confidenceLevel).toBe("high");
+    });
+  });
+
+  // === verdictSettings ===
+
+  describe("getVerdictSettings", () => {
+    it("returns verdict settings", async () => {
+      const client = new HeadsDownClient({
+        ...CLIENT_OPTS,
+        fetch: mockGraphQL({ verdictSettings: RAW_VERDICT_SETTINGS }),
+      });
+
+      const settings = await client.getVerdictSettings();
+      expect(settings).toEqual(NORMALIZED_VERDICT_SETTINGS);
+    });
+  });
+
+  describe("updateVerdictSettings", () => {
+    it("sends mode thresholds and returns updated settings", async () => {
+      let capturedBody: string | undefined;
+      const fetchFn = ((_url: string, init: RequestInit) => {
+        capturedBody = init.body as string;
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ data: { updateVerdictSettings: RAW_VERDICT_SETTINGS } }),
+        });
+      }) as unknown as typeof globalThis.fetch;
+
+      const client = new HeadsDownClient({ ...CLIENT_OPTS, fetch: fetchFn });
+      const thresholds = { online: 60, busy: 15, limited: 5, offline: 0 };
+      const settings = await client.updateVerdictSettings(thresholds);
+
+      expect(settings).toEqual(NORMALIZED_VERDICT_SETTINGS);
+
+      const body = JSON.parse(capturedBody!);
+      expect(body.variables.modeThresholds).toEqual(thresholds);
+    });
+  });
+
+  // === digest ===
+
+  describe("listDigestSummaries", () => {
+    it("returns digest summaries", async () => {
+      const client = new HeadsDownClient({
+        ...CLIENT_OPTS,
+        fetch: mockGraphQL({ digestSummaries: [RAW_DIGEST_SUMMARY] }),
+      });
+
+      const digests = await client.listDigestSummaries();
+      expect(digests).toEqual([NORMALIZED_DIGEST_SUMMARY]);
+    });
+
+    it("passes latest variable when provided", async () => {
+      let capturedBody: string | undefined;
+      const fetchFn = ((_url: string, init: RequestInit) => {
+        capturedBody = init.body as string;
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ data: { digestSummaries: [RAW_DIGEST_SUMMARY] } }),
+        });
+      }) as unknown as typeof globalThis.fetch;
+
+      const client = new HeadsDownClient({ ...CLIENT_OPTS, fetch: fetchFn });
+      await client.listDigestSummaries({ latest: 3 });
+
+      const body = JSON.parse(capturedBody!);
+      expect(body.variables.latest).toBe(3);
+    });
+  });
+
+  describe("dismissDigestEntry", () => {
+    it("dismisses a digest entry", async () => {
+      const client = new HeadsDownClient({
+        ...CLIENT_OPTS,
+        fetch: mockGraphQL({ dismissDigestEntry: RAW_DIGEST_SUMMARY }),
+      });
+
+      const digest = await client.dismissDigestEntry("digest-1");
+      expect(digest).toEqual(NORMALIZED_DIGEST_SUMMARY);
+    });
+
+    it("throws ValidationError for empty digest id", async () => {
+      const client = new HeadsDownClient({ ...CLIENT_OPTS, fetch: mockGraphQL({}) });
+      await expect(client.dismissDigestEntry("")).rejects.toThrow(ValidationError);
+    });
+  });
+
+  // === auto responder ===
+
+  describe("getAutoResponderSettings", () => {
+    it("returns auto responder settings", async () => {
+      const client = new HeadsDownClient({
+        ...CLIENT_OPTS,
+        fetch: mockGraphQL({ autoResponderSettings: RAW_AUTO_RESPONDER_SETTINGS }),
+      });
+
+      const settings = await client.getAutoResponderSettings();
+      expect(settings).toEqual(NORMALIZED_AUTO_RESPONDER_SETTINGS);
+    });
+  });
+
+  describe("updateAutoResponderSettings", () => {
+    it("updates auto responder settings", async () => {
+      let capturedBody: string | undefined;
+      const fetchFn = ((_url: string, init: RequestInit) => {
+        capturedBody = init.body as string;
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () =>
+            Promise.resolve({ data: { updateAutoResponderSettings: RAW_AUTO_RESPONDER_SETTINGS } }),
+        });
+      }) as unknown as typeof globalThis.fetch;
+
+      const client = new HeadsDownClient({ ...CLIENT_OPTS, fetch: fetchFn });
+      const settings = await client.updateAutoResponderSettings({
+        busyText: "Busy",
+        offlineText: "Offline",
+      });
+
+      expect(settings).toEqual(NORMALIZED_AUTO_RESPONDER_SETTINGS);
+      const body = JSON.parse(capturedBody!);
+      expect(body.variables.busyText).toBe("Busy");
+      expect(body.variables.offlineText).toBe("Offline");
+      expect(body.variables).not.toHaveProperty("limitedText");
+    });
+  });
+
+  // === teams ===
+
+  describe("listTeams", () => {
+    it("returns teams", async () => {
+      const client = new HeadsDownClient({
+        ...CLIENT_OPTS,
+        fetch: mockGraphQL({ teams: [RAW_TEAM] }),
+      });
+
+      const teams = await client.listTeams();
+      expect(teams).toEqual([NORMALIZED_TEAM]);
+    });
+
+    it("passes id variable when provided", async () => {
+      let capturedBody: string | undefined;
+      const fetchFn = ((_url: string, init: RequestInit) => {
+        capturedBody = init.body as string;
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ data: { teams: [RAW_TEAM] } }),
+        });
+      }) as unknown as typeof globalThis.fetch;
+
+      const client = new HeadsDownClient({ ...CLIENT_OPTS, fetch: fetchFn });
+      await client.listTeams({ id: "team-1" });
+
+      const body = JSON.parse(capturedBody!);
+      expect(body.variables.id).toBe("team-1");
+    });
+  });
+
+  describe("getCompany", () => {
+    it("returns company", async () => {
+      const client = new HeadsDownClient({
+        ...CLIENT_OPTS,
+        fetch: mockGraphQL({ company: RAW_COMPANY }),
+      });
+
+      const company = await client.getCompany();
+      expect(company).toEqual(NORMALIZED_COMPANY);
+    });
+  });
+
+  describe("listTeamPresence", () => {
+    it("returns team presence entries", async () => {
+      const client = new HeadsDownClient({
+        ...CLIENT_OPTS,
+        fetch: mockGraphQL({ teamPresence: [RAW_TEAM_PRESENCE] }),
+      });
+
+      const presence = await client.listTeamPresence("team-1");
+      expect(presence).toEqual([NORMALIZED_TEAM_PRESENCE]);
+    });
+
+    it("throws ValidationError for empty team id", async () => {
+      const client = new HeadsDownClient({ ...CLIENT_OPTS, fetch: mockGraphQL({}) });
+      await expect(client.listTeamPresence("")).rejects.toThrow(ValidationError);
+    });
+  });
+
+  // === schedule with at parameter ===
+
+  describe("getSchedule with at parameter", () => {
+    it("passes at variable when provided", async () => {
+      let capturedBody: string | undefined;
+      const fetchFn = ((_url: string, init: RequestInit) => {
+        capturedBody = init.body as string;
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ data: { schedule: RAW_SCHEDULE } }),
+        });
+      }) as unknown as typeof globalThis.fetch;
+
+      const client = new HeadsDownClient({ ...CLIENT_OPTS, fetch: fetchFn });
+      await client.getSchedule({ at: "2025-06-16T09:00:00Z" });
+
+      const body = JSON.parse(capturedBody!);
+      expect(body.variables.at).toBe("2025-06-16T09:00:00Z");
+    });
+
+    it("omits variables when no at provided", async () => {
+      let capturedBody: string | undefined;
+      const fetchFn = ((_url: string, init: RequestInit) => {
+        capturedBody = init.body as string;
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ data: { schedule: RAW_SCHEDULE } }),
+        });
+      }) as unknown as typeof globalThis.fetch;
+
+      const client = new HeadsDownClient({ ...CLIENT_OPTS, fetch: fetchFn });
+      await client.getSchedule();
+
+      const body = JSON.parse(capturedBody!);
+      expect(body.variables).toBeUndefined();
     });
   });
 

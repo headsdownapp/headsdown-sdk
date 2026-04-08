@@ -1,12 +1,14 @@
 import { ApiError, AuthError, NetworkError } from "./errors.js";
-import type {
-  GraphQLResponse,
-  Mode,
-  VerdictDecision,
-  AlertLevel,
-  PresenceLevel,
-  DayName,
-} from "./types.js";
+import type { GraphQLResponse, Mode, VerdictDecision, DayName } from "./types.js";
+
+type NormalizeEnumString<T extends string> = Uppercase<T> extends T ? Lowercase<T> : T;
+export type Normalized<T> = T extends string
+  ? NormalizeEnumString<T>
+  : T extends Array<infer U>
+    ? Array<Normalized<U>>
+    : T extends object
+      ? { [K in keyof T]: Normalized<T[K]> }
+      : T;
 
 const DEFAULT_BASE_URL = "https://headsdown.app";
 const DEFAULT_TIMEOUT = 30_000;
@@ -16,6 +18,24 @@ export interface GraphQLClientOptions {
   baseUrl?: string;
   fetch?: typeof globalThis.fetch;
   timeout?: number;
+  retries?: number;
+  retryDelayMs?: number;
+  hooks?: {
+    onRequest?: (event: {
+      url: string;
+      attempt: number;
+      query: string;
+      variables?: Record<string, unknown>;
+    }) => void;
+    onResponse?: (event: {
+      url: string;
+      attempt: number;
+      status: number;
+      ok: boolean;
+      requestId?: string;
+    }) => void;
+    onRetry?: (event: { url: string; attempt: number; delayMs: number; reason: string }) => void;
+  };
 }
 
 /**
@@ -27,74 +47,147 @@ export class GraphQLClient {
   private readonly baseUrl: string;
   private readonly fetchFn: typeof globalThis.fetch;
   private readonly timeout: number;
+  private readonly retries: number;
+  private readonly retryDelayMs: number;
+  private readonly hooks: NonNullable<GraphQLClientOptions["hooks"]>;
 
   constructor(options: GraphQLClientOptions) {
     this.apiKey = options.apiKey;
     this.baseUrl = (options.baseUrl ?? DEFAULT_BASE_URL).replace(/\/+$/, "");
     this.fetchFn = options.fetch ?? globalThis.fetch;
     this.timeout = options.timeout ?? DEFAULT_TIMEOUT;
+    this.retries = options.retries ?? 2;
+    this.retryDelayMs = options.retryDelayMs ?? 250;
+    this.hooks = options.hooks ?? {};
   }
 
   /** Execute a GraphQL query or mutation. Returns the `data` payload with enums lowercased. */
-  async request<T>(query: string, variables?: Record<string, unknown>): Promise<T> {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), this.timeout);
+  async request<
+    T,
+    TVariables extends Record<string, unknown> | undefined = Record<string, unknown>,
+  >(query: string, variables?: TVariables): Promise<Normalized<T>> {
+    const url = `${this.baseUrl}/graphql`;
 
-    let response: Response;
-    try {
-      response = await this.fetchFn(`${this.baseUrl}/graphql`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${this.apiKey}`,
-        },
-        body: JSON.stringify({ query, variables }),
-        signal: controller.signal,
-      });
-    } catch (error) {
-      if (error instanceof DOMException && error.name === "AbortError") {
-        throw new NetworkError(`Request timed out after ${this.timeout}ms`);
+    for (let attempt = 0; attempt <= this.retries; attempt++) {
+      this.hooks.onRequest?.({ url, attempt, query, variables });
+
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), this.timeout);
+
+      let response: Response;
+      try {
+        response = await this.fetchFn(url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${this.apiKey}`,
+          },
+          body: JSON.stringify({ query, variables }),
+          signal: controller.signal,
+        });
+      } catch (error) {
+        clearTimeout(timer);
+        const networkError =
+          error instanceof DOMException && error.name === "AbortError"
+            ? new NetworkError(`Request timed out after ${this.timeout}ms`)
+            : new NetworkError(
+                `Failed to connect to HeadsDown API at ${this.baseUrl}: ${(error as Error)?.message ?? String(error)}`,
+                error instanceof Error ? error : undefined,
+              );
+
+        if (attempt < this.retries) {
+          const delayMs = this.retryDelayMs * Math.pow(2, attempt);
+          this.hooks.onRetry?.({ url, attempt, delayMs, reason: networkError.message });
+          await sleep(delayMs);
+          continue;
+        }
+
+        throw networkError;
+      } finally {
+        clearTimeout(timer);
       }
-      const cause = error instanceof Error ? error : undefined;
-      throw new NetworkError(
-        `Failed to connect to HeadsDown API at ${this.baseUrl}: ${cause?.message ?? String(error)}`,
-        cause,
-      );
-    } finally {
-      clearTimeout(timer);
-    }
 
-    if (response.status === 401) {
-      throw new AuthError(
-        "API key is invalid or expired. Authenticate again with DeviceFlow or provide a valid key.",
-      );
-    }
-
-    if (!response.ok) {
-      const body = await response.text().catch(() => "");
-      throw new ApiError(`HeadsDown API returned ${response.status}: ${body}`, {
+      const requestId = response.headers?.get?.("x-request-id") ?? undefined;
+      this.hooks.onResponse?.({
+        url,
+        attempt,
         status: response.status,
+        ok: response.ok,
+        requestId,
       });
+
+      if (response.status === 401) {
+        throw new AuthError(
+          "API key is invalid or expired. Authenticate again with DeviceFlow or provide a valid key.",
+        );
+      }
+
+      if (!response.ok) {
+        const body = await response.text().catch(() => "");
+        const message = `HeadsDown API returned ${response.status}: ${body}`;
+
+        if (attempt < this.retries && isRetryableStatus(response.status)) {
+          const delayMs = retryDelayFromResponse(
+            response,
+            this.retryDelayMs * Math.pow(2, attempt),
+          );
+          this.hooks.onRetry?.({ url, attempt, delayMs, reason: message });
+          await sleep(delayMs);
+          continue;
+        }
+
+        throw new ApiError(message, { status: response.status, requestId });
+      }
+
+      let json: GraphQLResponse<T>;
+      try {
+        json = (await response.json()) as GraphQLResponse<T>;
+      } catch {
+        throw new ApiError("HeadsDown API returned invalid JSON.", { requestId });
+      }
+
+      if (json.errors?.length) {
+        const messages = json.errors.map((e) => e.message).join("; ");
+        throw new ApiError(`GraphQL error: ${messages}`, {
+          graphqlErrors: json.errors,
+          requestId,
+        });
+      }
+
+      if (!json.data) {
+        throw new ApiError("HeadsDown API returned an empty response.", { requestId });
+      }
+
+      return normalizeEnums(json.data) as Normalized<T>;
     }
 
-    let json: GraphQLResponse<T>;
-    try {
-      json = (await response.json()) as GraphQLResponse<T>;
-    } catch {
-      throw new ApiError("HeadsDown API returned invalid JSON.");
-    }
-
-    if (json.errors?.length) {
-      const messages = json.errors.map((e) => e.message).join("; ");
-      throw new ApiError(`GraphQL error: ${messages}`, { graphqlErrors: json.errors });
-    }
-
-    if (!json.data) {
-      throw new ApiError("HeadsDown API returned an empty response.");
-    }
-
-    return normalizeEnums(json.data);
+    throw new ApiError("Unexpected request loop termination.");
   }
+}
+
+function isRetryableStatus(status: number): boolean {
+  return status === 408 || status === 429 || status === 502 || status === 503 || status === 504;
+}
+
+function retryDelayFromResponse(response: Response, fallbackMs: number): number {
+  const retryAfter = response.headers?.get?.("retry-after");
+  if (!retryAfter) return fallbackMs;
+
+  const asSeconds = Number(retryAfter);
+  if (Number.isFinite(asSeconds) && asSeconds >= 0) {
+    return Math.round(asSeconds * 1000);
+  }
+
+  const retryAt = Date.parse(retryAfter);
+  if (!Number.isNaN(retryAt)) {
+    return Math.max(0, retryAt - Date.now());
+  }
+
+  return fallbackMs;
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 // === Enum Normalization ===
@@ -107,11 +200,15 @@ const ENUM_FIELDS = new Set([
   "mode",
   "decision",
   "verdict",
-  "alerts",
-  "presence",
+  "originalVerdict",
+  "overrideVerdict",
   "day",
   "nextWorkday",
   "outcome",
+  "confidenceLevel",
+  "policyStatus",
+  "visibilityLevel",
+  "alertsPolicy",
 ]);
 
 /** Convert SCREAMING_CASE enum values to lowercase in a response object. */
@@ -139,4 +236,4 @@ export function toGraphQLEnum(value: string): string {
 }
 
 // Re-export for type narrowing in the client
-export type { Mode, VerdictDecision, AlertLevel, PresenceLevel, DayName };
+export type { Mode, VerdictDecision, DayName };

@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { GraphQLClient } from "../src/graphql.js";
 import { ApiError, AuthError, NetworkError } from "../src/errors.js";
 import {
@@ -146,6 +146,98 @@ describe("GraphQLClient", () => {
       expect(error).toBeInstanceOf(NetworkError);
       expect(error.message).toContain("ECONNREFUSED");
       expect(error.cause).toBeInstanceOf(TypeError);
+    });
+
+    it("retries transient network errors and eventually succeeds", async () => {
+      let calls = 0;
+      const fetchFn = (() => {
+        calls++;
+        if (calls < 3) {
+          return Promise.reject(new TypeError("ECONNRESET"));
+        }
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ data: { test: true } }),
+          headers: new Headers(),
+        });
+      }) as unknown as typeof globalThis.fetch;
+
+      const onRetry = vi.fn();
+      const client = new GraphQLClient({
+        ...BASE_OPTIONS,
+        fetch: fetchFn,
+        retries: 2,
+        retryDelayMs: 0,
+        hooks: { onRetry },
+      });
+
+      const data = await client.request<{ test: boolean }>("query { test }");
+      expect(data.test).toBe(true);
+      expect(calls).toBe(3);
+      expect(onRetry).toHaveBeenCalledTimes(2);
+    });
+
+    it("retries retryable HTTP status codes and eventually succeeds", async () => {
+      let calls = 0;
+      const fetchFn = (() => {
+        calls++;
+        if (calls < 3) {
+          return Promise.resolve({
+            ok: false,
+            status: 503,
+            text: () => Promise.resolve("Service unavailable"),
+            headers: new Headers(),
+          });
+        }
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ data: { test: true } }),
+          headers: new Headers(),
+        });
+      }) as unknown as typeof globalThis.fetch;
+
+      const client = new GraphQLClient({
+        ...BASE_OPTIONS,
+        fetch: fetchFn,
+        retries: 2,
+        retryDelayMs: 0,
+      });
+      const data = await client.request<{ test: boolean }>("query { test }");
+      expect(data.test).toBe(true);
+      expect(calls).toBe(3);
+    });
+
+    it("captures x-request-id on API errors", async () => {
+      const fetchFn = (() =>
+        Promise.resolve({
+          ok: false,
+          status: 500,
+          text: () => Promise.resolve("Internal Server Error"),
+          headers: new Headers({ "x-request-id": "req_123" }),
+        })) as unknown as typeof globalThis.fetch;
+
+      const client = new GraphQLClient({ ...BASE_OPTIONS, fetch: fetchFn, retries: 0 });
+      const error = await client.request("query { test }").catch((e) => e as ApiError);
+      expect(error).toBeInstanceOf(ApiError);
+      expect(error.requestId).toBe("req_123");
+    });
+
+    it("calls request and response hooks", async () => {
+      const onRequest = vi.fn();
+      const onResponse = vi.fn();
+      const client = new GraphQLClient({
+        ...BASE_OPTIONS,
+        fetch: mockGraphQL({ test: true }),
+        hooks: { onRequest, onResponse },
+      });
+
+      await client.request("query { test }");
+
+      expect(onRequest).toHaveBeenCalledTimes(1);
+      expect(onResponse).toHaveBeenCalledTimes(1);
+      expect(onResponse.mock.calls[0][0].status).toBe(200);
     });
 
     it("throws NetworkError on timeout", async () => {

@@ -1,7 +1,16 @@
 import type {
+  AutoResponderSettings,
+  Company,
   Contract,
-  Calendar,
+  ScheduleResolution,
+  CalibrationProfile,
+  DigestSummary,
+  InterruptResult,
+  Team,
+  TeamPresence,
   Verdict,
+  VerdictOverride,
+  VerdictSettings,
   TaskProposal,
   Preset,
   UserProfile,
@@ -15,14 +24,13 @@ export const RAW_CONTRACT = {
   status: true,
   statusEmoji: "🔨",
   statusText: "Deep work",
-  afk: false,
   autoRespond: true,
   lock: true,
   duration: 120,
+  ruleSetType: null,
+  ruleSetParams: null,
   expiresAt: "2025-06-15T18:00:00Z",
   insertedAt: "2025-06-15T16:00:00Z",
-  recordMessages: false,
-  snooze: false,
 };
 
 export const NORMALIZED_CONTRACT: Contract = {
@@ -31,42 +39,55 @@ export const NORMALIZED_CONTRACT: Contract = {
   status: true,
   statusEmoji: "🔨",
   statusText: "Deep work",
-  afk: false,
   autoRespond: true,
   lock: true,
   duration: 120,
+  ruleSetType: null,
+  ruleSetParams: null,
   expiresAt: "2025-06-15T18:00:00Z",
   insertedAt: "2025-06-15T16:00:00Z",
-  recordMessages: false,
-  snooze: false,
 };
 
-export const RAW_CALENDAR = {
-  automateEndOfDay: true,
-  automateStartOfDay: true,
-  day: "WEDNESDAY",
-  endsAt: "2025-06-15T17:00:00-06:00",
-  nextWorkday: "THURSDAY",
-  nextWorkdayStartsAt: "2025-06-16T09:00:00-06:00",
-  now: "2025-06-15T14:30:00-06:00",
-  offHours: false,
-  startsAt: "2025-06-15T09:00:00-06:00",
-  workHours: true,
-  working: true,
+export const RAW_SCHEDULE = {
+  inReachableHours: true,
+  nextTransitionAt: "2025-06-15T17:00:00-06:00",
+  activeWindow: {
+    id: "window-1",
+    label: "Work Hours",
+    priority: 1,
+    startTime: "09:00:00",
+    endTime: "17:00:00",
+    days: ["monday", "tuesday", "wednesday", "thursday", "friday"],
+    mode: "ONLINE",
+    alertsPolicy: "INTERRUPTABLE",
+    snooze: false,
+    status: true,
+    statusEmoji: "💻",
+    statusText: "Working",
+    autoActivate: true,
+  },
+  nextWindow: null,
 };
 
-export const NORMALIZED_CALENDAR: Calendar = {
-  automateEndOfDay: true,
-  automateStartOfDay: true,
-  day: "wednesday",
-  endsAt: "2025-06-15T17:00:00-06:00",
-  nextWorkday: "thursday",
-  nextWorkdayStartsAt: "2025-06-16T09:00:00-06:00",
-  now: "2025-06-15T14:30:00-06:00",
-  offHours: false,
-  startsAt: "2025-06-15T09:00:00-06:00",
-  workHours: true,
-  working: true,
+export const NORMALIZED_SCHEDULE: ScheduleResolution = {
+  inReachableHours: true,
+  nextTransitionAt: "2025-06-15T17:00:00-06:00",
+  activeWindow: {
+    id: "window-1",
+    label: "Work Hours",
+    priority: 1,
+    startTime: "09:00:00",
+    endTime: "17:00:00",
+    days: ["monday", "tuesday", "wednesday", "thursday", "friday"],
+    mode: "online",
+    alertsPolicy: "interruptable",
+    snooze: false,
+    status: true,
+    statusEmoji: "💻",
+    statusText: "Working",
+    autoActivate: true,
+  },
+  nextWindow: null,
 };
 
 export const RAW_VERDICT_APPROVED = {
@@ -130,8 +151,6 @@ export const NORMALIZED_PROPOSAL: TaskProposal = {
 export const RAW_PRESET = {
   id: "preset-1",
   name: "Deep Work",
-  alerts: "DO_NOT_DISTURB",
-  presence: "ON_KEYS",
   status: true,
   statusEmoji: "🔨",
   statusText: "Deep work",
@@ -143,8 +162,6 @@ export const RAW_PRESET = {
 export const NORMALIZED_PRESET: Preset = {
   id: "preset-1",
   name: "Deep Work",
-  alerts: "do_not_disturb",
-  presence: "on_keys",
   status: true,
   statusEmoji: "🔨",
   statusText: "Deep work",
@@ -156,12 +173,167 @@ export const NORMALIZED_PRESET: Preset = {
 export const RAW_PROFILE = {
   id: "user-1",
   name: "Test User",
+  handle: "testuser",
   email: "test@example.com",
   avatar: "https://example.com/avatar.png",
+  timezone: "America/Denver",
+  visibilityLevel: "APPROXIMATE",
+  showStatusMessage: true,
+  confirmedAt: "2025-01-01T00:00:00Z",
   location: "Denver, CO",
+  insertedAt: "2025-01-01T00:00:00Z",
+  updatedAt: "2025-06-01T00:00:00Z",
 };
 
-export const NORMALIZED_PROFILE: UserProfile = { ...RAW_PROFILE };
+export const NORMALIZED_PROFILE: UserProfile = {
+  id: "user-1",
+  name: "Test User",
+  handle: "testuser",
+  email: "test@example.com",
+  avatar: "https://example.com/avatar.png",
+  timezone: "America/Denver",
+  visibilityLevel: "approximate",
+  showStatusMessage: true,
+  confirmedAt: "2025-01-01T00:00:00Z",
+  location: "Denver, CO",
+  insertedAt: "2025-01-01T00:00:00Z",
+  updatedAt: "2025-06-01T00:00:00Z",
+};
+
+export const RAW_VERDICT_OVERRIDE = {
+  id: "override-1",
+  originalVerdict: "DEFERRED",
+  overrideVerdict: "APPROVED",
+  reason: "Urgent hotfix needed",
+  proposalId: "proposal-def-456",
+  insertedAt: "2025-06-15T15:00:00Z",
+};
+
+export const NORMALIZED_VERDICT_OVERRIDE: VerdictOverride = {
+  id: "override-1",
+  originalVerdict: "deferred",
+  overrideVerdict: "approved",
+  reason: "Urgent hotfix needed",
+  proposalId: "proposal-def-456",
+  insertedAt: "2025-06-15T15:00:00Z",
+};
+
+export const RAW_INTERRUPT_ALLOWED: InterruptResult = {
+  allowed: true,
+  reason: "User is online and interruptable",
+  autoResponse: null,
+};
+
+export const RAW_INTERRUPT_DENIED: InterruptResult = {
+  allowed: false,
+  reason: "User is in do_not_disturb mode",
+  autoResponse: "I'm heads down right now. I'll get back to you later.",
+};
+
+export const RAW_CALIBRATION_PROFILE = {
+  id: "profile-1",
+  model: "claude-sonnet-4",
+  framework: "claude-code",
+  sampleSize: 50,
+  medianDurationMinutes: 15.0,
+  successRate: 0.85,
+  overrideRate: 0.1,
+  p25DurationMinutes: 8.0,
+  p75DurationMinutes: 25.0,
+  durationCiLower: 12.0,
+  durationCiUpper: 18.0,
+  successRateCiLower: 0.75,
+  successRateCiUpper: 0.92,
+  confidenceLevel: "HIGH",
+  tier: "established",
+  status: "active",
+  tasksToHighConfidence: 0,
+  insertedAt: "2025-06-01T00:00:00Z",
+  updatedAt: "2025-06-15T00:00:00Z",
+};
+
+export const NORMALIZED_CALIBRATION_PROFILE: CalibrationProfile = {
+  ...RAW_CALIBRATION_PROFILE,
+  confidenceLevel: "high",
+};
+
+export const RAW_VERDICT_SETTINGS = {
+  id: "settings-1",
+  modeThresholds: { online: 60, busy: 15, limited: 5, offline: 0 },
+  insertedAt: "2025-06-01T00:00:00Z",
+  updatedAt: "2025-06-10T00:00:00Z",
+};
+
+export const NORMALIZED_VERDICT_SETTINGS: VerdictSettings = { ...RAW_VERDICT_SETTINGS };
+
+export const RAW_DIGEST_SUMMARY = {
+  id: "digest-1",
+  actorRef: "slack:user:123",
+  actorLabel: "Jane Dev",
+  sourceType: "slack",
+  action: "message",
+  channelRef: "C123",
+  events: [{ description: "Pinged you in #eng", insertedAt: "2025-06-15T12:01:00Z" }],
+  entryCount: 1,
+  firstEventAt: "2025-06-15T12:01:00Z",
+  lastEventAt: "2025-06-15T12:01:00Z",
+};
+
+export const NORMALIZED_DIGEST_SUMMARY: DigestSummary = { ...RAW_DIGEST_SUMMARY };
+
+export const RAW_AUTO_RESPONDER_SETTINGS = {
+  id: "ars-1",
+  busyText: "Heads down, will reply later",
+  limitedText: "In limited mode right now",
+  offlineText: "Offline for now",
+  insertedAt: "2025-06-01T10:00:00Z",
+  updatedAt: "2025-06-10T10:00:00Z",
+};
+
+export const NORMALIZED_AUTO_RESPONDER_SETTINGS: AutoResponderSettings = {
+  ...RAW_AUTO_RESPONDER_SETTINGS,
+};
+
+export const RAW_TEAM = {
+  id: "team-1",
+  name: "Platform",
+  icon: "rocket",
+  description: "Core platform team",
+  members: [
+    {
+      id: "user-2",
+      email: "member@example.com",
+      name: "Team Member",
+      location: "Denver",
+      avatar: "https://example.com/member.png",
+    },
+  ],
+};
+
+export const NORMALIZED_TEAM: Team = { ...RAW_TEAM };
+
+export const RAW_COMPANY = {
+  id: "company-1",
+  name: "HeadsDown",
+  teams: [
+    {
+      id: "team-1",
+      name: "Platform",
+      icon: "rocket",
+      description: "Core platform team",
+    },
+  ],
+};
+
+export const NORMALIZED_COMPANY: Company = { ...RAW_COMPANY };
+
+export const RAW_TEAM_PRESENCE = {
+  userId: "user-2",
+  onlineAt: "2025-06-15T12:03:00Z",
+  connectionType: "websocket",
+};
+
+export const NORMALIZED_TEAM_PRESENCE: TeamPresence = { ...RAW_TEAM_PRESENCE };
 
 // === Helper: Create a mock fetch that returns a GraphQL response ===
 
