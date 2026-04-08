@@ -188,7 +188,7 @@ export class HeadsDownClient {
   async getActiveContract(): Promise<Contract | null> {
     try {
       const data = await this.graphql.request<ActiveContractQuery>(ACTIVE_CONTRACT_QUERY);
-      return data.activeContract as unknown as Contract | null;
+      return data.activeContract as Contract | null;
     } catch (error) {
       // The API returns a GraphQL error when no contract exists.
       if (error instanceof Error && error.message.includes("No active contract")) {
@@ -205,7 +205,7 @@ export class HeadsDownClient {
     if (!data.calendar) {
       throw new ApiError("HeadsDown API returned no calendar data.");
     }
-    return data.calendar as unknown as Calendar;
+    return data.calendar as Calendar;
   }
 
   /**
@@ -223,8 +223,8 @@ export class HeadsDownClient {
         throw new ApiError("HeadsDown API returned no calendar data.");
       }
       return {
-        contract: data.activeContract as unknown as Contract | null,
-        calendar: data.calendar as unknown as Calendar,
+        contract: data.activeContract as Contract | null,
+        calendar: data.calendar as Calendar,
       };
     } catch (error) {
       if (error instanceof Error && error.message.includes("No active contract")) {
@@ -275,7 +275,7 @@ export class HeadsDownClient {
     if (!data.submitProposal) {
       throw new ApiError("HeadsDown API returned no submitProposal data.");
     }
-    return data.submitProposal as unknown as Verdict;
+    return data.submitProposal as Verdict;
   }
 
   /**
@@ -302,7 +302,7 @@ export class HeadsDownClient {
     if (!data.overrideVerdict) {
       throw new ApiError("HeadsDown API returned no overrideVerdict data.");
     }
-    return data.overrideVerdict as unknown as VerdictOverride;
+    return data.overrideVerdict as VerdictOverride;
   }
 
   /** List previously submitted proposals, optionally filtered by verdict or limited. */
@@ -315,7 +315,7 @@ export class HeadsDownClient {
       LIST_PROPOSALS_QUERY,
       Object.keys(variables).length > 0 ? variables : undefined,
     );
-    return (data.proposals ?? []) as unknown as TaskProposal[];
+    return (data.proposals ?? []) as TaskProposal[];
   }
 
   // === Presets ===
@@ -338,7 +338,7 @@ export class HeadsDownClient {
     if (!data.applyPreset) {
       throw new ApiError("HeadsDown API returned no applyPreset data.");
     }
-    return data.applyPreset as unknown as Contract;
+    return data.applyPreset as Contract;
   }
 
   // === Contracts ===
@@ -369,7 +369,7 @@ export class HeadsDownClient {
     if (!data.createContract) {
       throw new ApiError("HeadsDown API returned no createContract data.");
     }
-    return data.createContract as unknown as Contract;
+    return data.createContract as Contract;
   }
 
   // === Profile ===
@@ -380,7 +380,7 @@ export class HeadsDownClient {
     if (!data.profile) {
       throw new ApiError("HeadsDown API returned no profile data.");
     }
-    return data.profile as unknown as UserProfile;
+    return data.profile as UserProfile;
   }
 
   // === Interrupts ===
@@ -539,7 +539,7 @@ export class HeadsDownClient {
   /** List calibration profiles for the current user's model/framework pairs. */
   async listCalibrationProfiles(): Promise<CalibrationProfile[]> {
     const data = await this.graphql.request<CalibrationProfilesQuery>(CALIBRATION_PROFILES_QUERY);
-    return (data.calibrationProfiles ?? []) as unknown as CalibrationProfile[];
+    return (data.calibrationProfiles ?? []) as CalibrationProfile[];
   }
 
   // === Verdict Settings ===
@@ -606,7 +606,7 @@ export class HeadsDownClient {
     if (!data.reportOutcome) {
       throw new ApiError("HeadsDown API returned no reportOutcome data.");
     }
-    return data.reportOutcome as unknown as TaskOutcome;
+    return data.reportOutcome as TaskOutcome;
   }
 }
 

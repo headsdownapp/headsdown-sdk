@@ -1,6 +1,15 @@
 import { ApiError, AuthError, NetworkError } from "./errors.js";
 import type { GraphQLResponse, Mode, VerdictDecision, DayName } from "./types.js";
 
+type NormalizeEnumString<T extends string> = Uppercase<T> extends T ? Lowercase<T> : T;
+export type Normalized<T> = T extends string
+  ? NormalizeEnumString<T>
+  : T extends Array<infer U>
+    ? Array<Normalized<U>>
+    : T extends object
+      ? { [K in keyof T]: Normalized<T[K]> }
+      : T;
+
 const DEFAULT_BASE_URL = "https://headsdown.app";
 const DEFAULT_TIMEOUT = 30_000;
 
@@ -56,7 +65,7 @@ export class GraphQLClient {
   async request<
     T,
     TVariables extends Record<string, unknown> | undefined = Record<string, unknown>,
-  >(query: string, variables?: TVariables): Promise<T> {
+  >(query: string, variables?: TVariables): Promise<Normalized<T>> {
     const url = `${this.baseUrl}/graphql`;
 
     for (let attempt = 0; attempt <= this.retries; attempt++) {
@@ -149,7 +158,7 @@ export class GraphQLClient {
         throw new ApiError("HeadsDown API returned an empty response.", { requestId });
       }
 
-      return normalizeEnums(json.data);
+      return normalizeEnums(json.data) as Normalized<T>;
     }
 
     throw new ApiError("Unexpected request loop termination.");

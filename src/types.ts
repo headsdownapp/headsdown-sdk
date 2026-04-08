@@ -113,7 +113,7 @@ export interface Team {
   name: string;
   icon: string | null;
   description: string | null;
-  members: TeamMember[] | null;
+  members?: TeamMember[] | null;
 }
 
 /** Organization-level container for teams. */
