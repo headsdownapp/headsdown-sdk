@@ -6,16 +6,19 @@ export type Mode = "online" | "busy" | "limited" | "offline";
 /** Verdict on a task proposal. */
 export type VerdictDecision = "approved" | "deferred";
 
-/** Alert behavior preference. */
-export type AlertLevel =
+/** Confidence level for a calibration profile. */
+export type ConfidenceLevel = "learning" | "high";
+
+/** Controls how much timing detail the public availability page reveals. */
+export type VisibilityLevel = "minimal" | "approximate" | "precise";
+
+/** Notification policy for a reachability window. */
+export type AlertsPolicy =
   | "interruptable"
   | "do_not_disturb"
   | "take_a_number"
   | "after_hours"
   | "off";
-
-/** Physical presence during an activity. */
-export type PresenceLevel = "on_keys" | "distracted" | "afk";
 
 /** Day of the week. */
 export type DayName =
@@ -44,14 +47,13 @@ export interface Contract {
   status: boolean;
   statusEmoji: string | null;
   statusText: string | null;
-  afk: boolean;
   autoRespond: boolean;
   lock: boolean | null;
   duration: number | null;
+  ruleSetType: string | null;
+  ruleSetParams: Record<string, unknown> | null;
   expiresAt: string;
   insertedAt: string;
-  recordMessages: boolean;
-  snooze: boolean;
 }
 
 /** The user's current work schedule context. */
@@ -73,8 +75,6 @@ export interface Calendar {
 export interface Preset {
   id: string;
   name: string;
-  alerts: AlertLevel;
-  presence: PresenceLevel;
   status: boolean;
   statusEmoji: string | null;
   statusText: string | null;
@@ -89,6 +89,54 @@ export interface Verdict {
   reason: string;
   proposalId: string;
   evaluatedAt: string;
+}
+
+/** The result of overriding a verdict. */
+export interface VerdictOverride {
+  id: string;
+  originalVerdict: VerdictDecision;
+  overrideVerdict: VerdictDecision;
+  reason: string | null;
+  proposalId: string;
+  insertedAt: string;
+}
+
+/** Verdict evaluation settings. */
+export interface VerdictSettings {
+  id: string;
+  modeThresholds: Record<string, unknown>;
+  insertedAt: string;
+  updatedAt: string;
+}
+
+/** The result of evaluating whether an interrupt is allowed. */
+export interface InterruptResult {
+  allowed: boolean;
+  reason: string;
+  autoResponse: string | null;
+}
+
+/** A calibration profile for a model/framework pair. */
+export interface CalibrationProfile {
+  id: string;
+  model: string;
+  framework: string;
+  sampleSize: number;
+  medianDurationMinutes: number | null;
+  successRate: number | null;
+  overrideRate: number | null;
+  p25DurationMinutes: number | null;
+  p75DurationMinutes: number | null;
+  durationCiLower: number | null;
+  durationCiUpper: number | null;
+  successRateCiLower: number | null;
+  successRateCiUpper: number | null;
+  confidenceLevel: ConfidenceLevel;
+  tier: string;
+  status: string;
+  tasksToHighConfidence: number;
+  insertedAt: string;
+  updatedAt: string;
 }
 
 /** A previously submitted task proposal with its verdict. */
@@ -111,9 +159,16 @@ export interface TaskProposal {
 export interface UserProfile {
   id: string;
   name: string | null;
+  handle: string | null;
   email: string;
   avatar: string | null;
+  timezone: string | null;
+  visibilityLevel: VisibilityLevel;
+  showStatusMessage: boolean;
+  confirmedAt: string | null;
   location: string | null;
+  insertedAt: string;
+  updatedAt: string;
 }
 
 /** A recorded task outcome with calibration data. */
@@ -160,13 +215,24 @@ export interface ProposalInput {
 /** Input for creating a new availability contract. */
 export interface ContractInput {
   mode: Mode;
-  afk: boolean;
   autoRespond: boolean;
   status: boolean;
   statusEmoji?: string;
   statusText?: string;
   lock?: boolean;
   duration?: number;
+  ruleSetType?: string;
+  ruleSetParams?: Record<string, unknown>;
+}
+
+/** Input for overriding a verdict. */
+export interface OverrideInput {
+  /** ID of the proposal to override. */
+  proposalId: string;
+  /** The new verdict decision. */
+  overrideVerdict: VerdictDecision;
+  /** Reason for the override. */
+  reason?: string;
 }
 
 /** Input for listing proposals with optional filters. */

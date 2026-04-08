@@ -247,13 +247,14 @@ export class HeadsDownClient {
     const variables = {
       input: stripUndefined({
         mode: toGraphQLEnum(input.mode),
-        afk: input.afk,
         autoRespond: input.autoRespond,
         status: input.status,
         statusEmoji: input.statusEmoji,
         statusText: input.statusText,
         lock: input.lock,
         duration: input.duration,
+        ruleSetType: input.ruleSetType,
+        ruleSetParams: input.ruleSetParams,
       }),
     };
 

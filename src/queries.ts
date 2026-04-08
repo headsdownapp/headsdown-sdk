@@ -7,14 +7,13 @@ export const ACTIVE_CONTRACT_QUERY = `
       status
       statusEmoji
       statusText
-      afk
       autoRespond
       lock
       duration
+      ruleSetType
+      ruleSetParams
       expiresAt
       insertedAt
-      recordMessages
-      snooze
     }
   }
 `;
@@ -47,14 +46,13 @@ export const AVAILABILITY_QUERY = `
       status
       statusEmoji
       statusText
-      afk
       autoRespond
       lock
       duration
+      ruleSetType
+      ruleSetParams
       expiresAt
       insertedAt
-      recordMessages
-      snooze
     }
     calendar {
       automateEndOfDay
@@ -110,8 +108,6 @@ export const LIST_PRESETS_QUERY = `
     presets {
       id
       name
-      alerts
-      presence
       status
       statusEmoji
       statusText
@@ -131,14 +127,13 @@ export const APPLY_PRESET_MUTATION = `
       status
       statusEmoji
       statusText
-      afk
       autoRespond
       lock
       duration
+      ruleSetType
+      ruleSetParams
       expiresAt
       insertedAt
-      recordMessages
-      snooze
     }
   }
 `;
@@ -152,14 +147,13 @@ export const CREATE_CONTRACT_MUTATION = `
       status
       statusEmoji
       statusText
-      afk
       autoRespond
       lock
       duration
+      ruleSetType
+      ruleSetParams
       expiresAt
       insertedAt
-      recordMessages
-      snooze
     }
   }
 `;

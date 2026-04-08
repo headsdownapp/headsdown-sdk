@@ -15,14 +15,13 @@ export const RAW_CONTRACT = {
   status: true,
   statusEmoji: "🔨",
   statusText: "Deep work",
-  afk: false,
   autoRespond: true,
   lock: true,
   duration: 120,
+  ruleSetType: null,
+  ruleSetParams: null,
   expiresAt: "2025-06-15T18:00:00Z",
   insertedAt: "2025-06-15T16:00:00Z",
-  recordMessages: false,
-  snooze: false,
 };
 
 export const NORMALIZED_CONTRACT: Contract = {
@@ -31,14 +30,13 @@ export const NORMALIZED_CONTRACT: Contract = {
   status: true,
   statusEmoji: "🔨",
   statusText: "Deep work",
-  afk: false,
   autoRespond: true,
   lock: true,
   duration: 120,
+  ruleSetType: null,
+  ruleSetParams: null,
   expiresAt: "2025-06-15T18:00:00Z",
   insertedAt: "2025-06-15T16:00:00Z",
-  recordMessages: false,
-  snooze: false,
 };
 
 export const RAW_CALENDAR = {
@@ -130,8 +128,6 @@ export const NORMALIZED_PROPOSAL: TaskProposal = {
 export const RAW_PRESET = {
   id: "preset-1",
   name: "Deep Work",
-  alerts: "DO_NOT_DISTURB",
-  presence: "ON_KEYS",
   status: true,
   statusEmoji: "🔨",
   statusText: "Deep work",
@@ -143,8 +139,6 @@ export const RAW_PRESET = {
 export const NORMALIZED_PRESET: Preset = {
   id: "preset-1",
   name: "Deep Work",
-  alerts: "do_not_disturb",
-  presence: "on_keys",
   status: true,
   statusEmoji: "🔨",
   statusText: "Deep work",

@@ -24,8 +24,6 @@ export type {
   // Enums
   Mode,
   VerdictDecision,
-  AlertLevel,
-  PresenceLevel,
   DayName,
   TaskOutcomeResult,
   // Response types

@@ -3,8 +3,6 @@ import type {
   GraphQLResponse,
   Mode,
   VerdictDecision,
-  AlertLevel,
-  PresenceLevel,
   DayName,
 } from "./types.js";
 
@@ -107,11 +105,13 @@ const ENUM_FIELDS = new Set([
   "mode",
   "decision",
   "verdict",
-  "alerts",
-  "presence",
   "day",
   "nextWorkday",
   "outcome",
+  "confidenceLevel",
+  "policyStatus",
+  "visibilityLevel",
+  "alertsPolicy",
 ]);
 
 /** Convert SCREAMING_CASE enum values to lowercase in a response object. */
@@ -139,4 +139,4 @@ export function toGraphQLEnum(value: string): string {
 }
 
 // Re-export for type narrowing in the client
-export type { Mode, VerdictDecision, AlertLevel, PresenceLevel, DayName };
+export type { Mode, VerdictDecision, DayName };

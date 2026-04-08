@@ -357,8 +357,6 @@ describe("HeadsDownClient", () => {
       const presets = await client.listPresets();
       expect(presets).toHaveLength(1);
       expect(presets[0]).toEqual(NORMALIZED_PRESET);
-      expect(presets[0].alerts).toBe("do_not_disturb");
-      expect(presets[0].presence).toBe("on_keys");
     });
   });
 
@@ -398,7 +396,6 @@ describe("HeadsDownClient", () => {
       const client = new HeadsDownClient({ ...CLIENT_OPTS, fetch: fetchFn });
       const contract = await client.createContract({
         mode: "busy",
-        afk: false,
         autoRespond: true,
         status: true,
         statusText: "Deep work",
