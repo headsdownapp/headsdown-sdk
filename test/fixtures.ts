@@ -1,8 +1,15 @@
 import type {
+  ApiKey,
+  ApiKeyWithRaw,
+  AutoResponderSettings,
+  Company,
   Contract,
   Calendar,
   CalibrationProfile,
+  DigestSummary,
   InterruptResult,
+  Team,
+  TeamPresence,
   Verdict,
   VerdictOverride,
   VerdictSettings,
@@ -246,6 +253,95 @@ export const RAW_VERDICT_SETTINGS = {
 };
 
 export const NORMALIZED_VERDICT_SETTINGS: VerdictSettings = { ...RAW_VERDICT_SETTINGS };
+
+export const RAW_DIGEST_SUMMARY = {
+  id: "digest-1",
+  actorRef: "slack:user:123",
+  actorLabel: "Jane Dev",
+  sourceType: "slack",
+  action: "message",
+  channelRef: "C123",
+  events: [{ description: "Pinged you in #eng", insertedAt: "2025-06-15T12:01:00Z" }],
+  entryCount: 1,
+  firstEventAt: "2025-06-15T12:01:00Z",
+  lastEventAt: "2025-06-15T12:01:00Z",
+};
+
+export const NORMALIZED_DIGEST_SUMMARY: DigestSummary = { ...RAW_DIGEST_SUMMARY };
+
+export const RAW_API_KEY = {
+  id: "key-1",
+  prefix: "hd_abc",
+  label: "CLI",
+  lastUsedAt: "2025-06-15T12:00:00Z",
+  insertedAt: "2025-06-01T10:00:00Z",
+};
+
+export const NORMALIZED_API_KEY: ApiKey = { ...RAW_API_KEY };
+
+export const RAW_API_KEY_WITH_RAW = {
+  rawKey: "hd_full_secret_value",
+  apiKey: RAW_API_KEY,
+};
+
+export const NORMALIZED_API_KEY_WITH_RAW: ApiKeyWithRaw = {
+  rawKey: "hd_full_secret_value",
+  apiKey: NORMALIZED_API_KEY,
+};
+
+export const RAW_AUTO_RESPONDER_SETTINGS = {
+  id: "ars-1",
+  busyText: "Heads down, will reply later",
+  limitedText: "In limited mode right now",
+  offlineText: "Offline for now",
+  insertedAt: "2025-06-01T10:00:00Z",
+  updatedAt: "2025-06-10T10:00:00Z",
+};
+
+export const NORMALIZED_AUTO_RESPONDER_SETTINGS: AutoResponderSettings = {
+  ...RAW_AUTO_RESPONDER_SETTINGS,
+};
+
+export const RAW_TEAM = {
+  id: "team-1",
+  name: "Platform",
+  icon: "rocket",
+  description: "Core platform team",
+  members: [
+    {
+      id: "user-2",
+      email: "member@example.com",
+      name: "Team Member",
+      location: "Denver",
+      avatar: "https://example.com/member.png",
+    },
+  ],
+};
+
+export const NORMALIZED_TEAM: Team = { ...RAW_TEAM };
+
+export const RAW_COMPANY = {
+  id: "company-1",
+  name: "HeadsDown",
+  teams: [
+    {
+      id: "team-1",
+      name: "Platform",
+      icon: "rocket",
+      description: "Core platform team",
+    },
+  ],
+};
+
+export const NORMALIZED_COMPANY: Company = { ...RAW_COMPANY };
+
+export const RAW_TEAM_PRESENCE = {
+  userId: "user-2",
+  onlineAt: "2025-06-15T12:03:00Z",
+  connectionType: "websocket",
+};
+
+export const NORMALIZED_TEAM_PRESENCE: TeamPresence = { ...RAW_TEAM_PRESENCE };
 
 // === Helper: Create a mock fetch that returns a GraphQL response ===
 

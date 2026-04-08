@@ -308,6 +308,143 @@ export const DIGEST_SUMMARIES_QUERY = `
   }
 `;
 
+/** Dismiss a digest summary entry. */
+export const DISMISS_DIGEST_ENTRY_MUTATION = `
+  mutation DismissDigestEntry($id: ID!) {
+    dismissDigestEntry(id: $id) {
+      id
+      actorRef
+      actorLabel
+      sourceType
+      action
+      channelRef
+      events {
+        description
+        insertedAt
+      }
+      entryCount
+      firstEventAt
+      lastEventAt
+    }
+  }
+`;
+
+/** List API keys for the current user. */
+export const API_KEYS_QUERY = `
+  query ApiKeys {
+    apiKeys {
+      id
+      prefix
+      label
+      lastUsedAt
+      insertedAt
+    }
+  }
+`;
+
+/** Create a new API key. */
+export const CREATE_API_KEY_MUTATION = `
+  mutation CreateApiKey($label: String!) {
+    createApiKey(label: $label) {
+      rawKey
+      apiKey {
+        id
+        prefix
+        label
+        lastUsedAt
+        insertedAt
+      }
+    }
+  }
+`;
+
+/** Revoke an API key by id. */
+export const REVOKE_API_KEY_MUTATION = `
+  mutation RevokeApiKey($id: ID!) {
+    revokeApiKey(id: $id) {
+      id
+      prefix
+      label
+      lastUsedAt
+      insertedAt
+    }
+  }
+`;
+
+/** Get current auto-responder settings. */
+export const AUTO_RESPONDER_SETTINGS_QUERY = `
+  query AutoResponderSettings {
+    autoResponderSettings {
+      id
+      busyText
+      limitedText
+      offlineText
+      insertedAt
+      updatedAt
+    }
+  }
+`;
+
+/** Update auto-responder settings. */
+export const UPDATE_AUTO_RESPONDER_SETTINGS_MUTATION = `
+  mutation UpdateAutoResponderSettings($busyText: String, $limitedText: String, $offlineText: String) {
+    updateAutoResponderSettings(busyText: $busyText, limitedText: $limitedText, offlineText: $offlineText) {
+      id
+      busyText
+      limitedText
+      offlineText
+      insertedAt
+      updatedAt
+    }
+  }
+`;
+
+/** List teams for current user, optionally filtered by team id. */
+export const TEAMS_QUERY = `
+  query Teams($id: ID) {
+    teams(id: $id) {
+      id
+      name
+      icon
+      description
+      members {
+        id
+        email
+        name
+        location
+        avatar
+      }
+    }
+  }
+`;
+
+/** Get company for current user. */
+export const COMPANY_QUERY = `
+  query Company {
+    company {
+      id
+      name
+      teams {
+        id
+        name
+        icon
+        description
+      }
+    }
+  }
+`;
+
+/** List currently online presence entries for a team. */
+export const TEAM_PRESENCE_QUERY = `
+  query TeamPresence($teamId: ID!) {
+    teamPresence(teamId: $teamId) {
+      userId
+      onlineAt
+      connectionType
+    }
+  }
+`;
+
 /** Report a task outcome (insert or update). */
 export const REPORT_OUTCOME_MUTATION = `
   mutation ReportOutcome($input: OutcomeInput!) {

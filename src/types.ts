@@ -66,6 +66,63 @@ export interface ListDigestOptions {
   latest?: number;
 }
 
+/** A user API key (without raw secret). */
+export interface ApiKey {
+  id: string;
+  prefix: string;
+  label: string;
+  lastUsedAt: string | null;
+  insertedAt: string;
+}
+
+/** API key creation payload containing the one-time raw key. */
+export interface ApiKeyWithRaw {
+  rawKey: string;
+  apiKey: ApiKey;
+}
+
+/** Auto-responder message templates for non-online modes. */
+export interface AutoResponderSettings {
+  id: string;
+  busyText: string;
+  limitedText: string;
+  offlineText: string;
+  insertedAt: string;
+  updatedAt: string;
+}
+
+/** Presence info for a team member currently online. */
+export interface TeamPresence {
+  userId: string;
+  onlineAt: string;
+  connectionType: string;
+}
+
+/** Lightweight team member projection used by team queries. */
+export interface TeamMember {
+  id: string;
+  email: string;
+  name: string | null;
+  location: string | null;
+  avatar: string | null;
+}
+
+/** Lightweight team projection used by company/team queries. */
+export interface Team {
+  id: string;
+  name: string;
+  icon: string | null;
+  description: string | null;
+  members: TeamMember[] | null;
+}
+
+/** Organization-level container for teams. */
+export interface Company {
+  id: string;
+  name: string | null;
+  teams: Team[] | null;
+}
+
 // === API Response Types ===
 
 /** The user's active availability contract. */
@@ -263,12 +320,25 @@ export interface OverrideInput {
   reason?: string;
 }
 
+/** Optional fields to update auto-responder templates. */
+export interface UpdateAutoResponderInput {
+  busyText?: string;
+  limitedText?: string;
+  offlineText?: string;
+}
+
 /** Input for listing proposals with optional filters. */
 export interface ListProposalsOptions {
   /** Filter by verdict decision. */
   verdict?: VerdictDecision;
   /** Limit to N most recent proposals. */
   latest?: number;
+}
+
+/** Optional filters for listing teams. */
+export interface ListTeamsOptions {
+  /** Restrict to a single team id when provided. */
+  id?: string;
 }
 
 /** Input for reporting a task outcome. */

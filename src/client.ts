@@ -3,26 +3,39 @@ import { AuthError, ValidationError } from "./errors.js";
 import { GraphQLClient, toGraphQLEnum } from "./graphql.js";
 import {
   ACTIVE_CONTRACT_QUERY,
+  API_KEYS_QUERY,
   APPLY_PRESET_MUTATION,
+  AUTO_RESPONDER_SETTINGS_QUERY,
   AVAILABILITY_QUERY,
   CALENDAR_QUERY,
   CALIBRATION_PROFILES_QUERY,
+  COMPANY_QUERY,
+  CREATE_API_KEY_MUTATION,
   CREATE_CONTRACT_MUTATION,
   DIGEST_SUMMARIES_QUERY,
+  DISMISS_DIGEST_ENTRY_MUTATION,
   EVALUATE_INTERRUPT_QUERY,
   LIST_PRESETS_QUERY,
   LIST_PROPOSALS_QUERY,
   OVERRIDE_VERDICT_MUTATION,
   PROFILE_QUERY,
   REPORT_OUTCOME_MUTATION,
+  REVOKE_API_KEY_MUTATION,
   SUBMIT_PROPOSAL_MUTATION,
+  TEAM_PRESENCE_QUERY,
+  TEAMS_QUERY,
+  UPDATE_AUTO_RESPONDER_SETTINGS_MUTATION,
   UPDATE_VERDICT_SETTINGS_MUTATION,
   VERDICT_SETTINGS_QUERY,
 } from "./queries.js";
 import type {
+  ApiKey,
+  ApiKeyWithRaw,
+  AutoResponderSettings,
   Calendar,
   CalibrationProfile,
   ClientOptions,
+  Company,
   Contract,
   ContractInput,
   DeviceAuthorization,
@@ -31,12 +44,16 @@ import type {
   InterruptResult,
   ListDigestOptions,
   ListProposalsOptions,
+  ListTeamsOptions,
   OutcomeInput,
   OverrideInput,
   Preset,
   ProposalInput,
   TaskOutcome,
   TaskProposal,
+  Team,
+  TeamPresence,
+  UpdateAutoResponderInput,
   UserProfile,
   Verdict,
   VerdictOverride,
@@ -348,6 +365,106 @@ export class HeadsDownClient {
       Object.keys(variables).length > 0 ? variables : undefined,
     );
     return data.digestSummaries;
+  }
+
+  /** Dismiss a digest summary entry by id. */
+  async dismissDigestEntry(id: string): Promise<DigestSummary> {
+    if (!id?.trim()) {
+      throw new ValidationError("Digest entry ID is required.", "id");
+    }
+
+    const data = await this.graphql.request<{ dismissDigestEntry: DigestSummary }>(
+      DISMISS_DIGEST_ENTRY_MUTATION,
+      { id },
+    );
+    return data.dismissDigestEntry;
+  }
+
+  // === API Keys ===
+
+  /** List API keys for the current user. */
+  async listApiKeys(): Promise<ApiKey[]> {
+    const data = await this.graphql.request<{ apiKeys: ApiKey[] }>(API_KEYS_QUERY);
+    return data.apiKeys;
+  }
+
+  /** Create a new API key with a label. The raw key is returned once. */
+  async createApiKey(label: string): Promise<ApiKeyWithRaw> {
+    if (!label?.trim()) {
+      throw new ValidationError("API key label is required.", "label");
+    }
+
+    const data = await this.graphql.request<{ createApiKey: ApiKeyWithRaw }>(
+      CREATE_API_KEY_MUTATION,
+      { label },
+    );
+    return data.createApiKey;
+  }
+
+  /** Revoke an API key by id. */
+  async revokeApiKey(id: string): Promise<ApiKey> {
+    if (!id?.trim()) {
+      throw new ValidationError("API key ID is required.", "id");
+    }
+
+    const data = await this.graphql.request<{ revokeApiKey: ApiKey }>(REVOKE_API_KEY_MUTATION, {
+      id,
+    });
+    return data.revokeApiKey;
+  }
+
+  // === Auto Responder ===
+
+  /** Get auto-responder message templates. */
+  async getAutoResponderSettings(): Promise<AutoResponderSettings> {
+    const data = await this.graphql.request<{ autoResponderSettings: AutoResponderSettings }>(
+      AUTO_RESPONDER_SETTINGS_QUERY,
+    );
+    return data.autoResponderSettings;
+  }
+
+  /** Update auto-responder message templates. */
+  async updateAutoResponderSettings(
+    input: UpdateAutoResponderInput,
+  ): Promise<AutoResponderSettings> {
+    const variables = stripUndefined({
+      busyText: input.busyText,
+      limitedText: input.limitedText,
+      offlineText: input.offlineText,
+    });
+
+    const data = await this.graphql.request<{ updateAutoResponderSettings: AutoResponderSettings }>(
+      UPDATE_AUTO_RESPONDER_SETTINGS_MUTATION,
+      Object.keys(variables).length > 0 ? variables : undefined,
+    );
+    return data.updateAutoResponderSettings;
+  }
+
+  // === Teams ===
+
+  /** List teams for the current user, optionally filtered by team id. */
+  async listTeams(options?: ListTeamsOptions): Promise<Team[]> {
+    const variables = options?.id ? { id: options.id } : undefined;
+    const data = await this.graphql.request<{ teams: Team[] }>(TEAMS_QUERY, variables);
+    return data.teams;
+  }
+
+  /** Get the current user's company and teams. */
+  async getCompany(): Promise<Company | null> {
+    const data = await this.graphql.request<{ company: Company | null }>(COMPANY_QUERY);
+    return data.company;
+  }
+
+  /** List currently online members for a team. */
+  async listTeamPresence(teamId: string): Promise<TeamPresence[]> {
+    if (!teamId?.trim()) {
+      throw new ValidationError("Team ID is required.", "teamId");
+    }
+
+    const data = await this.graphql.request<{ teamPresence: TeamPresence[] }>(TEAM_PRESENCE_QUERY, {
+      teamId,
+    });
+    return data.teamPresence;
   }
 
   // === Calibration Profiles ===

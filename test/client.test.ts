@@ -21,6 +21,13 @@ import {
   RAW_INTERRUPT_DENIED,
   RAW_CALIBRATION_PROFILE,
   RAW_VERDICT_SETTINGS,
+  RAW_DIGEST_SUMMARY,
+  RAW_API_KEY,
+  RAW_API_KEY_WITH_RAW,
+  RAW_AUTO_RESPONDER_SETTINGS,
+  RAW_TEAM,
+  RAW_COMPANY,
+  RAW_TEAM_PRESENCE,
   NORMALIZED_CONTRACT,
   NORMALIZED_CALENDAR,
   NORMALIZED_VERDICT_APPROVED,
@@ -29,6 +36,13 @@ import {
   NORMALIZED_VERDICT_OVERRIDE,
   NORMALIZED_CALIBRATION_PROFILE,
   NORMALIZED_VERDICT_SETTINGS,
+  NORMALIZED_DIGEST_SUMMARY,
+  NORMALIZED_API_KEY,
+  NORMALIZED_API_KEY_WITH_RAW,
+  NORMALIZED_AUTO_RESPONDER_SETTINGS,
+  NORMALIZED_TEAM,
+  NORMALIZED_COMPANY,
+  NORMALIZED_TEAM_PRESENCE,
 } from "./fixtures.js";
 
 const CLIENT_OPTS = { apiKey: "hd_test_key", baseUrl: "https://test.headsdown.app" };
@@ -567,6 +581,214 @@ describe("HeadsDownClient", () => {
 
       const body = JSON.parse(capturedBody!);
       expect(body.variables.modeThresholds).toEqual(thresholds);
+    });
+  });
+
+  // === digest ===
+
+  describe("listDigestSummaries", () => {
+    it("returns digest summaries", async () => {
+      const client = new HeadsDownClient({
+        ...CLIENT_OPTS,
+        fetch: mockGraphQL({ digestSummaries: [RAW_DIGEST_SUMMARY] }),
+      });
+
+      const digests = await client.listDigestSummaries();
+      expect(digests).toEqual([NORMALIZED_DIGEST_SUMMARY]);
+    });
+
+    it("passes latest variable when provided", async () => {
+      let capturedBody: string | undefined;
+      const fetchFn = ((_url: string, init: RequestInit) => {
+        capturedBody = init.body as string;
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ data: { digestSummaries: [RAW_DIGEST_SUMMARY] } }),
+        });
+      }) as unknown as typeof globalThis.fetch;
+
+      const client = new HeadsDownClient({ ...CLIENT_OPTS, fetch: fetchFn });
+      await client.listDigestSummaries({ latest: 3 });
+
+      const body = JSON.parse(capturedBody!);
+      expect(body.variables.latest).toBe(3);
+    });
+  });
+
+  describe("dismissDigestEntry", () => {
+    it("dismisses a digest entry", async () => {
+      const client = new HeadsDownClient({
+        ...CLIENT_OPTS,
+        fetch: mockGraphQL({ dismissDigestEntry: RAW_DIGEST_SUMMARY }),
+      });
+
+      const digest = await client.dismissDigestEntry("digest-1");
+      expect(digest).toEqual(NORMALIZED_DIGEST_SUMMARY);
+    });
+
+    it("throws ValidationError for empty digest id", async () => {
+      const client = new HeadsDownClient({ ...CLIENT_OPTS, fetch: mockGraphQL({}) });
+      await expect(client.dismissDigestEntry("")).rejects.toThrow(ValidationError);
+    });
+  });
+
+  // === api keys ===
+
+  describe("listApiKeys", () => {
+    it("returns api keys", async () => {
+      const client = new HeadsDownClient({
+        ...CLIENT_OPTS,
+        fetch: mockGraphQL({ apiKeys: [RAW_API_KEY] }),
+      });
+
+      const keys = await client.listApiKeys();
+      expect(keys).toEqual([NORMALIZED_API_KEY]);
+    });
+  });
+
+  describe("createApiKey", () => {
+    it("creates an api key", async () => {
+      let capturedBody: string | undefined;
+      const fetchFn = ((_url: string, init: RequestInit) => {
+        capturedBody = init.body as string;
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ data: { createApiKey: RAW_API_KEY_WITH_RAW } }),
+        });
+      }) as unknown as typeof globalThis.fetch;
+
+      const client = new HeadsDownClient({ ...CLIENT_OPTS, fetch: fetchFn });
+      const created = await client.createApiKey("CLI");
+
+      expect(created).toEqual(NORMALIZED_API_KEY_WITH_RAW);
+      const body = JSON.parse(capturedBody!);
+      expect(body.variables.label).toBe("CLI");
+    });
+
+    it("throws ValidationError for empty label", async () => {
+      const client = new HeadsDownClient({ ...CLIENT_OPTS, fetch: mockGraphQL({}) });
+      await expect(client.createApiKey("")).rejects.toThrow(ValidationError);
+    });
+  });
+
+  describe("revokeApiKey", () => {
+    it("revokes an api key", async () => {
+      const client = new HeadsDownClient({
+        ...CLIENT_OPTS,
+        fetch: mockGraphQL({ revokeApiKey: RAW_API_KEY }),
+      });
+
+      const revoked = await client.revokeApiKey("key-1");
+      expect(revoked).toEqual(NORMALIZED_API_KEY);
+    });
+
+    it("throws ValidationError for empty key id", async () => {
+      const client = new HeadsDownClient({ ...CLIENT_OPTS, fetch: mockGraphQL({}) });
+      await expect(client.revokeApiKey("")).rejects.toThrow(ValidationError);
+    });
+  });
+
+  // === auto responder ===
+
+  describe("getAutoResponderSettings", () => {
+    it("returns auto responder settings", async () => {
+      const client = new HeadsDownClient({
+        ...CLIENT_OPTS,
+        fetch: mockGraphQL({ autoResponderSettings: RAW_AUTO_RESPONDER_SETTINGS }),
+      });
+
+      const settings = await client.getAutoResponderSettings();
+      expect(settings).toEqual(NORMALIZED_AUTO_RESPONDER_SETTINGS);
+    });
+  });
+
+  describe("updateAutoResponderSettings", () => {
+    it("updates auto responder settings", async () => {
+      let capturedBody: string | undefined;
+      const fetchFn = ((_url: string, init: RequestInit) => {
+        capturedBody = init.body as string;
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () =>
+            Promise.resolve({ data: { updateAutoResponderSettings: RAW_AUTO_RESPONDER_SETTINGS } }),
+        });
+      }) as unknown as typeof globalThis.fetch;
+
+      const client = new HeadsDownClient({ ...CLIENT_OPTS, fetch: fetchFn });
+      const settings = await client.updateAutoResponderSettings({
+        busyText: "Busy",
+        offlineText: "Offline",
+      });
+
+      expect(settings).toEqual(NORMALIZED_AUTO_RESPONDER_SETTINGS);
+      const body = JSON.parse(capturedBody!);
+      expect(body.variables.busyText).toBe("Busy");
+      expect(body.variables.offlineText).toBe("Offline");
+      expect(body.variables).not.toHaveProperty("limitedText");
+    });
+  });
+
+  // === teams ===
+
+  describe("listTeams", () => {
+    it("returns teams", async () => {
+      const client = new HeadsDownClient({
+        ...CLIENT_OPTS,
+        fetch: mockGraphQL({ teams: [RAW_TEAM] }),
+      });
+
+      const teams = await client.listTeams();
+      expect(teams).toEqual([NORMALIZED_TEAM]);
+    });
+
+    it("passes id variable when provided", async () => {
+      let capturedBody: string | undefined;
+      const fetchFn = ((_url: string, init: RequestInit) => {
+        capturedBody = init.body as string;
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ data: { teams: [RAW_TEAM] } }),
+        });
+      }) as unknown as typeof globalThis.fetch;
+
+      const client = new HeadsDownClient({ ...CLIENT_OPTS, fetch: fetchFn });
+      await client.listTeams({ id: "team-1" });
+
+      const body = JSON.parse(capturedBody!);
+      expect(body.variables.id).toBe("team-1");
+    });
+  });
+
+  describe("getCompany", () => {
+    it("returns company", async () => {
+      const client = new HeadsDownClient({
+        ...CLIENT_OPTS,
+        fetch: mockGraphQL({ company: RAW_COMPANY }),
+      });
+
+      const company = await client.getCompany();
+      expect(company).toEqual(NORMALIZED_COMPANY);
+    });
+  });
+
+  describe("listTeamPresence", () => {
+    it("returns team presence entries", async () => {
+      const client = new HeadsDownClient({
+        ...CLIENT_OPTS,
+        fetch: mockGraphQL({ teamPresence: [RAW_TEAM_PRESENCE] }),
+      });
+
+      const presence = await client.listTeamPresence("team-1");
+      expect(presence).toEqual([NORMALIZED_TEAM_PRESENCE]);
+    });
+
+    it("throws ValidationError for empty team id", async () => {
+      const client = new HeadsDownClient({ ...CLIENT_OPTS, fetch: mockGraphQL({}) });
+      await expect(client.listTeamPresence("")).rejects.toThrow(ValidationError);
     });
   });
 
