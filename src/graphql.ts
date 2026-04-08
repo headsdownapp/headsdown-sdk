@@ -53,7 +53,10 @@ export class GraphQLClient {
   }
 
   /** Execute a GraphQL query or mutation. Returns the `data` payload with enums lowercased. */
-  async request<T>(query: string, variables?: Record<string, unknown>): Promise<T> {
+  async request<
+    T,
+    TVariables extends Record<string, unknown> | undefined = Record<string, unknown>,
+  >(query: string, variables?: TVariables): Promise<T> {
     const url = `${this.baseUrl}/graphql`;
 
     for (let attempt = 0; attempt <= this.retries; attempt++) {

@@ -1,41 +1,38 @@
 import { copyFileSync, existsSync, mkdirSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { execFileSync } from "node:child_process";
 
 export function syncSchema(options = {}) {
   const sdkDir = options.sdkDir ?? resolve(dirname(fileURLToPath(import.meta.url)), "..");
-  const appDir = options.appDir ?? resolve(sdkDir, "..", "app");
-  const runner = options.runner ?? defaultRunner;
-  const sourcePath = join(appDir, "priv/graphql/schema.json");
-  const targetPath = join(sdkDir, "test/fixtures/app-schema.json");
+  const sourcePath = options.sourcePath ?? process.env.HEADSDOWN_SCHEMA_SOURCE;
+  const targetPath = options.targetPath ?? join(sdkDir, "test/fixtures/app-schema.json");
 
-  if (!existsSync(join(appDir, "Makefile"))) {
-    throw new Error(`Could not find app Makefile at ${join(appDir, "Makefile")}`);
+  if (!sourcePath) {
+    throw new Error("Missing schema source. Pass --source <path> or set HEADSDOWN_SCHEMA_SOURCE.");
   }
 
-  runner(appDir);
-
   if (!existsSync(sourcePath)) {
-    throw new Error(`Expected schema export at ${sourcePath}`);
+    throw new Error(`Schema source not found at ${sourcePath}`);
   }
 
   mkdirSync(dirname(targetPath), { recursive: true });
   copyFileSync(sourcePath, targetPath);
 
-  return { appDir, sdkDir, sourcePath, targetPath };
+  return { sdkDir, sourcePath, targetPath };
 }
 
-function defaultRunner(appDir) {
-  execFileSync("make", ["graphql-export"], {
-    cwd: appDir,
-    stdio: "inherit",
-  });
+function parseSourceArg(argv) {
+  const sourceFlagIndex = argv.findIndex((arg) => arg === "--source");
+  if (sourceFlagIndex >= 0 && argv[sourceFlagIndex + 1]) {
+    return argv[sourceFlagIndex + 1];
+  }
+  return undefined;
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   try {
-    const result = syncSchema();
+    const sourcePath = parseSourceArg(process.argv);
+    const result = syncSchema({ sourcePath });
     process.stdout.write(`Synced schema from ${result.sourcePath} to ${result.targetPath}\n`);
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));

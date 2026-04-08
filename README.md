@@ -218,13 +218,23 @@ No telemetry. No analytics. No third-party requests.
 
 ## Schema Sync
 
-The app repo is the source of truth for the GraphQL schema. If you have the sibling `../app` checkout, run:
+The app repo is the source of truth for the GraphQL schema, and this SDK only consumes a pushed schema file.
+
+When the app exports a new schema, import it here:
 
 ```bash
-npm run schema:sync
+npm run schema:sync -- --source /absolute/path/to/schema.json
 ```
 
-That runs `make graphql-export` in `../app` and copies `priv/graphql/schema.json` into this SDK's test fixture. The schema compatibility test uses that snapshot to make drift obvious in CI.
+(Equivalent env var form: `HEADSDOWN_SCHEMA_SOURCE=/absolute/path/to/schema.json npm run schema:sync`.)
+
+Then regenerate operation and variable types:
+
+```bash
+npm run codegen:types
+```
+
+The schema compatibility test uses this local snapshot to make drift obvious in CI.
 
 ## Releases
 
