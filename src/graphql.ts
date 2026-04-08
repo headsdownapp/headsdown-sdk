@@ -1,10 +1,5 @@
 import { ApiError, AuthError, NetworkError } from "./errors.js";
-import type {
-  GraphQLResponse,
-  Mode,
-  VerdictDecision,
-  DayName,
-} from "./types.js";
+import type { GraphQLResponse, Mode, VerdictDecision, DayName } from "./types.js";
 
 const DEFAULT_BASE_URL = "https://headsdown.app";
 const DEFAULT_TIMEOUT = 30_000;
@@ -105,6 +100,8 @@ const ENUM_FIELDS = new Set([
   "mode",
   "decision",
   "verdict",
+  "originalVerdict",
+  "overrideVerdict",
   "day",
   "nextWorkday",
   "outcome",

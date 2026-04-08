@@ -1,7 +1,11 @@
 import type {
   Contract,
   Calendar,
+  CalibrationProfile,
+  InterruptResult,
   Verdict,
+  VerdictOverride,
+  VerdictSettings,
   TaskProposal,
   Preset,
   UserProfile,
@@ -150,12 +154,98 @@ export const NORMALIZED_PRESET: Preset = {
 export const RAW_PROFILE = {
   id: "user-1",
   name: "Test User",
+  handle: "testuser",
   email: "test@example.com",
   avatar: "https://example.com/avatar.png",
+  timezone: "America/Denver",
+  visibilityLevel: "APPROXIMATE",
+  showStatusMessage: true,
+  confirmedAt: "2025-01-01T00:00:00Z",
   location: "Denver, CO",
+  insertedAt: "2025-01-01T00:00:00Z",
+  updatedAt: "2025-06-01T00:00:00Z",
 };
 
-export const NORMALIZED_PROFILE: UserProfile = { ...RAW_PROFILE };
+export const NORMALIZED_PROFILE: UserProfile = {
+  id: "user-1",
+  name: "Test User",
+  handle: "testuser",
+  email: "test@example.com",
+  avatar: "https://example.com/avatar.png",
+  timezone: "America/Denver",
+  visibilityLevel: "approximate",
+  showStatusMessage: true,
+  confirmedAt: "2025-01-01T00:00:00Z",
+  location: "Denver, CO",
+  insertedAt: "2025-01-01T00:00:00Z",
+  updatedAt: "2025-06-01T00:00:00Z",
+};
+
+export const RAW_VERDICT_OVERRIDE = {
+  id: "override-1",
+  originalVerdict: "DEFERRED",
+  overrideVerdict: "APPROVED",
+  reason: "Urgent hotfix needed",
+  proposalId: "proposal-def-456",
+  insertedAt: "2025-06-15T15:00:00Z",
+};
+
+export const NORMALIZED_VERDICT_OVERRIDE: VerdictOverride = {
+  id: "override-1",
+  originalVerdict: "deferred",
+  overrideVerdict: "approved",
+  reason: "Urgent hotfix needed",
+  proposalId: "proposal-def-456",
+  insertedAt: "2025-06-15T15:00:00Z",
+};
+
+export const RAW_INTERRUPT_ALLOWED: InterruptResult = {
+  allowed: true,
+  reason: "User is online and interruptable",
+  autoResponse: null,
+};
+
+export const RAW_INTERRUPT_DENIED: InterruptResult = {
+  allowed: false,
+  reason: "User is in do_not_disturb mode",
+  autoResponse: "I'm heads down right now. I'll get back to you later.",
+};
+
+export const RAW_CALIBRATION_PROFILE = {
+  id: "profile-1",
+  model: "claude-sonnet-4",
+  framework: "claude-code",
+  sampleSize: 50,
+  medianDurationMinutes: 15.0,
+  successRate: 0.85,
+  overrideRate: 0.1,
+  p25DurationMinutes: 8.0,
+  p75DurationMinutes: 25.0,
+  durationCiLower: 12.0,
+  durationCiUpper: 18.0,
+  successRateCiLower: 0.75,
+  successRateCiUpper: 0.92,
+  confidenceLevel: "HIGH",
+  tier: "established",
+  status: "active",
+  tasksToHighConfidence: 0,
+  insertedAt: "2025-06-01T00:00:00Z",
+  updatedAt: "2025-06-15T00:00:00Z",
+};
+
+export const NORMALIZED_CALIBRATION_PROFILE: CalibrationProfile = {
+  ...RAW_CALIBRATION_PROFILE,
+  confidenceLevel: "high",
+};
+
+export const RAW_VERDICT_SETTINGS = {
+  id: "settings-1",
+  modeThresholds: { online: 60, busy: 15, limited: 5, offline: 0 },
+  insertedAt: "2025-06-01T00:00:00Z",
+  updatedAt: "2025-06-10T00:00:00Z",
+};
+
+export const NORMALIZED_VERDICT_SETTINGS: VerdictSettings = { ...RAW_VERDICT_SETTINGS };
 
 // === Helper: Create a mock fetch that returns a GraphQL response ===
 

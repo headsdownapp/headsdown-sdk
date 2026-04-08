@@ -20,8 +20,8 @@ export const ACTIVE_CONTRACT_QUERY = `
 
 /** Get the user's current work schedule. */
 export const CALENDAR_QUERY = `
-  query Calendar {
-    calendar {
+  query Calendar($at: DateTime) {
+    calendar(at: $at) {
       automateEndOfDay
       automateStartOfDay
       day
@@ -164,9 +164,146 @@ export const PROFILE_QUERY = `
     profile {
       id
       name
+      handle
       email
       avatar
+      timezone
+      visibilityLevel
+      showStatusMessage
+      confirmedAt
       location
+      insertedAt
+      updatedAt
+    }
+  }
+`;
+
+/** Override a verdict decision. */
+export const OVERRIDE_VERDICT_MUTATION = `
+  mutation OverrideVerdict($input: OverrideInput!) {
+    overrideVerdict(input: $input) {
+      id
+      originalVerdict
+      overrideVerdict
+      reason
+      proposalId
+      insertedAt
+    }
+  }
+`;
+
+/** Evaluate whether interrupting a user is allowed. */
+export const EVALUATE_INTERRUPT_QUERY = `
+  query EvaluateInterrupt($handle: String!) {
+    evaluateInterrupt(handle: $handle) {
+      allowed
+      reason
+      autoResponse
+    }
+  }
+`;
+
+/** List calibration profiles for the current user. */
+export const CALIBRATION_PROFILES_QUERY = `
+  query CalibrationProfiles {
+    calibrationProfiles {
+      id
+      model
+      framework
+      sampleSize
+      medianDurationMinutes
+      successRate
+      overrideRate
+      p25DurationMinutes
+      p75DurationMinutes
+      durationCiLower
+      durationCiUpper
+      successRateCiLower
+      successRateCiUpper
+      confidenceLevel
+      tier
+      status
+      tasksToHighConfidence
+      insertedAt
+      updatedAt
+    }
+  }
+`;
+
+/** Get the current verdict evaluation settings. */
+export const VERDICT_SETTINGS_QUERY = `
+  query VerdictSettings {
+    verdictSettings {
+      id
+      modeThresholds
+      insertedAt
+      updatedAt
+    }
+  }
+`;
+
+/** Update verdict evaluation settings. */
+export const UPDATE_VERDICT_SETTINGS_MUTATION = `
+  mutation UpdateVerdictSettings($modeThresholds: JSON!) {
+    updateVerdictSettings(modeThresholds: $modeThresholds) {
+      id
+      modeThresholds
+      insertedAt
+      updatedAt
+    }
+  }
+`;
+
+/** Get the user's calendar at a specific time (combined query). */
+export const AVAILABILITY_AT_QUERY = `
+  query AvailabilityAt($at: DateTime) {
+    activeContract {
+      id
+      mode
+      status
+      statusEmoji
+      statusText
+      autoRespond
+      lock
+      duration
+      ruleSetType
+      ruleSetParams
+      expiresAt
+      insertedAt
+    }
+    calendar(at: $at) {
+      automateEndOfDay
+      automateStartOfDay
+      day
+      endsAt
+      nextWorkday
+      nextWorkdayStartsAt
+      now
+      offHours
+      startsAt
+      workHours
+      working
+    }
+  }
+`;
+
+/** List digest summaries (notifications aggregated during focus time). */
+export const DIGEST_SUMMARIES_QUERY = `
+  query DigestSummaries($latest: Int) {
+    digestSummaries(latest: $latest) {
+      id
+      actorRef
+      actorLabel
+      sourceType
+      action
+      channelRef
+      events {
+        description
+        insertedAt
+      }
+      entryCount
+      firstEventAt
+      lastEventAt
     }
   }
 `;

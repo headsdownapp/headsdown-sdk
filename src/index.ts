@@ -24,6 +24,9 @@ export type {
   // Enums
   Mode,
   VerdictDecision,
+  ConfidenceLevel,
+  VisibilityLevel,
+  AlertsPolicy,
   DayName,
   TaskOutcomeResult,
   // Response types
@@ -31,13 +34,21 @@ export type {
   Calendar,
   Preset,
   Verdict,
+  VerdictOverride,
+  VerdictSettings,
+  InterruptResult,
+  CalibrationProfile,
+  DigestSummary,
+  DigestEvent,
   TaskProposal,
   TaskOutcome,
   UserProfile,
   // Input types
   ProposalInput,
   ContractInput,
+  OverrideInput,
   ListProposalsOptions,
+  ListDigestOptions,
   OutcomeInput,
   // Auth types
   DeviceAuthorization,

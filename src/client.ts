@@ -6,28 +6,41 @@ import {
   APPLY_PRESET_MUTATION,
   AVAILABILITY_QUERY,
   CALENDAR_QUERY,
+  CALIBRATION_PROFILES_QUERY,
   CREATE_CONTRACT_MUTATION,
+  DIGEST_SUMMARIES_QUERY,
+  EVALUATE_INTERRUPT_QUERY,
   LIST_PRESETS_QUERY,
   LIST_PROPOSALS_QUERY,
+  OVERRIDE_VERDICT_MUTATION,
   PROFILE_QUERY,
   REPORT_OUTCOME_MUTATION,
   SUBMIT_PROPOSAL_MUTATION,
+  UPDATE_VERDICT_SETTINGS_MUTATION,
+  VERDICT_SETTINGS_QUERY,
 } from "./queries.js";
 import type {
   Calendar,
+  CalibrationProfile,
   ClientOptions,
   Contract,
   ContractInput,
   DeviceAuthorization,
   DeviceFlowOptions,
+  DigestSummary,
+  InterruptResult,
+  ListDigestOptions,
   ListProposalsOptions,
   OutcomeInput,
+  OverrideInput,
   Preset,
   ProposalInput,
   TaskOutcome,
   TaskProposal,
   UserProfile,
   Verdict,
+  VerdictOverride,
+  VerdictSettings,
 } from "./types.js";
 
 /**
@@ -138,27 +151,32 @@ export class HeadsDownClient {
     }
   }
 
-  /** Get the user's current work schedule context. */
-  async getCalendar(): Promise<Calendar> {
-    const data = await this.graphql.request<{ calendar: Calendar }>(CALENDAR_QUERY);
+  /** Get the user's current work schedule context. Optionally pass an ISO 8601 datetime to check at a specific time. */
+  async getCalendar(options?: { at?: string }): Promise<Calendar> {
+    const variables = options?.at ? { at: options.at } : undefined;
+    const data = await this.graphql.request<{ calendar: Calendar }>(CALENDAR_QUERY, variables);
     return data.calendar;
   }
 
   /**
    * Get both contract and calendar in a single request.
    * This is the recommended way to check availability before starting work.
+   * Optionally pass an ISO 8601 datetime to check the calendar at a specific time.
    */
-  async getAvailability(): Promise<{ contract: Contract | null; calendar: Calendar }> {
+  async getAvailability(options?: {
+    at?: string;
+  }): Promise<{ contract: Contract | null; calendar: Calendar }> {
     try {
+      const variables = options?.at ? { at: options.at } : undefined;
       const data = await this.graphql.request<{
         activeContract: Contract;
         calendar: Calendar;
-      }>(AVAILABILITY_QUERY);
+      }>(AVAILABILITY_QUERY, variables);
       return { contract: data.activeContract, calendar: data.calendar };
     } catch (error) {
       if (error instanceof Error && error.message.includes("No active contract")) {
         // Fall back to calendar-only when no contract exists.
-        const calendar = await this.getCalendar();
+        const calendar = await this.getCalendar(options);
         return { contract: null, calendar };
       }
       throw error;
@@ -202,6 +220,30 @@ export class HeadsDownClient {
       variables,
     );
     return data.submitProposal;
+  }
+
+  /**
+   * Override a verdict decision.
+   * Lets a user change a deferred verdict to approved, or vice versa.
+   */
+  async overrideVerdict(input: OverrideInput): Promise<VerdictOverride> {
+    if (!input.proposalId?.trim()) {
+      throw new ValidationError("Proposal ID is required.", "proposalId");
+    }
+
+    const variables = {
+      input: stripUndefined({
+        proposalId: input.proposalId,
+        overrideVerdict: toGraphQLEnum(input.overrideVerdict),
+        reason: input.reason,
+      }),
+    };
+
+    const data = await this.graphql.request<{ overrideVerdict: VerdictOverride }>(
+      OVERRIDE_VERDICT_MUTATION,
+      variables,
+    );
+    return data.overrideVerdict;
   }
 
   /** List previously submitted proposals, optionally filtered by verdict or limited. */
@@ -271,6 +313,70 @@ export class HeadsDownClient {
   async getProfile(): Promise<UserProfile> {
     const data = await this.graphql.request<{ profile: UserProfile }>(PROFILE_QUERY);
     return data.profile;
+  }
+
+  // === Interrupts ===
+
+  /**
+   * Evaluate whether interrupting a user is allowed based on their current availability.
+   * Returns whether the interrupt is allowed, the reason, and an optional auto-response message.
+   */
+  async evaluateInterrupt(handle: string): Promise<InterruptResult> {
+    if (!handle?.trim()) {
+      throw new ValidationError("Handle is required.", "handle");
+    }
+
+    const data = await this.graphql.request<{ evaluateInterrupt: InterruptResult }>(
+      EVALUATE_INTERRUPT_QUERY,
+      { handle },
+    );
+    return data.evaluateInterrupt;
+  }
+
+  // === Digest ===
+
+  /**
+   * List digest summaries: aggregated notifications that arrived while the user was in focus mode.
+   * Each summary groups events from the same actor and source.
+   */
+  async listDigestSummaries(options?: ListDigestOptions): Promise<DigestSummary[]> {
+    const variables: Record<string, unknown> = {};
+    if (options?.latest !== undefined) variables.latest = options.latest;
+
+    const data = await this.graphql.request<{ digestSummaries: DigestSummary[] }>(
+      DIGEST_SUMMARIES_QUERY,
+      Object.keys(variables).length > 0 ? variables : undefined,
+    );
+    return data.digestSummaries;
+  }
+
+  // === Calibration Profiles ===
+
+  /** List calibration profiles for the current user's model/framework pairs. */
+  async listCalibrationProfiles(): Promise<CalibrationProfile[]> {
+    const data = await this.graphql.request<{ calibrationProfiles: CalibrationProfile[] }>(
+      CALIBRATION_PROFILES_QUERY,
+    );
+    return data.calibrationProfiles;
+  }
+
+  // === Verdict Settings ===
+
+  /** Get the current verdict evaluation settings. */
+  async getVerdictSettings(): Promise<VerdictSettings> {
+    const data = await this.graphql.request<{ verdictSettings: VerdictSettings }>(
+      VERDICT_SETTINGS_QUERY,
+    );
+    return data.verdictSettings;
+  }
+
+  /** Update the verdict evaluation mode thresholds. */
+  async updateVerdictSettings(modeThresholds: Record<string, unknown>): Promise<VerdictSettings> {
+    const data = await this.graphql.request<{ updateVerdictSettings: VerdictSettings }>(
+      UPDATE_VERDICT_SETTINGS_MUTATION,
+      { modeThresholds },
+    );
+    return data.updateVerdictSettings;
   }
 
   // === Calibration ===

@@ -38,6 +38,34 @@ export type TaskOutcomeResult =
   | "cancelled"
   | "timed_out";
 
+// === Digest Types ===
+
+/** A single event within a digest summary. */
+export interface DigestEvent {
+  description: string;
+  insertedAt: string;
+}
+
+/** An aggregated digest summary grouping related events that arrived during focus time. */
+export interface DigestSummary {
+  id: string;
+  actorRef: string;
+  actorLabel: string;
+  sourceType: string;
+  action: string;
+  channelRef: string | null;
+  events: DigestEvent[];
+  entryCount: number;
+  firstEventAt: string;
+  lastEventAt: string;
+}
+
+/** Options for listing digest summaries. */
+export interface ListDigestOptions {
+  /** Limit to N most recent summaries. */
+  latest?: number;
+}
+
 // === API Response Types ===
 
 /** The user's active availability contract. */

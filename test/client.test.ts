@@ -16,11 +16,19 @@ import {
   RAW_PROPOSAL,
   RAW_PRESET,
   RAW_PROFILE,
+  RAW_VERDICT_OVERRIDE,
+  RAW_INTERRUPT_ALLOWED,
+  RAW_INTERRUPT_DENIED,
+  RAW_CALIBRATION_PROFILE,
+  RAW_VERDICT_SETTINGS,
   NORMALIZED_CONTRACT,
   NORMALIZED_CALENDAR,
   NORMALIZED_VERDICT_APPROVED,
   NORMALIZED_PRESET,
   NORMALIZED_PROFILE,
+  NORMALIZED_VERDICT_OVERRIDE,
+  NORMALIZED_CALIBRATION_PROFILE,
+  NORMALIZED_VERDICT_SETTINGS,
 } from "./fixtures.js";
 
 const CLIENT_OPTS = { apiKey: "hd_test_key", baseUrl: "https://test.headsdown.app" };
@@ -421,6 +429,184 @@ describe("HeadsDownClient", () => {
 
       const profile = await client.getProfile();
       expect(profile).toEqual(NORMALIZED_PROFILE);
+    });
+  });
+
+  // === overrideVerdict ===
+
+  describe("overrideVerdict", () => {
+    it("overrides a verdict and returns the override", async () => {
+      let capturedBody: string | undefined;
+      const fetchFn = ((_url: string, init: RequestInit) => {
+        capturedBody = init.body as string;
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ data: { overrideVerdict: RAW_VERDICT_OVERRIDE } }),
+        });
+      }) as unknown as typeof globalThis.fetch;
+
+      const client = new HeadsDownClient({ ...CLIENT_OPTS, fetch: fetchFn });
+      const override = await client.overrideVerdict({
+        proposalId: "proposal-def-456",
+        overrideVerdict: "approved",
+        reason: "Urgent hotfix needed",
+      });
+
+      expect(override).toEqual(NORMALIZED_VERDICT_OVERRIDE);
+
+      const body = JSON.parse(capturedBody!);
+      expect(body.variables.input.overrideVerdict).toBe("APPROVED");
+    });
+
+    it("throws ValidationError for empty proposal ID", async () => {
+      const client = new HeadsDownClient({ ...CLIENT_OPTS, fetch: mockGraphQL({}) });
+      await expect(
+        client.overrideVerdict({ proposalId: "", overrideVerdict: "approved" }),
+      ).rejects.toThrow(ValidationError);
+    });
+  });
+
+  // === evaluateInterrupt ===
+
+  describe("evaluateInterrupt", () => {
+    it("returns allowed interrupt result", async () => {
+      const client = new HeadsDownClient({
+        ...CLIENT_OPTS,
+        fetch: mockGraphQL({ evaluateInterrupt: RAW_INTERRUPT_ALLOWED }),
+      });
+
+      const result = await client.evaluateInterrupt("testuser");
+      expect(result.allowed).toBe(true);
+      expect(result.reason).toBe("User is online and interruptable");
+      expect(result.autoResponse).toBeNull();
+    });
+
+    it("returns denied interrupt result with auto-response", async () => {
+      const client = new HeadsDownClient({
+        ...CLIENT_OPTS,
+        fetch: mockGraphQL({ evaluateInterrupt: RAW_INTERRUPT_DENIED }),
+      });
+
+      const result = await client.evaluateInterrupt("busyuser");
+      expect(result.allowed).toBe(false);
+      expect(result.autoResponse).toBeTruthy();
+    });
+
+    it("passes handle as variable", async () => {
+      let capturedBody: string | undefined;
+      const fetchFn = ((_url: string, init: RequestInit) => {
+        capturedBody = init.body as string;
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ data: { evaluateInterrupt: RAW_INTERRUPT_ALLOWED } }),
+        });
+      }) as unknown as typeof globalThis.fetch;
+
+      const client = new HeadsDownClient({ ...CLIENT_OPTS, fetch: fetchFn });
+      await client.evaluateInterrupt("targethandle");
+
+      const body = JSON.parse(capturedBody!);
+      expect(body.variables.handle).toBe("targethandle");
+    });
+
+    it("throws ValidationError for empty handle", async () => {
+      const client = new HeadsDownClient({ ...CLIENT_OPTS, fetch: mockGraphQL({}) });
+      await expect(client.evaluateInterrupt("")).rejects.toThrow(ValidationError);
+    });
+  });
+
+  // === listCalibrationProfiles ===
+
+  describe("listCalibrationProfiles", () => {
+    it("returns calibration profiles with normalized enums", async () => {
+      const client = new HeadsDownClient({
+        ...CLIENT_OPTS,
+        fetch: mockGraphQL({ calibrationProfiles: [RAW_CALIBRATION_PROFILE] }),
+      });
+
+      const profiles = await client.listCalibrationProfiles();
+      expect(profiles).toHaveLength(1);
+      expect(profiles[0]).toEqual(NORMALIZED_CALIBRATION_PROFILE);
+      expect(profiles[0].confidenceLevel).toBe("high");
+    });
+  });
+
+  // === verdictSettings ===
+
+  describe("getVerdictSettings", () => {
+    it("returns verdict settings", async () => {
+      const client = new HeadsDownClient({
+        ...CLIENT_OPTS,
+        fetch: mockGraphQL({ verdictSettings: RAW_VERDICT_SETTINGS }),
+      });
+
+      const settings = await client.getVerdictSettings();
+      expect(settings).toEqual(NORMALIZED_VERDICT_SETTINGS);
+    });
+  });
+
+  describe("updateVerdictSettings", () => {
+    it("sends mode thresholds and returns updated settings", async () => {
+      let capturedBody: string | undefined;
+      const fetchFn = ((_url: string, init: RequestInit) => {
+        capturedBody = init.body as string;
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ data: { updateVerdictSettings: RAW_VERDICT_SETTINGS } }),
+        });
+      }) as unknown as typeof globalThis.fetch;
+
+      const client = new HeadsDownClient({ ...CLIENT_OPTS, fetch: fetchFn });
+      const thresholds = { online: 60, busy: 15, limited: 5, offline: 0 };
+      const settings = await client.updateVerdictSettings(thresholds);
+
+      expect(settings).toEqual(NORMALIZED_VERDICT_SETTINGS);
+
+      const body = JSON.parse(capturedBody!);
+      expect(body.variables.modeThresholds).toEqual(thresholds);
+    });
+  });
+
+  // === calendar with at parameter ===
+
+  describe("getCalendar with at parameter", () => {
+    it("passes at variable when provided", async () => {
+      let capturedBody: string | undefined;
+      const fetchFn = ((_url: string, init: RequestInit) => {
+        capturedBody = init.body as string;
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ data: { calendar: RAW_CALENDAR } }),
+        });
+      }) as unknown as typeof globalThis.fetch;
+
+      const client = new HeadsDownClient({ ...CLIENT_OPTS, fetch: fetchFn });
+      await client.getCalendar({ at: "2025-06-16T09:00:00Z" });
+
+      const body = JSON.parse(capturedBody!);
+      expect(body.variables.at).toBe("2025-06-16T09:00:00Z");
+    });
+
+    it("omits variables when no at provided", async () => {
+      let capturedBody: string | undefined;
+      const fetchFn = ((_url: string, init: RequestInit) => {
+        capturedBody = init.body as string;
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ data: { calendar: RAW_CALENDAR } }),
+        });
+      }) as unknown as typeof globalThis.fetch;
+
+      const client = new HeadsDownClient({ ...CLIENT_OPTS, fetch: fetchFn });
+      await client.getCalendar();
+
+      const body = JSON.parse(capturedBody!);
+      expect(body.variables).toBeUndefined();
     });
   });
 
