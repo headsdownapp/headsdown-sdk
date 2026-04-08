@@ -11,14 +11,20 @@
       "import": "./dist/index.js"
     }
   },
-  "files": ["dist", "README.md", "LICENSE"],
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "dev": "tsc -p tsconfig.build.json --watch",
     "test": "vitest run",
     "test:watch": "vitest",
-    "lint": "prettier --check 'src/**/*.ts' 'test/**/*.ts'",
-    "format": "prettier --write 'src/**/*.ts' 'test/**/*.ts'",
+    "lint": "prettier --check 'src/**/*.ts' 'test/**/*.ts' 'scripts/**/*.mjs'",
+    "format": "prettier --write 'src/**/*.ts' 'test/**/*.ts' 'scripts/**/*.mjs'",
+    "schema:sync": "node scripts/schema-sync.mjs",
+    "codegen": "node scripts/schema-sync.mjs",
     "prepare": "npm run build",
     "prepublishOnly": "npm run build",
     "clean": "rm -rf dist"
@@ -45,6 +51,7 @@
   },
   "devDependencies": {
     "@types/node": "^20.17.0",
+    "graphql": "^16.13.2",
     "prettier": "^3.4.0",
     "typescript": "^5.7.0",
     "vitest": "^3.1.0"

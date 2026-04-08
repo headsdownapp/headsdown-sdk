@@ -209,6 +209,16 @@ This SDK sends requests only to the HeadsDown API (`https://headsdown.app/graphq
 
 No telemetry. No analytics. No third-party requests.
 
+## Schema Sync
+
+The app repo is the source of truth for the GraphQL schema. If you have the sibling `../app` checkout, run:
+
+```bash
+npm run schema:sync
+```
+
+That runs `make graphql-export` in `../app` and copies `priv/graphql/schema.json` into this SDK's test fixture. The schema compatibility test uses that snapshot to make drift obvious in CI.
+
 ## Releases
 
 Releases are tag-driven. Push a tag like `v0.1.0` and GitHub Actions will run tests, verify the tag matches `package.json`, and publish to npm using trusted publishing.
