@@ -394,6 +394,35 @@ export interface Credentials {
 
 // === Client Configuration ===
 
+/** Retry behavior for transient request failures. */
+export interface RetryOptions {
+  /** Number of retries after the initial attempt. Default: 2. */
+  retries?: number;
+  /** Base retry delay in milliseconds (exponential backoff). Default: 250. */
+  retryDelayMs?: number;
+}
+
+/** Request lifecycle hooks for debugging and observability. */
+export interface RequestHooks {
+  /** Called before each request attempt. */
+  onRequest?: (event: {
+    url: string;
+    attempt: number;
+    query: string;
+    variables?: Record<string, unknown>;
+  }) => void;
+  /** Called after each response. */
+  onResponse?: (event: {
+    url: string;
+    attempt: number;
+    status: number;
+    ok: boolean;
+    requestId?: string;
+  }) => void;
+  /** Called before retrying a transient failure. */
+  onRetry?: (event: { url: string; attempt: number; delayMs: number; reason: string }) => void;
+}
+
 /** Options for creating a HeadsDownClient. */
 export interface ClientOptions {
   /** HeadsDown API key (hd_...). Falls back to credentials file, then HEADSDOWN_API_KEY env var. */
@@ -404,6 +433,10 @@ export interface ClientOptions {
   fetch?: typeof globalThis.fetch;
   /** Request timeout in milliseconds. Default: 30000. */
   timeout?: number;
+  /** Retry behavior for transient errors. */
+  retry?: RetryOptions;
+  /** Optional request lifecycle hooks for debugging/telemetry. */
+  hooks?: RequestHooks;
 }
 
 /** Options for the Device Flow authentication. */

@@ -64,6 +64,8 @@ export type {
   Credentials,
   // Config types
   ClientOptions,
+  RetryOptions,
+  RequestHooks,
   DeviceFlowOptions,
   CredentialStoreOptions,
 } from "./types.js";

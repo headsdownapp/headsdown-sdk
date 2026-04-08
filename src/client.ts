@@ -93,6 +93,9 @@ export class HeadsDownClient {
       baseUrl: options.baseUrl,
       fetch: options.fetch,
       timeout: options.timeout,
+      retries: options.retry?.retries,
+      retryDelayMs: options.retry?.retryDelayMs,
+      hooks: options.hooks,
     });
   }
 

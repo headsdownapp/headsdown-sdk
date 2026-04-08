@@ -187,6 +187,10 @@ const client = new HeadsDownClient({
   baseUrl: "https://headsdown.app",           // API base URL
   timeout: 30000,                             // Request timeout in ms
   fetch: customFetch,                         // Custom fetch implementation
+  retry: { retries: 2, retryDelayMs: 250 },  // Transient failure retries
+  hooks: {
+    onRetry: ({ attempt, reason }) => console.log(`retry #${attempt + 1}: ${reason}`),
+  },
 });
 ```
 
@@ -196,6 +200,9 @@ const client = new HeadsDownClient({
 | `baseUrl` | `https://headsdown.app` | API endpoint |
 | `timeout` | `30000` | Request timeout in milliseconds |
 | `fetch` | `globalThis.fetch` | Custom fetch (for testing or proxies) |
+| `retry.retries` | `2` | Number of retries for transient failures |
+| `retry.retryDelayMs` | `250` | Base retry delay in ms (exponential backoff) |
+| `hooks` | `undefined` | Optional onRequest/onResponse/onRetry hooks |
 
 ## Data Transparency
 
