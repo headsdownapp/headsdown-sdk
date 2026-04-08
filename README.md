@@ -76,6 +76,12 @@ if (calendar.offHours) {
 }
 ```
 
+You can also check availability at a specific point in time:
+
+```typescript
+const later = await client.getAvailability({ at: "2025-06-16T09:00:00Z" });
+```
+
 ### Submit a Task Proposal
 
 Ask HeadsDown whether a task should proceed given the user's current availability.
@@ -120,13 +126,28 @@ const contract = await client.applyPreset(presets[0].id);
 ```typescript
 const contract = await client.createContract({
   mode: "busy",
-  afk: false,
   autoRespond: true,
   status: true,
   statusText: "Deep work",
   statusEmoji: "🔨",
   duration: 120, // minutes
+  ruleSetType: "focus",
+  ruleSetParams: { maxInterruptions: 0 },
 });
+```
+
+### Verdict and Calibration Utilities
+
+```typescript
+const interrupt = await client.evaluateInterrupt("brezn");
+if (!interrupt.allowed) {
+  console.log(interrupt.autoResponse ?? interrupt.reason);
+}
+
+const settings = await client.getVerdictSettings();
+const updated = await client.updateVerdictSettings({ online: 60, busy: 15, limited: 5, offline: 0 });
+
+const profiles = await client.listCalibrationProfiles();
 ```
 
 ### User Profile
@@ -180,13 +201,24 @@ const client = new HeadsDownClient({
 
 This SDK sends requests only to the HeadsDown API (`https://headsdown.app/graphql` by default). Every request includes your API key as a Bearer token. The exact GraphQL queries are in [`src/queries.ts`](src/queries.ts), readable in full.
 
-**What is sent:** Your API key, and the specific query/mutation being executed (availability checks, task proposals, preset operations).
+**What is sent:** Your API key, and the specific query/mutation being executed (availability checks, task proposals, preset operations, verdict settings, interrupt evaluation).
 
-**What is received:** Your availability status, calendar schedule, task verdicts, and preset configurations.
+**What is received:** Your availability status, calendar schedule, task verdicts, calibration data, and preset configurations.
 
 **What is stored locally:** Your API key at `~/.config/headsdown/credentials.json` (file permissions: 0600, user-only read/write).
 
 No telemetry. No analytics. No third-party requests.
+
+## Releases
+
+Releases are tag-driven. Push a tag like `v0.1.0` and GitHub Actions will run tests, verify the tag matches `package.json`, and publish to npm using trusted publishing.
+
+```bash
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+Before the first publish, configure npm trusted publishing for this repository and make sure the package version matches the tag.
 
 ## License
 
