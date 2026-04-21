@@ -45,26 +45,60 @@ export type AutoResponderSettings = {
   updatedAt: Scalars["DateTime"]["output"];
 };
 
+export type AvailabilityOverride = {
+  cancelledAt: Maybe<Scalars["DateTime"]["output"]>;
+  cancelledById: Maybe<Scalars["ID"]["output"]>;
+  createdById: Scalars["ID"]["output"];
+  expiredAt: Maybe<Scalars["DateTime"]["output"]>;
+  expiresAt: Scalars["DateTime"]["output"];
+  id: Scalars["ID"]["output"];
+  insertedAt: Scalars["DateTime"]["output"];
+  mode: Mode;
+  reason: Maybe<Scalars["String"]["output"]>;
+  source: Scalars["String"]["output"];
+  updatedAt: Scalars["DateTime"]["output"];
+};
+
+export type AvailabilityOverrideInput = {
+  durationMinutes: InputMaybe<Scalars["Int"]["input"]>;
+  expiresAt: InputMaybe<Scalars["DateTime"]["input"]>;
+  mode: Mode;
+  reason: InputMaybe<Scalars["String"]["input"]>;
+  source: InputMaybe<Scalars["String"]["input"]>;
+};
+
 /** Availability resolution for the current user at a point in time */
 export type AvailabilityResolution = {
   activeWindow: Maybe<ReachabilityWindow>;
+  attentionDeadlineAt: Maybe<Scalars["DateTime"]["output"]>;
   inReachableHours: Scalars["Boolean"]["output"];
   nextTransitionAt: Maybe<Scalars["DateTime"]["output"]>;
   nextWindow: Maybe<ReachabilityWindow>;
+  wrapUpGuidance: WrapUpGuidance;
 };
 
 export type CalibrationProfile = {
+  /** Count of Gold-tier outcomes with outcome=cancelled for this profile's model/framework scope. */
+  cancelledCount: Scalars["Int"]["output"];
+  /** Count of Gold-tier outcomes with outcome=completed for this profile's model/framework scope. */
+  completedCount: Scalars["Int"]["output"];
   confidenceLevel: ConfidenceLevel;
   durationCiLower: Maybe<Scalars["Float"]["output"]>;
   durationCiUpper: Maybe<Scalars["Float"]["output"]>;
+  /** Count of Gold-tier outcomes with outcome=failed for this profile's model/framework scope. */
+  failedCount: Scalars["Int"]["output"];
   framework: Scalars["String"]["output"];
   id: Scalars["ID"]["output"];
   insertedAt: Scalars["DateTime"]["output"];
+  /** Most recent task outcome write timestamp for this model/framework scope (all quality tiers). */
+  lastTaskAt: Maybe<Scalars["DateTime"]["output"]>;
   medianDurationMinutes: Maybe<Scalars["Float"]["output"]>;
   model: Scalars["String"]["output"];
   overrideRate: Maybe<Scalars["Float"]["output"]>;
   p25DurationMinutes: Maybe<Scalars["Float"]["output"]>;
   p75DurationMinutes: Maybe<Scalars["Float"]["output"]>;
+  /** Count of Gold-tier outcomes with outcome=partially_completed for this profile's model/framework scope. */
+  partiallyCompletedCount: Scalars["Int"]["output"];
   sampleSize: Scalars["Int"]["output"];
   status: Scalars["String"]["output"];
   successRate: Maybe<Scalars["Float"]["output"]>;
@@ -72,6 +106,10 @@ export type CalibrationProfile = {
   successRateCiUpper: Maybe<Scalars["Float"]["output"]>;
   tasksToHighConfidence: Scalars["Int"]["output"];
   tier: Scalars["String"]["output"];
+  /** Count of Gold-tier outcomes with outcome=timed_out for this profile's model/framework scope. */
+  timedOutCount: Scalars["Int"]["output"];
+  /** Count of Gold-tier outcomes with unknown/legacy outcome values not in the canonical outcome enum. */
+  unknownCount: Scalars["Int"]["output"];
   updatedAt: Scalars["DateTime"]["output"];
 };
 
@@ -123,6 +161,50 @@ export type ContractInput = {
   statusEmoji: InputMaybe<Scalars["String"]["input"]>;
   statusText: InputMaybe<Scalars["String"]["input"]>;
 };
+
+export type DelegationGrant = {
+  agentId: Maybe<Scalars["String"]["output"]>;
+  createdById: Scalars["ID"]["output"];
+  expiredAt: Maybe<Scalars["DateTime"]["output"]>;
+  expiresAt: Scalars["DateTime"]["output"];
+  id: Scalars["ID"]["output"];
+  insertedAt: Scalars["DateTime"]["output"];
+  permissions: Array<DelegationGrantPermission>;
+  revokedAt: Maybe<Scalars["DateTime"]["output"]>;
+  revokedById: Maybe<Scalars["ID"]["output"]>;
+  scope: DelegationGrantScope;
+  sessionId: Maybe<Scalars["String"]["output"]>;
+  source: Scalars["String"]["output"];
+  updatedAt: Scalars["DateTime"]["output"];
+  workspaceRef: Maybe<Scalars["String"]["output"]>;
+};
+
+export type DelegationGrantFilterInput = {
+  active: InputMaybe<Scalars["Boolean"]["input"]>;
+  agentId: InputMaybe<Scalars["String"]["input"]>;
+  scope: InputMaybe<DelegationGrantScope>;
+  sessionId: InputMaybe<Scalars["String"]["input"]>;
+  source: InputMaybe<Scalars["String"]["input"]>;
+  workspaceRef: InputMaybe<Scalars["String"]["input"]>;
+};
+
+export type DelegationGrantInput = {
+  agentId: InputMaybe<Scalars["String"]["input"]>;
+  durationMinutes: InputMaybe<Scalars["Int"]["input"]>;
+  expiresAt: InputMaybe<Scalars["DateTime"]["input"]>;
+  permissions: Array<DelegationGrantPermission>;
+  scope: DelegationGrantScope;
+  sessionId: InputMaybe<Scalars["String"]["input"]>;
+  source: InputMaybe<Scalars["String"]["input"]>;
+  workspaceRef: InputMaybe<Scalars["String"]["input"]>;
+};
+
+export type DelegationGrantPermission =
+  | "AVAILABILITY_OVERRIDE_CANCEL"
+  | "AVAILABILITY_OVERRIDE_CREATE"
+  | "PRESET_APPLY";
+
+export type DelegationGrantScope = "AGENT" | "SESSION" | "WORKSPACE";
 
 export type DeviceTypes = "ANDROID" | "IOS";
 
@@ -240,6 +322,7 @@ export type PresetInput = {
 
 export type ProposalInput = {
   agentRef: Scalars["String"]["input"];
+  deliveryMode: InputMaybe<WrapUpMode>;
   description: Scalars["String"]["input"];
   estimatedFiles: InputMaybe<Scalars["Int"]["input"]>;
   estimatedMinutes: InputMaybe<Scalars["Int"]["input"]>;
@@ -301,9 +384,16 @@ export type ReachabilityWindowUpdateInput = {
   statusText: InputMaybe<Scalars["String"]["input"]>;
 };
 
+export type RevokeDelegationGrantsResult = {
+  revokedCount: Scalars["Int"]["output"];
+};
+
 export type RootMutationType = {
   applyPreset: Maybe<Contract>;
+  cancelAvailabilityOverride: Maybe<AvailabilityOverride>;
+  createAvailabilityOverride: Maybe<AvailabilityOverride>;
   createContract: Maybe<Contract>;
+  createDelegationGrant: Maybe<DelegationGrant>;
   createPreset: Maybe<Preset>;
   createReachabilityWindow: Maybe<ReachabilityWindow>;
   deletePreset: Maybe<Preset>;
@@ -319,6 +409,8 @@ export type RootMutationType = {
    * long sessions (checkpoint) and once on session exit (final report).
    */
   reportOutcome: Maybe<TaskOutcome>;
+  revokeDelegationGrant: Maybe<DelegationGrant>;
+  revokeDelegationGrants: Maybe<RevokeDelegationGrantsResult>;
   submitProposal: Maybe<Verdict>;
   updateAutoResponderSettings: Maybe<AutoResponderSettings>;
   updateMobileClient: Maybe<MobileClient>;
@@ -332,8 +424,22 @@ export type RootMutationTypeApplyPresetArgs = {
   id: Scalars["ID"]["input"];
 };
 
+export type RootMutationTypeCancelAvailabilityOverrideArgs = {
+  id: Scalars["ID"]["input"];
+  reason: InputMaybe<Scalars["String"]["input"]>;
+  source: InputMaybe<Scalars["String"]["input"]>;
+};
+
+export type RootMutationTypeCreateAvailabilityOverrideArgs = {
+  input: AvailabilityOverrideInput;
+};
+
 export type RootMutationTypeCreateContractArgs = {
   input: ContractInput;
+};
+
+export type RootMutationTypeCreateDelegationGrantArgs = {
+  input: DelegationGrantInput;
 };
 
 export type RootMutationTypeCreatePresetArgs = {
@@ -368,6 +474,14 @@ export type RootMutationTypeReportOutcomeArgs = {
   input: OutcomeInput;
 };
 
+export type RootMutationTypeRevokeDelegationGrantArgs = {
+  id: Scalars["ID"]["input"];
+};
+
+export type RootMutationTypeRevokeDelegationGrantsArgs = {
+  filter: InputMaybe<DelegationGrantFilterInput>;
+};
+
 export type RootMutationTypeSubmitProposalArgs = {
   input: ProposalInput;
 };
@@ -398,11 +512,15 @@ export type RootMutationTypeUpdateReachabilityWindowArgs = {
 };
 
 export type RootMutationTypeUpdateVerdictSettingsArgs = {
-  modeThresholds: Scalars["JSON"]["input"];
+  defaultWrapUpMode: InputMaybe<WrapUpMode>;
+  thresholds: InputMaybe<VerdictModeThresholdsInput>;
+  wrapUpThresholdMinutes: InputMaybe<Scalars["Int"]["input"]>;
 };
 
 export type RootQueryType = {
+  activeAvailabilityOverride: Maybe<AvailabilityOverride>;
   activeContract: Maybe<Contract>;
+  activeDelegationGrants: Array<DelegationGrant>;
   autoResponderSettings: Maybe<AutoResponderSettings>;
   availability: Maybe<AvailabilityResolution>;
   /**
@@ -414,6 +532,7 @@ export type RootQueryType = {
    */
   calibrationProfiles: Maybe<Array<CalibrationProfile>>;
   company: Maybe<Company>;
+  delegationGrants: Array<DelegationGrant>;
   digestSummaries: Maybe<Array<DigestSummary>>;
   evaluateInterrupt: Maybe<InterruptResult>;
   preset: Maybe<Preset>;
@@ -429,6 +548,10 @@ export type RootQueryType = {
 
 export type RootQueryTypeAvailabilityArgs = {
   at: InputMaybe<Scalars["DateTime"]["input"]>;
+};
+
+export type RootQueryTypeDelegationGrantsArgs = {
+  filter: InputMaybe<DelegationGrantFilterInput>;
 };
 
 export type RootQueryTypeDigestSummariesArgs = {
@@ -512,6 +635,7 @@ export type TaskOutcomeResult =
 
 export type TaskProposal = {
   agentRef: Scalars["String"]["output"];
+  deliveryMode: WrapUpMode;
   description: Scalars["String"]["output"];
   estimatedFiles: Maybe<Scalars["Int"]["output"]>;
   estimatedMinutes: Maybe<Scalars["Int"]["output"]>;
@@ -523,6 +647,9 @@ export type TaskProposal = {
   sourceRef: Scalars["String"]["output"];
   verdict: VerdictDecision;
   verdictReason: Maybe<Scalars["String"]["output"]>;
+  wrapUpGuidance: Maybe<WrapUpGuidance>;
+  /** @deprecated Use wrapUpGuidance instead */
+  wrapUpGuidanceSnapshot: Maybe<Scalars["JSON"]["output"]>;
 };
 
 export type Team = {
@@ -574,9 +701,34 @@ export type Verdict = {
   policyStatus: Maybe<PolicyStatus>;
   proposalId: Scalars["ID"]["output"];
   reason: Scalars["String"]["output"];
+  wrapUpGuidance: Maybe<WrapUpGuidance>;
 };
 
 export type VerdictDecision = "APPROVED" | "DEFERRED";
+
+export type VerdictModeThreshold = {
+  maxEstimatedMinutes: Maybe<Scalars["Int"]["output"]>;
+  maxFiles: Maybe<Scalars["Int"]["output"]>;
+};
+
+export type VerdictModeThresholdInput = {
+  maxEstimatedMinutes: InputMaybe<Scalars["Int"]["input"]>;
+  maxFiles: InputMaybe<Scalars["Int"]["input"]>;
+};
+
+export type VerdictModeThresholds = {
+  busy: VerdictModeThreshold;
+  limited: VerdictModeThreshold;
+  offline: VerdictModeThreshold;
+  online: VerdictModeThreshold;
+};
+
+export type VerdictModeThresholdsInput = {
+  busy: VerdictModeThresholdInput;
+  limited: VerdictModeThresholdInput;
+  offline: VerdictModeThresholdInput;
+  online: VerdictModeThresholdInput;
+};
 
 export type VerdictOverride = {
   id: Scalars["ID"]["output"];
@@ -588,10 +740,14 @@ export type VerdictOverride = {
 };
 
 export type VerdictSettings = {
+  defaultWrapUpMode: WrapUpMode;
   id: Scalars["ID"]["output"];
   insertedAt: Scalars["DateTime"]["output"];
+  /** @deprecated Use thresholds instead */
   modeThresholds: Scalars["JSON"]["output"];
+  thresholds: VerdictModeThresholds;
   updatedAt: Scalars["DateTime"]["output"];
+  wrapUpThresholdMinutes: Scalars["Int"]["output"];
 };
 
 /** Controls how much timing detail the public availability page reveals */
@@ -602,6 +758,34 @@ export type VisibilityLevel =
   | "MINIMAL"
   /** Exact return time and full timezone */
   | "PRECISE";
+
+export type WrapUpGuidance = {
+  active: Scalars["Boolean"]["output"];
+  deadlineAt: Maybe<Scalars["DateTime"]["output"]>;
+  hints: Array<Scalars["String"]["output"]>;
+  profile: WrapUpProfile;
+  reason: Scalars["String"]["output"];
+  remainingMinutes: Maybe<Scalars["Int"]["output"]>;
+  selectedMode: WrapUpMode;
+  source: WrapUpGuidanceSource;
+  thresholdMinutes: Scalars["Int"]["output"];
+};
+
+/** Why Wrap-up Guidance is active or inactive */
+export type WrapUpGuidanceSource =
+  | "FORCED_FULL_DEPTH"
+  | "FORCED_WRAP_UP"
+  | "INACTIVE"
+  | "LOCKED"
+  | "OUTSIDE_REACHABLE_HOURS"
+  | "THRESHOLD"
+  | "UNKNOWN_DEADLINE";
+
+/** How Wrap-up Guidance should behave for this task/session */
+export type WrapUpMode = "AUTO" | "FULL_DEPTH" | "WRAP_UP";
+
+/** Wrap-up Guidance profile currently applied */
+export type WrapUpProfile = "NORMAL" | "WRAP_UP";
 
 export type ActiveContractQueryVariables = Exact<{ [key: string]: never }>;
 
@@ -630,6 +814,18 @@ export type ScheduleQuery = {
   schedule: {
     inReachableHours: boolean;
     nextTransitionAt: string | null;
+    attentionDeadlineAt: string | null;
+    wrapUpGuidance: {
+      active: boolean;
+      deadlineAt: string | null;
+      remainingMinutes: number | null;
+      profile: WrapUpProfile;
+      source: WrapUpGuidanceSource;
+      reason: string;
+      hints: Array<string>;
+      thresholdMinutes: number;
+      selectedMode: WrapUpMode;
+    };
     activeWindow: {
       id: string;
       label: string;
@@ -685,6 +881,18 @@ export type AvailabilityQuery = {
   schedule: {
     inReachableHours: boolean;
     nextTransitionAt: string | null;
+    attentionDeadlineAt: string | null;
+    wrapUpGuidance: {
+      active: boolean;
+      deadlineAt: string | null;
+      remainingMinutes: number | null;
+      profile: WrapUpProfile;
+      source: WrapUpGuidanceSource;
+      reason: string;
+      hints: Array<string>;
+      thresholdMinutes: number;
+      selectedMode: WrapUpMode;
+    };
     activeWindow: {
       id: string;
       label: string;
@@ -728,6 +936,17 @@ export type SubmitProposalMutation = {
     reason: string;
     proposalId: string;
     evaluatedAt: string;
+    wrapUpGuidance: {
+      active: boolean;
+      deadlineAt: string | null;
+      remainingMinutes: number | null;
+      profile: WrapUpProfile;
+      source: WrapUpGuidanceSource;
+      reason: string;
+      hints: Array<string>;
+      thresholdMinutes: number;
+      selectedMode: WrapUpMode;
+    } | null;
   } | null;
 };
 
@@ -747,9 +966,21 @@ export type ProposalsQuery = {
     estimatedMinutes: number | null;
     scopeSummary: string | null;
     sourceRef: string;
+    deliveryMode: WrapUpMode;
     verdict: VerdictDecision;
     verdictReason: string | null;
     insertedAt: string;
+    wrapUpGuidance: {
+      active: boolean;
+      deadlineAt: string | null;
+      remainingMinutes: number | null;
+      profile: WrapUpProfile;
+      source: WrapUpGuidanceSource;
+      reason: string;
+      hints: Array<string>;
+      thresholdMinutes: number;
+      selectedMode: WrapUpMode;
+    } | null;
   }> | null;
 };
 
@@ -844,6 +1075,104 @@ export type OverrideVerdictMutation = {
   } | null;
 };
 
+export type CreateDelegationGrantMutationVariables = Exact<{
+  input: DelegationGrantInput;
+}>;
+
+export type CreateDelegationGrantMutation = {
+  createDelegationGrant: {
+    id: string;
+    scope: DelegationGrantScope;
+    sessionId: string | null;
+    workspaceRef: string | null;
+    agentId: string | null;
+    permissions: Array<DelegationGrantPermission>;
+    source: string;
+    expiresAt: string;
+    revokedAt: string | null;
+    expiredAt: string | null;
+    createdById: string;
+    revokedById: string | null;
+    insertedAt: string;
+    updatedAt: string;
+  } | null;
+};
+
+export type DelegationGrantsQueryVariables = Exact<{
+  filter: InputMaybe<DelegationGrantFilterInput>;
+}>;
+
+export type DelegationGrantsQuery = {
+  delegationGrants: Array<{
+    id: string;
+    scope: DelegationGrantScope;
+    sessionId: string | null;
+    workspaceRef: string | null;
+    agentId: string | null;
+    permissions: Array<DelegationGrantPermission>;
+    source: string;
+    expiresAt: string;
+    revokedAt: string | null;
+    expiredAt: string | null;
+    createdById: string;
+    revokedById: string | null;
+    insertedAt: string;
+    updatedAt: string;
+  }>;
+};
+
+export type ActiveDelegationGrantsQueryVariables = Exact<{ [key: string]: never }>;
+
+export type ActiveDelegationGrantsQuery = {
+  activeDelegationGrants: Array<{
+    id: string;
+    scope: DelegationGrantScope;
+    sessionId: string | null;
+    workspaceRef: string | null;
+    agentId: string | null;
+    permissions: Array<DelegationGrantPermission>;
+    source: string;
+    expiresAt: string;
+    revokedAt: string | null;
+    expiredAt: string | null;
+    createdById: string;
+    revokedById: string | null;
+    insertedAt: string;
+    updatedAt: string;
+  }>;
+};
+
+export type RevokeDelegationGrantMutationVariables = Exact<{
+  id: Scalars["ID"]["input"];
+}>;
+
+export type RevokeDelegationGrantMutation = {
+  revokeDelegationGrant: {
+    id: string;
+    scope: DelegationGrantScope;
+    sessionId: string | null;
+    workspaceRef: string | null;
+    agentId: string | null;
+    permissions: Array<DelegationGrantPermission>;
+    source: string;
+    expiresAt: string;
+    revokedAt: string | null;
+    expiredAt: string | null;
+    createdById: string;
+    revokedById: string | null;
+    insertedAt: string;
+    updatedAt: string;
+  } | null;
+};
+
+export type RevokeDelegationGrantsMutationVariables = Exact<{
+  filter: InputMaybe<DelegationGrantFilterInput>;
+}>;
+
+export type RevokeDelegationGrantsMutation = {
+  revokeDelegationGrants: { revokedCount: number } | null;
+};
+
 export type EvaluateInterruptQueryVariables = Exact<{
   handle: Scalars["String"]["input"];
 }>;
@@ -883,22 +1212,38 @@ export type VerdictSettingsQueryVariables = Exact<{ [key: string]: never }>;
 export type VerdictSettingsQuery = {
   verdictSettings: {
     id: string;
-    modeThresholds: Record<string, unknown>;
+    defaultWrapUpMode: WrapUpMode;
+    wrapUpThresholdMinutes: number;
     insertedAt: string;
     updatedAt: string;
+    thresholds: {
+      online: { maxFiles: number | null; maxEstimatedMinutes: number | null };
+      busy: { maxFiles: number | null; maxEstimatedMinutes: number | null };
+      limited: { maxFiles: number | null; maxEstimatedMinutes: number | null };
+      offline: { maxFiles: number | null; maxEstimatedMinutes: number | null };
+    };
   } | null;
 };
 
 export type UpdateVerdictSettingsMutationVariables = Exact<{
-  modeThresholds: Scalars["JSON"]["input"];
+  thresholds: InputMaybe<VerdictModeThresholdsInput>;
+  defaultWrapUpMode: InputMaybe<WrapUpMode>;
+  wrapUpThresholdMinutes: InputMaybe<Scalars["Int"]["input"]>;
 }>;
 
 export type UpdateVerdictSettingsMutation = {
   updateVerdictSettings: {
     id: string;
-    modeThresholds: Record<string, unknown>;
+    defaultWrapUpMode: WrapUpMode;
+    wrapUpThresholdMinutes: number;
     insertedAt: string;
     updatedAt: string;
+    thresholds: {
+      online: { maxFiles: number | null; maxEstimatedMinutes: number | null };
+      busy: { maxFiles: number | null; maxEstimatedMinutes: number | null };
+      limited: { maxFiles: number | null; maxEstimatedMinutes: number | null };
+      offline: { maxFiles: number | null; maxEstimatedMinutes: number | null };
+    };
   } | null;
 };
 

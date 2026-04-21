@@ -175,7 +175,17 @@ export const LIST_PROPOSALS_QUERY = `
       deliveryMode
       verdict
       verdictReason
-      wrapUpGuidanceSnapshot
+      wrapUpGuidance {
+        active
+        deadlineAt
+        remainingMinutes
+        profile
+        source
+        reason
+        hints
+        thresholdMinutes
+        selectedMode
+      }
       insertedAt
     }
   }
@@ -411,7 +421,24 @@ export const VERDICT_SETTINGS_QUERY = `
   query VerdictSettings {
     verdictSettings {
       id
-      modeThresholds
+      thresholds {
+        online {
+          maxFiles
+          maxEstimatedMinutes
+        }
+        busy {
+          maxFiles
+          maxEstimatedMinutes
+        }
+        limited {
+          maxFiles
+          maxEstimatedMinutes
+        }
+        offline {
+          maxFiles
+          maxEstimatedMinutes
+        }
+      }
       defaultWrapUpMode
       wrapUpThresholdMinutes
       insertedAt
@@ -422,10 +449,27 @@ export const VERDICT_SETTINGS_QUERY = `
 
 /** Update verdict evaluation settings. */
 export const UPDATE_VERDICT_SETTINGS_MUTATION = `
-  mutation UpdateVerdictSettings($modeThresholds: JSON, $defaultWrapUpMode: WrapUpMode, $wrapUpThresholdMinutes: Int) {
-    updateVerdictSettings(modeThresholds: $modeThresholds, defaultWrapUpMode: $defaultWrapUpMode, wrapUpThresholdMinutes: $wrapUpThresholdMinutes) {
+  mutation UpdateVerdictSettings($thresholds: VerdictModeThresholdsInput, $defaultWrapUpMode: WrapUpMode, $wrapUpThresholdMinutes: Int) {
+    updateVerdictSettings(thresholds: $thresholds, defaultWrapUpMode: $defaultWrapUpMode, wrapUpThresholdMinutes: $wrapUpThresholdMinutes) {
       id
-      modeThresholds
+      thresholds {
+        online {
+          maxFiles
+          maxEstimatedMinutes
+        }
+        busy {
+          maxFiles
+          maxEstimatedMinutes
+        }
+        limited {
+          maxFiles
+          maxEstimatedMinutes
+        }
+        offline {
+          maxFiles
+          maxEstimatedMinutes
+        }
+      }
       defaultWrapUpMode
       wrapUpThresholdMinutes
       insertedAt

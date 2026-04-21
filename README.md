@@ -196,11 +196,11 @@ if (!interrupt.allowed) {
 
 const settings = await client.getVerdictSettings();
 const updated = await client.updateVerdictSettings({
-  modeThresholds: {
-    online: 60,
-    busy: 15,
-    limited: 5,
-    offline: 0,
+  thresholds: {
+    online: { maxFiles: null, maxEstimatedMinutes: null },
+    busy: { maxFiles: 5, maxEstimatedMinutes: 30 },
+    limited: { maxFiles: 3, maxEstimatedMinutes: 10 },
+    offline: { maxFiles: 0, maxEstimatedMinutes: 0 },
   },
   defaultWrapUpMode: "auto",
   wrapUpThresholdMinutes: 30,
