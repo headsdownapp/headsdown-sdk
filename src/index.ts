@@ -62,6 +62,7 @@ export type {
   DeviceAuthorization,
   Credentials,
   // Config types
+  ActorContext,
   ClientOptions,
   RetryOptions,
   RequestHooks,

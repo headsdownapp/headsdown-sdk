@@ -43,6 +43,42 @@ describe("GraphQLClient", () => {
       expect(body.query).toBe("query { test }");
     });
 
+    it("sends actor context header when configured", async () => {
+      let capturedInit: RequestInit | undefined;
+
+      const fetchFn = ((_url: string, init: RequestInit) => {
+        capturedInit = init;
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ data: {} }),
+        });
+      }) as unknown as typeof globalThis.fetch;
+
+      const client = new GraphQLClient({
+        ...BASE_OPTIONS,
+        fetch: fetchFn,
+        actorContext: {
+          source: "pi",
+          agentId: "agent-1",
+          sessionId: "session-1",
+          workspaceRef: "headsdown/sdk",
+        },
+      });
+
+      await client.request("query { test }");
+
+      const headers = capturedInit?.headers as Record<string, string>;
+      expect(headers["x-headsdown-actor-context"]).toBe(
+        JSON.stringify({
+          source: "pi",
+          agentId: "agent-1",
+          sessionId: "session-1",
+          workspaceRef: "headsdown/sdk",
+        }),
+      );
+    });
+
     it("sends variables when provided", async () => {
       let capturedBody: string | undefined;
 

@@ -76,6 +76,71 @@ describe("HeadsDownClient", () => {
         if (original) process.env.HEADSDOWN_API_KEY = original;
       }
     });
+
+    it("throws ValidationError for invalid actor context", () => {
+      expect(
+        () =>
+          new HeadsDownClient({
+            ...CLIENT_OPTS,
+            actorContext: { source: "" },
+          }),
+      ).toThrow(ValidationError);
+    });
+  });
+
+  describe("withActor", () => {
+    it("creates a derived client with actor context override", async () => {
+      let capturedHeaders: Record<string, string> | undefined;
+      const fetchFn = ((_url: string, init: RequestInit) => {
+        capturedHeaders = init.headers as Record<string, string>;
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ data: { profile: RAW_PROFILE } }),
+        });
+      }) as unknown as typeof globalThis.fetch;
+
+      const client = new HeadsDownClient({
+        ...CLIENT_OPTS,
+        fetch: fetchFn,
+        actorContext: { source: "pi", sessionId: "session-default" },
+      });
+
+      await client.withActor({ source: "pi", sessionId: "session-override" }).getProfile();
+
+      expect(capturedHeaders?.["x-headsdown-actor-context"]).toBe(
+        JSON.stringify({ source: "pi", sessionId: "session-override" }),
+      );
+    });
+
+    it("preserves original client actor context", async () => {
+      const capturedActorHeaders: string[] = [];
+      const fetchFn = ((_url: string, init: RequestInit) => {
+        const headers = init.headers as Record<string, string>;
+        capturedActorHeaders.push(headers["x-headsdown-actor-context"]);
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ data: { profile: RAW_PROFILE } }),
+        });
+      }) as unknown as typeof globalThis.fetch;
+
+      const client = new HeadsDownClient({
+        ...CLIENT_OPTS,
+        fetch: fetchFn,
+        actorContext: { source: "pi", sessionId: "session-default" },
+      });
+
+      await client.withActor({ source: "pi", sessionId: "session-override" }).getProfile();
+      await client.getProfile();
+
+      expect(capturedActorHeaders[0]).toBe(
+        JSON.stringify({ source: "pi", sessionId: "session-override" }),
+      );
+      expect(capturedActorHeaders[1]).toBe(
+        JSON.stringify({ source: "pi", sessionId: "session-default" }),
+      );
+    });
   });
 
   // === fromCredentials ===
