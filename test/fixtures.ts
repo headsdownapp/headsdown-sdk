@@ -181,7 +181,17 @@ export const RAW_PROPOSAL = {
   deliveryMode: "AUTO",
   verdict: "APPROVED",
   verdictReason: "Within scope",
-  wrapUpGuidanceSnapshot: { selected_mode: "auto", active: true },
+  wrapUpGuidance: {
+    active: true,
+    deadlineAt: "2025-06-15T15:00:00Z",
+    remainingMinutes: 30,
+    profile: "WRAP_UP",
+    source: "THRESHOLD",
+    reason: "Approaching end of focus window",
+    hints: ["Summarize progress", "Leave handoff notes"],
+    thresholdMinutes: 30,
+    selectedMode: "AUTO",
+  },
   insertedAt: "2025-06-15T14:30:00Z",
 };
 
@@ -198,7 +208,17 @@ export const NORMALIZED_PROPOSAL: TaskProposal = {
   deliveryMode: "auto",
   verdict: "approved",
   verdictReason: "Within scope",
-  wrapUpGuidanceSnapshot: { selected_mode: "auto", active: true },
+  wrapUpGuidance: {
+    active: true,
+    deadlineAt: "2025-06-15T15:00:00Z",
+    remainingMinutes: 30,
+    profile: "wrap_up",
+    source: "threshold",
+    reason: "Approaching end of focus window",
+    hints: ["Summarize progress", "Leave handoff notes"],
+    thresholdMinutes: 30,
+    selectedMode: "auto",
+  },
   insertedAt: "2025-06-15T14:30:00Z",
 };
 
@@ -351,7 +371,12 @@ export const NORMALIZED_CALIBRATION_PROFILE: CalibrationProfile = {
 
 export const RAW_VERDICT_SETTINGS = {
   id: "settings-1",
-  modeThresholds: { online: 60, busy: 15, limited: 5, offline: 0 },
+  thresholds: {
+    online: { maxFiles: null, maxEstimatedMinutes: null },
+    busy: { maxFiles: 5, maxEstimatedMinutes: 30 },
+    limited: { maxFiles: 3, maxEstimatedMinutes: 10 },
+    offline: { maxFiles: 0, maxEstimatedMinutes: 0 },
+  },
   defaultWrapUpMode: "AUTO",
   wrapUpThresholdMinutes: 30,
   insertedAt: "2025-06-01T00:00:00Z",

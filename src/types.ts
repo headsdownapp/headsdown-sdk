@@ -222,10 +222,24 @@ export interface VerdictOverride {
   insertedAt: string;
 }
 
+/** Threshold values for a single availability mode. */
+export interface VerdictModeThreshold {
+  maxFiles: number | null;
+  maxEstimatedMinutes: number | null;
+}
+
+/** Mode-indexed threshold settings used for verdict evaluation. */
+export interface VerdictModeThresholds {
+  online: VerdictModeThreshold;
+  busy: VerdictModeThreshold;
+  limited: VerdictModeThreshold;
+  offline: VerdictModeThreshold;
+}
+
 /** Verdict evaluation settings. */
 export interface VerdictSettings {
   id: string;
-  modeThresholds: Record<string, unknown>;
+  thresholds: VerdictModeThresholds;
   defaultWrapUpMode: WrapUpMode;
   wrapUpThresholdMinutes: number;
   insertedAt: string;
@@ -276,7 +290,7 @@ export interface TaskProposal {
   deliveryMode: WrapUpMode;
   verdict: VerdictDecision;
   verdictReason: string | null;
-  wrapUpGuidanceSnapshot: Record<string, unknown> | null;
+  wrapUpGuidance: WrapUpGuidance | null;
   insertedAt: string;
 }
 
@@ -383,6 +397,13 @@ export interface OverrideInput {
   overrideVerdict: VerdictDecision;
   /** Reason for the override. */
   reason?: string;
+}
+
+/** Optional fields to update verdict settings. */
+export interface UpdateVerdictSettingsInput {
+  thresholds?: VerdictModeThresholds;
+  defaultWrapUpMode?: WrapUpMode;
+  wrapUpThresholdMinutes?: number;
 }
 
 /** Optional fields to update auto-responder templates. */

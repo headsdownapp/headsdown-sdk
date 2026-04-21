@@ -31,6 +31,7 @@ import {
   NORMALIZED_CONTRACT,
   NORMALIZED_SCHEDULE,
   NORMALIZED_VERDICT_APPROVED,
+  NORMALIZED_PROPOSAL,
   NORMALIZED_PRESET,
   NORMALIZED_PROFILE,
   NORMALIZED_VERDICT_OVERRIDE,
@@ -391,6 +392,8 @@ describe("HeadsDownClient", () => {
       const proposals = await client.listProposals();
       expect(proposals).toHaveLength(1);
       expect(proposals[0].verdict).toBe("approved");
+      expect(proposals[0].wrapUpGuidance).toEqual(NORMALIZED_PROPOSAL.wrapUpGuidance);
+      expect(proposals[0]).not.toHaveProperty("wrapUpGuidanceSnapshot");
     });
 
     it("passes verdict filter as SCREAMING_CASE", async () => {
@@ -791,7 +794,7 @@ describe("HeadsDownClient", () => {
   });
 
   describe("updateVerdictSettings", () => {
-    it("sends mode thresholds and returns updated settings", async () => {
+    it("sends typed thresholds and returns updated settings", async () => {
       let capturedBody: string | undefined;
       const fetchFn = ((_url: string, init: RequestInit) => {
         capturedBody = init.body as string;
@@ -803,9 +806,14 @@ describe("HeadsDownClient", () => {
       }) as unknown as typeof globalThis.fetch;
 
       const client = new HeadsDownClient({ ...CLIENT_OPTS, fetch: fetchFn });
-      const thresholds = { online: 60, busy: 15, limited: 5, offline: 0 };
+      const thresholds = {
+        online: { maxFiles: 10, maxEstimatedMinutes: 60 },
+        busy: { maxFiles: 3, maxEstimatedMinutes: 15 },
+        limited: { maxFiles: 1, maxEstimatedMinutes: 5 },
+        offline: { maxFiles: 0, maxEstimatedMinutes: 0 },
+      };
       const settings = await client.updateVerdictSettings({
-        modeThresholds: thresholds,
+        thresholds,
         defaultWrapUpMode: "wrap_up",
         wrapUpThresholdMinutes: 45,
       });
@@ -813,7 +821,7 @@ describe("HeadsDownClient", () => {
       expect(settings).toEqual(NORMALIZED_VERDICT_SETTINGS);
 
       const body = JSON.parse(capturedBody!);
-      expect(body.variables.modeThresholds).toEqual(thresholds);
+      expect(body.variables.thresholds).toEqual(thresholds);
       expect(body.variables.defaultWrapUpMode).toBe("WRAP_UP");
       expect(body.variables.wrapUpThresholdMinutes).toBe(45);
     });

@@ -19,6 +19,18 @@ query Schedule($at: DateTime) {
     schedule: availability(at: $at) {
       inReachableHours
       nextTransitionAt
+      attentionDeadlineAt
+      wrapUpGuidance {
+        active
+        deadlineAt
+        remainingMinutes
+        profile
+        source
+        reason
+        hints
+        thresholdMinutes
+        selectedMode
+      }
       activeWindow {
         id
         label
@@ -70,6 +82,18 @@ query Availability($at: DateTime) {
     schedule: availability(at: $at) {
       inReachableHours
       nextTransitionAt
+      attentionDeadlineAt
+      wrapUpGuidance {
+        active
+        deadlineAt
+        remainingMinutes
+        profile
+        source
+        reason
+        hints
+        thresholdMinutes
+        selectedMode
+      }
       activeWindow {
         id
         label
@@ -109,6 +133,17 @@ mutation SubmitProposal($input: ProposalInput!) {
       reason
       proposalId
       evaluatedAt
+      wrapUpGuidance {
+        active
+        deadlineAt
+        remainingMinutes
+        profile
+        source
+        reason
+        hints
+        thresholdMinutes
+        selectedMode
+      }
     }
   }
 
@@ -123,8 +158,20 @@ query Proposals($verdict: VerdictDecision, $latest: Int) {
       estimatedMinutes
       scopeSummary
       sourceRef
+      deliveryMode
       verdict
       verdictReason
+      wrapUpGuidance {
+        active
+        deadlineAt
+        remainingMinutes
+        profile
+        source
+        reason
+        hints
+        thresholdMinutes
+        selectedMode
+      }
       insertedAt
     }
   }
@@ -204,6 +251,88 @@ mutation OverrideVerdict($input: OverrideInput!) {
     }
   }
 
+mutation CreateDelegationGrant($input: DelegationGrantInput!) {
+    createDelegationGrant(input: $input) {
+      id
+      scope
+      sessionId
+      workspaceRef
+      agentId
+      permissions
+      source
+      expiresAt
+      revokedAt
+      expiredAt
+      createdById
+      revokedById
+      insertedAt
+      updatedAt
+    }
+  }
+
+query DelegationGrants($filter: DelegationGrantFilterInput) {
+    delegationGrants(filter: $filter) {
+      id
+      scope
+      sessionId
+      workspaceRef
+      agentId
+      permissions
+      source
+      expiresAt
+      revokedAt
+      expiredAt
+      createdById
+      revokedById
+      insertedAt
+      updatedAt
+    }
+  }
+
+query ActiveDelegationGrants {
+    activeDelegationGrants {
+      id
+      scope
+      sessionId
+      workspaceRef
+      agentId
+      permissions
+      source
+      expiresAt
+      revokedAt
+      expiredAt
+      createdById
+      revokedById
+      insertedAt
+      updatedAt
+    }
+  }
+
+mutation RevokeDelegationGrant($id: ID!) {
+    revokeDelegationGrant(id: $id) {
+      id
+      scope
+      sessionId
+      workspaceRef
+      agentId
+      permissions
+      source
+      expiresAt
+      revokedAt
+      expiredAt
+      createdById
+      revokedById
+      insertedAt
+      updatedAt
+    }
+  }
+
+mutation RevokeDelegationGrants($filter: DelegationGrantFilterInput) {
+    revokeDelegationGrants(filter: $filter) {
+      revokedCount
+    }
+  }
+
 query EvaluateInterrupt($handle: String!) {
     evaluateInterrupt(handle: $handle) {
       allowed
@@ -239,16 +368,54 @@ query CalibrationProfiles {
 query VerdictSettings {
     verdictSettings {
       id
-      modeThresholds
+      thresholds {
+        online {
+          maxFiles
+          maxEstimatedMinutes
+        }
+        busy {
+          maxFiles
+          maxEstimatedMinutes
+        }
+        limited {
+          maxFiles
+          maxEstimatedMinutes
+        }
+        offline {
+          maxFiles
+          maxEstimatedMinutes
+        }
+      }
+      defaultWrapUpMode
+      wrapUpThresholdMinutes
       insertedAt
       updatedAt
     }
   }
 
-mutation UpdateVerdictSettings($modeThresholds: JSON!) {
-    updateVerdictSettings(modeThresholds: $modeThresholds) {
+mutation UpdateVerdictSettings($thresholds: VerdictModeThresholdsInput, $defaultWrapUpMode: WrapUpMode, $wrapUpThresholdMinutes: Int) {
+    updateVerdictSettings(thresholds: $thresholds, defaultWrapUpMode: $defaultWrapUpMode, wrapUpThresholdMinutes: $wrapUpThresholdMinutes) {
       id
-      modeThresholds
+      thresholds {
+        online {
+          maxFiles
+          maxEstimatedMinutes
+        }
+        busy {
+          maxFiles
+          maxEstimatedMinutes
+        }
+        limited {
+          maxFiles
+          maxEstimatedMinutes
+        }
+        offline {
+          maxFiles
+          maxEstimatedMinutes
+        }
+      }
+      defaultWrapUpMode
+      wrapUpThresholdMinutes
       insertedAt
       updatedAt
     }

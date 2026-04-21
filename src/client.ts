@@ -59,6 +59,7 @@ import type {
   TeamPresence,
   RevokeDelegationGrantsResult,
   UpdateAutoResponderInput,
+  UpdateVerdictSettingsInput,
   UserProfile,
   Verdict,
   VerdictOverride,
@@ -677,11 +678,7 @@ export class HeadsDownClient {
   }
 
   /** Update verdict evaluation settings. */
-  async updateVerdictSettings(input: {
-    modeThresholds?: Record<string, unknown>;
-    defaultWrapUpMode?: "auto" | "wrap_up" | "full_depth";
-    wrapUpThresholdMinutes?: number;
-  }): Promise<VerdictSettings> {
+  async updateVerdictSettings(input: UpdateVerdictSettingsInput): Promise<VerdictSettings> {
     if (!input || Object.keys(input).length === 0) {
       throw new ValidationError("At least one verdict settings field must be provided.", "input");
     }
@@ -689,7 +686,7 @@ export class HeadsDownClient {
     validateVerdictSettingsInput(input);
 
     const variables = stripUndefined({
-      modeThresholds: input.modeThresholds,
+      thresholds: input.thresholds,
       defaultWrapUpMode: input.defaultWrapUpMode
         ? toGraphQLEnum(input.defaultWrapUpMode)
         : undefined,
