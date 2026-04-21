@@ -112,12 +112,12 @@ function directiveInstruction(
     return "Execution policy: do not proceed with this work now. Defer or reduce scope until conditions change.";
   }
 
-  if (directiveCode === "proceed_with_caution") {
-    return "Execution policy: proceed with caution, keep scope narrow, and optimize for safe completion of the current slice.";
-  }
-
   if (maxScope === "full_depth") {
     return "Execution policy: proceed with full implementation depth, include robust validation and tests, and complete the requested outcome thoroughly.";
+  }
+
+  if (directiveCode === "proceed_with_caution") {
+    return "Execution policy: proceed with caution, keep scope narrow, and optimize for safe completion of the current slice.";
   }
 
   return "Execution policy: proceed normally with the requested task outcome.";

@@ -150,6 +150,30 @@ describe("describeExecutionDirective", () => {
     expect(directive.primaryDirective).toContain("full implementation depth");
   });
 
+  it("does not emit narrow-scope policy for busy plus forced full-depth", () => {
+    const directive = describeExecutionDirective({
+      contract: makeContract({ mode: "busy" }),
+      schedule: makeSchedule({
+        wrapUpGuidance: {
+          active: false,
+          deadlineAt: "2026-04-22T01:00:00Z",
+          remainingMinutes: 12,
+          profile: "normal",
+          source: "forced_full_depth",
+          reason: "Per-task deep override during busy mode",
+          hints: ["full_validation"],
+          thresholdMinutes: 30,
+          selectedMode: "full_depth",
+        },
+      }),
+    });
+
+    expect(directive.directiveCode).toBe("proceed_with_caution");
+    expect(directive.hardLimits.maxScope).toBe("full_depth");
+    expect(directive.primaryDirective).toContain("full implementation depth");
+    expect(directive.primaryDirective).not.toContain("keep scope narrow");
+  });
+
   it("prefers verdict wrap-up guidance over schedule guidance", () => {
     const verdict = makeVerdict({
       wrapUpGuidance: {
