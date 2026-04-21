@@ -29,6 +29,8 @@ export type {
   AlertsPolicy,
   DayName,
   TaskOutcomeResult,
+  DelegationGrantScope,
+  DelegationGrantPermission,
   // Response types
   Contract,
   ScheduleResolution,
@@ -49,6 +51,8 @@ export type {
   TaskProposal,
   TaskOutcome,
   UserProfile,
+  DelegationGrant,
+  RevokeDelegationGrantsResult,
   // Input types
   ProposalInput,
   ContractInput,
@@ -58,6 +62,8 @@ export type {
   ListDigestOptions,
   ListTeamsOptions,
   OutcomeInput,
+  DelegationGrantInput,
+  DelegationGrantFilterInput,
   // Auth types
   DeviceAuthorization,
   Credentials,

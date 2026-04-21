@@ -38,6 +38,15 @@ export type TaskOutcomeResult =
   | "cancelled"
   | "timed_out";
 
+/** Scope for delegation grants. */
+export type DelegationGrantScope = "session" | "workspace" | "agent";
+
+/** Permission that can be delegated to an agent context. */
+export type DelegationGrantPermission =
+  | "availability_override_create"
+  | "availability_override_cancel"
+  | "preset_apply";
+
 // === Digest Types ===
 
 /** A single event within a digest summary. */
@@ -251,6 +260,29 @@ export interface UserProfile {
   updatedAt: string;
 }
 
+/** Delegated permission grant for actor-scoped authorization. */
+export interface DelegationGrant {
+  id: string;
+  scope: DelegationGrantScope;
+  sessionId: string | null;
+  workspaceRef: string | null;
+  agentId: string | null;
+  permissions: DelegationGrantPermission[];
+  source: string;
+  expiresAt: string;
+  revokedAt: string | null;
+  expiredAt: string | null;
+  createdById: string;
+  revokedById: string | null;
+  insertedAt: string;
+  updatedAt: string;
+}
+
+/** Bulk revoke result for delegation grants. */
+export interface RevokeDelegationGrantsResult {
+  revokedCount: number;
+}
+
 /** A recorded task outcome with calibration data. */
 export interface TaskOutcome {
   id: string;
@@ -334,6 +366,28 @@ export interface ListProposalsOptions {
 export interface ListTeamsOptions {
   /** Restrict to a single team id when provided. */
   id?: string;
+}
+
+/** Input for creating a delegation grant. */
+export interface DelegationGrantInput {
+  scope: DelegationGrantScope;
+  sessionId?: string;
+  workspaceRef?: string;
+  agentId?: string;
+  permissions: DelegationGrantPermission[];
+  durationMinutes?: number;
+  expiresAt?: string;
+  source?: string;
+}
+
+/** Filter input for listing/revoking delegation grants. */
+export interface DelegationGrantFilterInput {
+  active?: boolean;
+  scope?: DelegationGrantScope;
+  sessionId?: string;
+  workspaceRef?: string;
+  agentId?: string;
+  source?: string;
 }
 
 /** Input for reporting a task outcome. */
