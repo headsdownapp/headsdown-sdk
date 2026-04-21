@@ -763,12 +763,18 @@ describe("HeadsDownClient", () => {
 
       const client = new HeadsDownClient({ ...CLIENT_OPTS, fetch: fetchFn });
       const thresholds = { online: 60, busy: 15, limited: 5, offline: 0 };
-      const settings = await client.updateVerdictSettings(thresholds);
+      const settings = await client.updateVerdictSettings({
+        modeThresholds: thresholds,
+        defaultWrapUpMode: "wrap_up",
+        wrapUpThresholdMinutes: 45,
+      });
 
       expect(settings).toEqual(NORMALIZED_VERDICT_SETTINGS);
 
       const body = JSON.parse(capturedBody!);
       expect(body.variables.modeThresholds).toEqual(thresholds);
+      expect(body.variables.defaultWrapUpMode).toBe("WRAP_UP");
+      expect(body.variables.wrapUpThresholdMinutes).toBe(45);
     });
   });
 

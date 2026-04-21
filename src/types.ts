@@ -6,6 +6,22 @@ export type Mode = "online" | "busy" | "limited" | "offline";
 /** Verdict on a task proposal. */
 export type VerdictDecision = "approved" | "deferred";
 
+/** Delivery mode for how agents should execute a task near deadlines. */
+export type WrapUpMode = "auto" | "wrap_up" | "full_depth";
+
+/** Active wrap-up profile. */
+export type WrapUpProfile = "normal" | "wrap_up";
+
+/** Why wrap-up guidance is active or inactive. */
+export type WrapUpGuidanceSource =
+  | "inactive"
+  | "threshold"
+  | "forced_wrap_up"
+  | "forced_full_depth"
+  | "outside_reachable_hours"
+  | "unknown_deadline"
+  | "locked";
+
 /** Confidence level for a calibration profile. */
 export type ConfidenceLevel = "learning" | "high";
 
@@ -152,10 +168,25 @@ export interface ReachabilityWindow {
   autoActivate: boolean;
 }
 
+/** Guidance describing how clients should shape execution near the user's attention deadline. */
+export interface WrapUpGuidance {
+  active: boolean;
+  deadlineAt: string | null;
+  remainingMinutes: number | null;
+  profile: WrapUpProfile;
+  source: WrapUpGuidanceSource;
+  reason: string;
+  hints: string[];
+  thresholdMinutes: number;
+  selectedMode: WrapUpMode;
+}
+
 /** Current schedule resolution for the authenticated user. */
 export interface ScheduleResolution {
   inReachableHours: boolean;
   nextTransitionAt: string | null;
+  attentionDeadlineAt: string | null;
+  wrapUpGuidance: WrapUpGuidance;
   activeWindow: ReachabilityWindow | null;
   nextWindow: ReachabilityWindow | null;
 }
@@ -178,6 +209,7 @@ export interface Verdict {
   reason: string;
   proposalId: string;
   evaluatedAt: string;
+  wrapUpGuidance: WrapUpGuidance | null;
 }
 
 /** The result of overriding a verdict. */
@@ -194,6 +226,8 @@ export interface VerdictOverride {
 export interface VerdictSettings {
   id: string;
   modeThresholds: Record<string, unknown>;
+  defaultWrapUpMode: WrapUpMode;
+  wrapUpThresholdMinutes: number;
   insertedAt: string;
   updatedAt: string;
 }
@@ -239,8 +273,10 @@ export interface TaskProposal {
   estimatedMinutes: number | null;
   scopeSummary: string | null;
   sourceRef: string;
+  deliveryMode: WrapUpMode;
   verdict: VerdictDecision;
   verdictReason: string | null;
+  wrapUpGuidanceSnapshot: Record<string, unknown> | null;
   insertedAt: string;
 }
 
@@ -322,6 +358,8 @@ export interface ProposalInput {
   scopeSummary?: string;
   /** Reference to the task source: ticket number, PR URL, etc. */
   sourceRef?: string;
+  /** Optional per-task override for delivery style. */
+  deliveryMode?: WrapUpMode;
 }
 
 /** Input for creating a new availability contract. */

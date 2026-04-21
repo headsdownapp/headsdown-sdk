@@ -79,6 +79,11 @@ if (contract?.mode === "busy") {
 if (!schedule.inReachableHours) {
   console.log(`Not currently reachable. Next transition: ${schedule.nextTransitionAt}`);
 }
+
+if (schedule.wrapUpGuidance.active) {
+  console.log(`Finish Today active: ${schedule.wrapUpGuidance.remainingMinutes} minutes left`);
+  console.log(`Guidance source: ${schedule.wrapUpGuidance.source}`);
+}
 ```
 
 You can also check availability at a specific point in time:
@@ -119,10 +124,14 @@ const verdict = await client.submitProposal({
   estimatedMinutes: 30,
   scopeSummary: "4 files in lib/auth/",
   sourceRef: "ticket-142",
+  deliveryMode: "auto", // optional: "auto" | "wrap_up" | "full_depth"
 });
 
 if (verdict.decision === "approved") {
   // Proceed with the task
+  if (verdict.wrapUpGuidance?.active) {
+    console.log(`Finish Today is active until ${verdict.wrapUpGuidance.deadlineAt}`);
+  }
 } else {
   // verdict.decision === "deferred"
   console.log(`Deferred: ${verdict.reason}`);
@@ -187,10 +196,14 @@ if (!interrupt.allowed) {
 
 const settings = await client.getVerdictSettings();
 const updated = await client.updateVerdictSettings({
-  online: 60,
-  busy: 15,
-  limited: 5,
-  offline: 0,
+  modeThresholds: {
+    online: 60,
+    busy: 15,
+    limited: 5,
+    offline: 0,
+  },
+  defaultWrapUpMode: "auto",
+  wrapUpThresholdMinutes: 30,
 });
 
 const profiles = await client.listCalibrationProfiles();
