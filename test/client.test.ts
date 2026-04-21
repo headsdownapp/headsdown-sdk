@@ -462,6 +462,15 @@ describe("HeadsDownClient", () => {
       expect(contract).toEqual(NORMALIZED_CONTRACT);
     });
 
+    it("maps missing actor context error to AuthError", async () => {
+      const client = new HeadsDownClient({
+        ...CLIENT_OPTS,
+        fetch: mockGraphQLError([{ message: "Missing actor context for API key authorization" }]),
+      });
+
+      await expect(client.applyPreset("preset-1")).rejects.toThrow(AuthError);
+    });
+
     it("throws ValidationError for empty preset ID", async () => {
       const client = new HeadsDownClient({ ...CLIENT_OPTS, fetch: mockGraphQL({}) });
       await expect(client.applyPreset("")).rejects.toThrow(ValidationError);
@@ -496,6 +505,19 @@ describe("HeadsDownClient", () => {
 
       const body = JSON.parse(capturedBody!);
       expect(body.variables.input.mode).toBe("BUSY");
+    });
+
+    it("rejects Wrap-Up fields in ruleSetParams", async () => {
+      const client = new HeadsDownClient({ ...CLIENT_OPTS, fetch: mockGraphQL({}) });
+
+      await expect(
+        client.createContract({
+          mode: "busy",
+          autoRespond: true,
+          status: true,
+          ruleSetParams: { default_wrap_up_mode: "wrap_up" },
+        }),
+      ).rejects.toThrow(ValidationError);
     });
   });
 
@@ -578,6 +600,25 @@ describe("HeadsDownClient", () => {
         "AVAILABILITY_OVERRIDE_CREATE",
         "PRESET_APPLY",
       ]);
+    });
+
+    it("maps session-token-only grant management errors to AuthError", async () => {
+      const client = new HeadsDownClient({
+        ...CLIENT_OPTS,
+        fetch: mockGraphQLError([{ message: "Delegation grants require session-token auth" }]),
+      });
+
+      await expect(
+        client.createDelegationGrant({
+          scope: "session",
+          sessionId: "session-123",
+          permissions: ["availability_override_create"],
+          durationMinutes: 30,
+        }),
+      ).rejects.toThrow(AuthError);
+
+      await expect(client.revokeDelegationGrant("grant-1")).rejects.toThrow(AuthError);
+      await expect(client.revokeDelegationGrants()).rejects.toThrow(AuthError);
     });
 
     it("validates required scope identifiers before request", async () => {
@@ -783,6 +824,16 @@ describe("HeadsDownClient", () => {
       expect(body.variables.thresholds).toEqual(thresholds);
       expect(body.variables.defaultWrapUpMode).toBe("WRAP_UP");
       expect(body.variables.wrapUpThresholdMinutes).toBe(45);
+    });
+
+    it("rejects availability fields inside modeThresholds", async () => {
+      const client = new HeadsDownClient({ ...CLIENT_OPTS, fetch: mockGraphQL({}) });
+
+      await expect(
+        client.updateVerdictSettings({
+          modeThresholds: { status: true },
+        }),
+      ).rejects.toThrow(ValidationError);
     });
   });
 

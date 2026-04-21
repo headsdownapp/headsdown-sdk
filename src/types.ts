@@ -1,12 +1,12 @@
 // === Enums ===
 
-/** Availability mode. Controls how interruptible the user is. */
+/** Availability mode. Controls interruptibility/status, independent from Wrap-Up execution guidance. */
 export type Mode = "online" | "busy" | "limited" | "offline";
 
 /** Verdict on a task proposal. */
 export type VerdictDecision = "approved" | "deferred";
 
-/** Delivery mode for how agents should execute a task near deadlines. */
+/** Wrap-Up delivery mode for task execution style. This does not change availability status. */
 export type WrapUpMode = "auto" | "wrap_up" | "full_depth";
 
 /** Active wrap-up profile. */
