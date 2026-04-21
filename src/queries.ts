@@ -234,6 +234,103 @@ export const OVERRIDE_VERDICT_MUTATION = `
   }
 `;
 
+/** Create a delegation grant for actor-scoped authorization. */
+export const CREATE_DELEGATION_GRANT_MUTATION = `
+  mutation CreateDelegationGrant($input: DelegationGrantInput!) {
+    createDelegationGrant(input: $input) {
+      id
+      scope
+      sessionId
+      workspaceRef
+      agentId
+      permissions
+      source
+      expiresAt
+      revokedAt
+      expiredAt
+      createdById
+      revokedById
+      insertedAt
+      updatedAt
+    }
+  }
+`;
+
+/** List delegation grants, optionally filtered. */
+export const LIST_DELEGATION_GRANTS_QUERY = `
+  query DelegationGrants($filter: DelegationGrantFilterInput) {
+    delegationGrants(filter: $filter) {
+      id
+      scope
+      sessionId
+      workspaceRef
+      agentId
+      permissions
+      source
+      expiresAt
+      revokedAt
+      expiredAt
+      createdById
+      revokedById
+      insertedAt
+      updatedAt
+    }
+  }
+`;
+
+/** List active delegation grants. */
+export const ACTIVE_DELEGATION_GRANTS_QUERY = `
+  query ActiveDelegationGrants {
+    activeDelegationGrants {
+      id
+      scope
+      sessionId
+      workspaceRef
+      agentId
+      permissions
+      source
+      expiresAt
+      revokedAt
+      expiredAt
+      createdById
+      revokedById
+      insertedAt
+      updatedAt
+    }
+  }
+`;
+
+/** Revoke a single delegation grant. */
+export const REVOKE_DELEGATION_GRANT_MUTATION = `
+  mutation RevokeDelegationGrant($id: ID!) {
+    revokeDelegationGrant(id: $id) {
+      id
+      scope
+      sessionId
+      workspaceRef
+      agentId
+      permissions
+      source
+      expiresAt
+      revokedAt
+      expiredAt
+      createdById
+      revokedById
+      insertedAt
+      updatedAt
+    }
+  }
+`;
+
+/** Revoke delegation grants in bulk, optionally filtered. */
+export const REVOKE_DELEGATION_GRANTS_MUTATION = `
+  mutation RevokeDelegationGrants($filter: DelegationGrantFilterInput) {
+    revokeDelegationGrants(filter: $filter) {
+      revokedCount
+    }
+  }
+`;
+
 /** Evaluate whether interrupting a user is allowed. */
 export const EVALUATE_INTERRUPT_QUERY = `
   query EvaluateInterrupt($handle: String!) {

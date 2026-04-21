@@ -161,6 +161,22 @@ const contract = await client.createContract({
 });
 ```
 
+### Delegation Grants
+
+```typescript
+const grant = await client.createDelegationGrant({
+  scope: "session",
+  sessionId: "session-123",
+  permissions: ["availability_override_create", "availability_override_cancel"],
+  durationMinutes: 30,
+  source: "pi",
+});
+
+const active = await client.listActiveDelegationGrants();
+
+await client.revokeDelegationGrant(grant.id);
+```
+
 ### Verdict and Calibration Utilities
 
 ```typescript

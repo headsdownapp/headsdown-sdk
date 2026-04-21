@@ -130,6 +130,30 @@ describe("GraphQLClient", () => {
       expect(data.proposals[1].verdict).toBe("deferred");
     });
 
+    it("normalizes enum arrays for delegation permissions", async () => {
+      const client = new GraphQLClient({
+        ...BASE_OPTIONS,
+        fetch: mockGraphQL({
+          delegationGrants: [
+            {
+              scope: "SESSION",
+              permissions: ["AVAILABILITY_OVERRIDE_CREATE", "PRESET_APPLY"],
+            },
+          ],
+        }),
+      });
+
+      const data = await client.request<{
+        delegationGrants: Array<{ scope: string; permissions: string[] }>;
+      }>("query { delegationGrants { scope permissions } }");
+
+      expect(data.delegationGrants[0].scope).toBe("session");
+      expect(data.delegationGrants[0].permissions).toEqual([
+        "availability_override_create",
+        "preset_apply",
+      ]);
+    });
+
     it("throws AuthError on 401", async () => {
       const client = new GraphQLClient({ ...BASE_OPTIONS, fetch: mockHttpError(401) });
 

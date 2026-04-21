@@ -222,6 +222,8 @@ const ENUM_FIELDS = new Set([
   "policyStatus",
   "visibilityLevel",
   "alertsPolicy",
+  "scope",
+  "permissions",
 ]);
 
 /** Convert SCREAMING_CASE enum values to lowercase in a response object. */
@@ -234,6 +236,8 @@ function normalizeEnums<T>(data: T): T {
   for (const [key, value] of Object.entries(data as Record<string, unknown>)) {
     if (ENUM_FIELDS.has(key) && typeof value === "string") {
       result[key] = value.toLowerCase();
+    } else if (ENUM_FIELDS.has(key) && Array.isArray(value)) {
+      result[key] = value.map((item) => (typeof item === "string" ? item.toLowerCase() : item));
     } else if (typeof value === "object" && value !== null) {
       result[key] = normalizeEnums(value);
     } else {
