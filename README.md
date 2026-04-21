@@ -23,6 +23,11 @@ const client = await HeadsDownClient.fromCredentials();
 
 // Or from the HEADSDOWN_API_KEY environment variable
 const client = new HeadsDownClient();
+
+// Optional: set default actor context for delegated authorization
+const scopedClient = new HeadsDownClient({
+  actorContext: { source: "pi", sessionId: "session-123" },
+});
 ```
 
 ## Authentication
@@ -82,6 +87,26 @@ You can also check availability at a specific point in time:
 const later = await client.getAvailability({ at: "2025-06-16T09:00:00Z" });
 ```
 
+### Actor Context (session/workspace-aware authorization)
+
+For endpoints protected by delegation grants, the backend can require actor context metadata. Set it once at client construction, or override it for one call with `withActor()`.
+
+```typescript
+const client = new HeadsDownClient({
+  apiKey: "hd_...",
+  actorContext: { source: "pi", sessionId: "session-default" },
+});
+
+// Per-request override via a derived client
+await client
+  .withActor({ source: "pi", workspaceRef: "headsdown/headsdown-pi", sessionId: "session-override" })
+  .submitProposal({ agentRef: "pi", description: "Refactor auth resolver" });
+```
+
+Transport format is a single HTTP header:
+
+- `x-headsdown-actor-context: {"source":"...","agentId":"...?","sessionId":"...?","workspaceRef":"...?"}`
+
 ### Submit a Task Proposal
 
 Ask HeadsDown whether a task should proceed given the user's current availability.
@@ -134,6 +159,22 @@ const contract = await client.createContract({
   ruleSetType: "focus",
   ruleSetParams: { maxInterruptions: 0 },
 });
+```
+
+### Delegation Grants
+
+```typescript
+const grant = await client.createDelegationGrant({
+  scope: "session",
+  sessionId: "session-123",
+  permissions: ["availability_override_create", "availability_override_cancel"],
+  durationMinutes: 30,
+  source: "pi",
+});
+
+const active = await client.listActiveDelegationGrants();
+
+await client.revokeDelegationGrant(grant.id);
 ```
 
 ### Verdict and Calibration Utilities
@@ -196,6 +237,7 @@ const client = new HeadsDownClient({
   hooks: {
     onRetry: ({ attempt, reason }) => console.log(`retry #${attempt + 1}: ${reason}`),
   },
+  actorContext: { source: "pi", sessionId: "session-123" },
 });
 ```
 
@@ -208,12 +250,13 @@ const client = new HeadsDownClient({
 | `retry.retries`      | `2`                         | Number of retries for transient failures     |
 | `retry.retryDelayMs` | `250`                       | Base retry delay in ms (exponential backoff) |
 | `hooks`              | `undefined`                 | Optional onRequest/onResponse/onRetry hooks  |
+| `actorContext`       | `undefined`                 | Default actor context sent as `x-headsdown-actor-context` |
 
 ## Data Transparency
 
 This SDK sends requests only to the HeadsDown API (`https://headsdown.app/graphql` by default). Every request includes your API key as a Bearer token. The exact GraphQL queries are in [`src/queries.ts`](src/queries.ts), readable in full.
 
-**What is sent:** Your API key, and the specific query/mutation being executed (availability checks, task proposals, preset operations, verdict settings, interrupt evaluation).
+**What is sent:** Your API key, the specific query/mutation being executed (availability checks, task proposals, preset operations, verdict settings, interrupt evaluation), and optional actor context metadata when configured (`source`, `agentId`, `sessionId`, `workspaceRef`).
 
 **What is received:** Your availability status, schedule resolution, task verdicts, calibration data, and preset configurations.
 

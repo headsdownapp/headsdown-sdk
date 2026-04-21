@@ -3,20 +3,25 @@ import { ApiError, AuthError, ValidationError } from "./errors.js";
 import { GraphQLClient, toGraphQLEnum } from "./graphql.js";
 import {
   ACTIVE_CONTRACT_QUERY,
+  ACTIVE_DELEGATION_GRANTS_QUERY,
   APPLY_PRESET_MUTATION,
   AUTO_RESPONDER_SETTINGS_QUERY,
   AVAILABILITY_QUERY,
   CALIBRATION_PROFILES_QUERY,
   COMPANY_QUERY,
   CREATE_CONTRACT_MUTATION,
+  CREATE_DELEGATION_GRANT_MUTATION,
   DIGEST_SUMMARIES_QUERY,
   DISMISS_DIGEST_ENTRY_MUTATION,
   EVALUATE_INTERRUPT_QUERY,
+  LIST_DELEGATION_GRANTS_QUERY,
   LIST_PRESETS_QUERY,
   LIST_PROPOSALS_QUERY,
   OVERRIDE_VERDICT_MUTATION,
   PROFILE_QUERY,
   REPORT_OUTCOME_MUTATION,
+  REVOKE_DELEGATION_GRANT_MUTATION,
+  REVOKE_DELEGATION_GRANTS_MUTATION,
   SCHEDULE_QUERY,
   SUBMIT_PROPOSAL_MUTATION,
   TEAM_PRESENCE_QUERY,
@@ -26,9 +31,13 @@ import {
   VERDICT_SETTINGS_QUERY,
 } from "./queries.js";
 import type {
+  ActorContext,
   AutoResponderSettings,
   CalibrationProfile,
   ClientOptions,
+  DelegationGrant,
+  DelegationGrantFilterInput,
+  DelegationGrantInput,
   Company,
   Contract,
   ContractInput,
@@ -48,6 +57,7 @@ import type {
   TaskProposal,
   Team,
   TeamPresence,
+  RevokeDelegationGrantsResult,
   UpdateAutoResponderInput,
   UserProfile,
   Verdict,
@@ -97,6 +107,7 @@ import type {
  */
 export class HeadsDownClient {
   private readonly graphql: GraphQLClient;
+  private readonly clientOptions: ClientOptions & { apiKey: string };
 
   constructor(options: ClientOptions = {}) {
     const apiKey = resolveApiKey(options.apiKey);
@@ -107,6 +118,18 @@ export class HeadsDownClient {
       );
     }
 
+    validateActorContext(options.actorContext);
+
+    this.clientOptions = {
+      apiKey,
+      baseUrl: options.baseUrl,
+      fetch: options.fetch,
+      timeout: options.timeout,
+      retry: options.retry,
+      hooks: options.hooks,
+      actorContext: options.actorContext,
+    };
+
     this.graphql = new GraphQLClient({
       apiKey,
       baseUrl: options.baseUrl,
@@ -115,7 +138,20 @@ export class HeadsDownClient {
       retries: options.retry?.retries,
       retryDelayMs: options.retry?.retryDelayMs,
       hooks: options.hooks,
+      actorContext: options.actorContext,
     });
+  }
+
+  /**
+   * Create a derived client with actor context override for scoped authorization.
+   *
+   * @example
+   * ```ts
+   * await client.withActor({ source: "pi", sessionId: "sess_123" }).submitProposal({ ... });
+   * ```
+   */
+  withActor(actorContext?: ActorContext): HeadsDownClient {
+    return new HeadsDownClient({ ...this.clientOptions, actorContext });
   }
 
   /**
@@ -171,6 +207,9 @@ export class HeadsDownClient {
       baseUrl: options?.baseUrl,
       fetch: options?.fetch,
       timeout: options?.timeout,
+      retry: options?.retry,
+      hooks: options?.hooks,
+      actorContext: options?.actorContext,
     });
   }
 
@@ -294,6 +333,118 @@ export class HeadsDownClient {
       throw new ApiError("HeadsDown API returned no overrideVerdict data.");
     }
     return data.overrideVerdict as VerdictOverride;
+  }
+
+  // === Delegation Grants ===
+
+  /**
+   * Create a delegation grant for actor-scoped authorization.
+   * Session scope requires sessionId, workspace scope requires workspaceRef.
+   */
+  async createDelegationGrant(input: DelegationGrantInput): Promise<DelegationGrant> {
+    validateDelegationGrantInput(input);
+
+    const variables = {
+      input: stripUndefined({
+        scope: toGraphQLEnum(input.scope),
+        sessionId: input.sessionId,
+        workspaceRef: input.workspaceRef,
+        agentId: input.agentId,
+        permissions: input.permissions.map((permission) => toGraphQLEnum(permission)),
+        durationMinutes: input.durationMinutes,
+        expiresAt: input.expiresAt,
+        source: input.source,
+      }),
+    };
+
+    const data = await this.graphql.request<{ createDelegationGrant: DelegationGrant | null }>(
+      CREATE_DELEGATION_GRANT_MUTATION,
+      variables,
+    );
+    if (!data.createDelegationGrant) {
+      throw new ApiError("HeadsDown API returned no createDelegationGrant data.");
+    }
+    return data.createDelegationGrant as DelegationGrant;
+  }
+
+  /** List delegation grants, optionally filtered. */
+  async listDelegationGrants(filter?: DelegationGrantFilterInput): Promise<DelegationGrant[]> {
+    validateDelegationGrantFilter(filter);
+
+    const variables = filter
+      ? {
+          filter: stripUndefined({
+            active: filter.active,
+            scope: filter.scope ? toGraphQLEnum(filter.scope) : undefined,
+            sessionId: filter.sessionId,
+            workspaceRef: filter.workspaceRef,
+            agentId: filter.agentId,
+            source: filter.source,
+          }),
+        }
+      : undefined;
+
+    const data = await this.graphql.request<{ delegationGrants: DelegationGrant[] | null }>(
+      LIST_DELEGATION_GRANTS_QUERY,
+      variables,
+    );
+    return (data.delegationGrants ?? []) as DelegationGrant[];
+  }
+
+  /** List currently active delegation grants. */
+  async listActiveDelegationGrants(): Promise<DelegationGrant[]> {
+    const data = await this.graphql.request<{ activeDelegationGrants: DelegationGrant[] | null }>(
+      ACTIVE_DELEGATION_GRANTS_QUERY,
+    );
+    return (data.activeDelegationGrants ?? []) as DelegationGrant[];
+  }
+
+  /** Revoke a delegation grant by id. */
+  async revokeDelegationGrant(id: string): Promise<DelegationGrant> {
+    if (!id?.trim()) {
+      throw new ValidationError("Delegation grant ID is required.", "id");
+    }
+
+    const data = await this.graphql.request<{ revokeDelegationGrant: DelegationGrant | null }>(
+      REVOKE_DELEGATION_GRANT_MUTATION,
+      { id },
+    );
+
+    if (!data.revokeDelegationGrant) {
+      throw new ApiError("HeadsDown API returned no revokeDelegationGrant data.");
+    }
+
+    return data.revokeDelegationGrant as DelegationGrant;
+  }
+
+  /** Revoke delegation grants in bulk, optionally filtered. */
+  async revokeDelegationGrants(
+    filter?: DelegationGrantFilterInput,
+  ): Promise<RevokeDelegationGrantsResult> {
+    validateDelegationGrantFilter(filter);
+
+    const variables = filter
+      ? {
+          filter: stripUndefined({
+            active: filter.active,
+            scope: filter.scope ? toGraphQLEnum(filter.scope) : undefined,
+            sessionId: filter.sessionId,
+            workspaceRef: filter.workspaceRef,
+            agentId: filter.agentId,
+            source: filter.source,
+          }),
+        }
+      : undefined;
+
+    const data = await this.graphql.request<{
+      revokeDelegationGrants: RevokeDelegationGrantsResult | null;
+    }>(REVOKE_DELEGATION_GRANTS_MUTATION, variables);
+
+    if (!data.revokeDelegationGrants) {
+      throw new ApiError("HeadsDown API returned no revokeDelegationGrants data.");
+    }
+
+    return data.revokeDelegationGrants as RevokeDelegationGrantsResult;
   }
 
   /** List previously submitted proposals, optionally filtered by verdict or limited. */
@@ -564,6 +715,79 @@ export class HeadsDownClient {
 }
 
 // === Helpers ===
+
+function validateDelegationGrantInput(input: DelegationGrantInput): void {
+  if (!input.permissions || input.permissions.length === 0) {
+    throw new ValidationError(
+      "Delegation grant permissions must include at least one permission.",
+      "permissions",
+    );
+  }
+
+  if (input.scope === "session" && !isNonEmptyString(input.sessionId)) {
+    throw new ValidationError("sessionId is required for session scope.", "sessionId");
+  }
+
+  if (input.scope === "workspace" && !isNonEmptyString(input.workspaceRef)) {
+    throw new ValidationError("workspaceRef is required for workspace scope.", "workspaceRef");
+  }
+}
+
+function validateDelegationGrantFilter(filter?: DelegationGrantFilterInput): void {
+  if (!filter) return;
+
+  if (
+    filter.scope === "session" &&
+    filter.sessionId !== undefined &&
+    !isNonEmptyString(filter.sessionId)
+  ) {
+    throw new ValidationError("sessionId must be a non-empty string when provided.", "sessionId");
+  }
+
+  if (
+    filter.scope === "workspace" &&
+    filter.workspaceRef !== undefined &&
+    !isNonEmptyString(filter.workspaceRef)
+  ) {
+    throw new ValidationError(
+      "workspaceRef must be a non-empty string when provided.",
+      "workspaceRef",
+    );
+  }
+}
+
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function validateActorContext(actorContext?: ActorContext): void {
+  if (!actorContext) return;
+
+  validateActorContextField("source", actorContext.source, true);
+  validateActorContextField("agentId", actorContext.agentId, false);
+  validateActorContextField("sessionId", actorContext.sessionId, false);
+  validateActorContextField("workspaceRef", actorContext.workspaceRef, false);
+}
+
+function validateActorContextField(
+  field: keyof ActorContext,
+  value: unknown,
+  required: boolean,
+): void {
+  if (value === undefined || value === null) {
+    if (required) {
+      throw new ValidationError(`Actor context ${field} is required.`, `actorContext.${field}`);
+    }
+    return;
+  }
+
+  if (typeof value !== "string" || value.trim().length === 0) {
+    throw new ValidationError(
+      `Actor context ${field} must be a non-empty string when provided.`,
+      `actorContext.${field}`,
+    );
+  }
+}
 
 function resolveApiKey(explicit?: string): string | undefined {
   if (explicit) return explicit;

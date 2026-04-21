@@ -1,5 +1,5 @@
 import { ApiError, AuthError, NetworkError } from "./errors.js";
-import type { GraphQLResponse, Mode, VerdictDecision, DayName } from "./types.js";
+import type { ActorContext, GraphQLResponse, Mode, VerdictDecision, DayName } from "./types.js";
 
 type NormalizeEnumString<T extends string> = Uppercase<T> extends T ? Lowercase<T> : T;
 export type Normalized<T> = T extends string
@@ -20,6 +20,7 @@ export interface GraphQLClientOptions {
   timeout?: number;
   retries?: number;
   retryDelayMs?: number;
+  actorContext?: ActorContext;
   hooks?: {
     onRequest?: (event: {
       url: string;
@@ -49,6 +50,7 @@ export class GraphQLClient {
   private readonly timeout: number;
   private readonly retries: number;
   private readonly retryDelayMs: number;
+  private readonly actorContext?: ActorContext;
   private readonly hooks: NonNullable<GraphQLClientOptions["hooks"]>;
 
   constructor(options: GraphQLClientOptions) {
@@ -58,6 +60,7 @@ export class GraphQLClient {
     this.timeout = options.timeout ?? DEFAULT_TIMEOUT;
     this.retries = options.retries ?? 2;
     this.retryDelayMs = options.retryDelayMs ?? 250;
+    this.actorContext = options.actorContext;
     this.hooks = options.hooks ?? {};
   }
 
@@ -78,10 +81,7 @@ export class GraphQLClient {
       try {
         response = await this.fetchFn(url, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${this.apiKey}`,
-          },
+          headers: buildHeaders(this.apiKey, this.actorContext),
           body: JSON.stringify({ query, variables }),
           signal: controller.signal,
         });
@@ -190,6 +190,19 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function buildHeaders(apiKey: string, actorContext?: ActorContext): Record<string, string> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${apiKey}`,
+  };
+
+  if (actorContext) {
+    headers["x-headsdown-actor-context"] = JSON.stringify(actorContext);
+  }
+
+  return headers;
+}
+
 // === Enum Normalization ===
 //
 // Absinthe returns enum values in SCREAMING_CASE (e.g., "ONLINE", "APPROVED").
@@ -209,6 +222,8 @@ const ENUM_FIELDS = new Set([
   "policyStatus",
   "visibilityLevel",
   "alertsPolicy",
+  "scope",
+  "permissions",
 ]);
 
 /** Convert SCREAMING_CASE enum values to lowercase in a response object. */
@@ -221,6 +236,8 @@ function normalizeEnums<T>(data: T): T {
   for (const [key, value] of Object.entries(data as Record<string, unknown>)) {
     if (ENUM_FIELDS.has(key) && typeof value === "string") {
       result[key] = value.toLowerCase();
+    } else if (ENUM_FIELDS.has(key) && Array.isArray(value)) {
+      result[key] = value.map((item) => (typeof item === "string" ? item.toLowerCase() : item));
     } else if (typeof value === "object" && value !== null) {
       result[key] = normalizeEnums(value);
     } else {

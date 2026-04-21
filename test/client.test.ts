@@ -17,6 +17,8 @@ import {
   RAW_PRESET,
   RAW_PROFILE,
   RAW_VERDICT_OVERRIDE,
+  RAW_DELEGATION_GRANT,
+  RAW_REVOKE_DELEGATION_GRANTS_RESULT,
   RAW_INTERRUPT_ALLOWED,
   RAW_INTERRUPT_DENIED,
   RAW_CALIBRATION_PROFILE,
@@ -32,6 +34,7 @@ import {
   NORMALIZED_PRESET,
   NORMALIZED_PROFILE,
   NORMALIZED_VERDICT_OVERRIDE,
+  NORMALIZED_DELEGATION_GRANT,
   NORMALIZED_CALIBRATION_PROFILE,
   NORMALIZED_VERDICT_SETTINGS,
   NORMALIZED_DIGEST_SUMMARY,
@@ -75,6 +78,71 @@ describe("HeadsDownClient", () => {
       } finally {
         if (original) process.env.HEADSDOWN_API_KEY = original;
       }
+    });
+
+    it("throws ValidationError for invalid actor context", () => {
+      expect(
+        () =>
+          new HeadsDownClient({
+            ...CLIENT_OPTS,
+            actorContext: { source: "" },
+          }),
+      ).toThrow(ValidationError);
+    });
+  });
+
+  describe("withActor", () => {
+    it("creates a derived client with actor context override", async () => {
+      let capturedHeaders: Record<string, string> | undefined;
+      const fetchFn = ((_url: string, init: RequestInit) => {
+        capturedHeaders = init.headers as Record<string, string>;
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ data: { profile: RAW_PROFILE } }),
+        });
+      }) as unknown as typeof globalThis.fetch;
+
+      const client = new HeadsDownClient({
+        ...CLIENT_OPTS,
+        fetch: fetchFn,
+        actorContext: { source: "pi", sessionId: "session-default" },
+      });
+
+      await client.withActor({ source: "pi", sessionId: "session-override" }).getProfile();
+
+      expect(capturedHeaders?.["x-headsdown-actor-context"]).toBe(
+        JSON.stringify({ source: "pi", sessionId: "session-override" }),
+      );
+    });
+
+    it("preserves original client actor context", async () => {
+      const capturedActorHeaders: string[] = [];
+      const fetchFn = ((_url: string, init: RequestInit) => {
+        const headers = init.headers as Record<string, string>;
+        capturedActorHeaders.push(headers["x-headsdown-actor-context"]);
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ data: { profile: RAW_PROFILE } }),
+        });
+      }) as unknown as typeof globalThis.fetch;
+
+      const client = new HeadsDownClient({
+        ...CLIENT_OPTS,
+        fetch: fetchFn,
+        actorContext: { source: "pi", sessionId: "session-default" },
+      });
+
+      await client.withActor({ source: "pi", sessionId: "session-override" }).getProfile();
+      await client.getProfile();
+
+      expect(capturedActorHeaders[0]).toBe(
+        JSON.stringify({ source: "pi", sessionId: "session-override" }),
+      );
+      expect(capturedActorHeaders[1]).toBe(
+        JSON.stringify({ source: "pi", sessionId: "session-default" }),
+      );
     });
   });
 
@@ -474,6 +542,130 @@ describe("HeadsDownClient", () => {
       await expect(
         client.overrideVerdict({ proposalId: "", overrideVerdict: "approved" }),
       ).rejects.toThrow(ValidationError);
+    });
+  });
+
+  // === delegation grants ===
+
+  describe("delegation grants", () => {
+    it("creates a delegation grant and converts enums to SCREAMING_CASE", async () => {
+      let capturedBody: string | undefined;
+      const fetchFn = ((_url: string, init: RequestInit) => {
+        capturedBody = init.body as string;
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ data: { createDelegationGrant: RAW_DELEGATION_GRANT } }),
+        });
+      }) as unknown as typeof globalThis.fetch;
+
+      const client = new HeadsDownClient({ ...CLIENT_OPTS, fetch: fetchFn });
+      const grant = await client.createDelegationGrant({
+        scope: "session",
+        sessionId: "session-123",
+        permissions: ["availability_override_create", "preset_apply"],
+        durationMinutes: 30,
+      });
+
+      expect(grant).toEqual(NORMALIZED_DELEGATION_GRANT);
+
+      const body = JSON.parse(capturedBody!);
+      expect(body.variables.input.scope).toBe("SESSION");
+      expect(body.variables.input.permissions).toEqual([
+        "AVAILABILITY_OVERRIDE_CREATE",
+        "PRESET_APPLY",
+      ]);
+    });
+
+    it("validates required scope identifiers before request", async () => {
+      const client = new HeadsDownClient({ ...CLIENT_OPTS, fetch: mockGraphQL({}) });
+
+      await expect(
+        client.createDelegationGrant({
+          scope: "session",
+          permissions: ["availability_override_create"],
+        }),
+      ).rejects.toThrow(ValidationError);
+
+      await expect(
+        client.createDelegationGrant({
+          scope: "workspace",
+          permissions: ["availability_override_create"],
+        }),
+      ).rejects.toThrow(ValidationError);
+    });
+
+    it("lists delegation grants with optional filter", async () => {
+      let capturedBody: string | undefined;
+      const fetchFn = ((_url: string, init: RequestInit) => {
+        capturedBody = init.body as string;
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ data: { delegationGrants: [RAW_DELEGATION_GRANT] } }),
+        });
+      }) as unknown as typeof globalThis.fetch;
+
+      const client = new HeadsDownClient({ ...CLIENT_OPTS, fetch: fetchFn });
+      const grants = await client.listDelegationGrants({
+        scope: "session",
+        sessionId: "session-123",
+        active: true,
+      });
+
+      expect(grants).toEqual([NORMALIZED_DELEGATION_GRANT]);
+
+      const body = JSON.parse(capturedBody!);
+      expect(body.variables.filter.scope).toBe("SESSION");
+      expect(body.variables.filter.sessionId).toBe("session-123");
+      expect(body.variables.filter.active).toBe(true);
+    });
+
+    it("lists active delegation grants", async () => {
+      const client = new HeadsDownClient({
+        ...CLIENT_OPTS,
+        fetch: mockGraphQL({ activeDelegationGrants: [RAW_DELEGATION_GRANT] }),
+      });
+
+      const grants = await client.listActiveDelegationGrants();
+      expect(grants).toEqual([NORMALIZED_DELEGATION_GRANT]);
+    });
+
+    it("revokes a delegation grant by id", async () => {
+      const client = new HeadsDownClient({
+        ...CLIENT_OPTS,
+        fetch: mockGraphQL({ revokeDelegationGrant: RAW_DELEGATION_GRANT }),
+      });
+
+      const revoked = await client.revokeDelegationGrant("grant-1");
+      expect(revoked).toEqual(NORMALIZED_DELEGATION_GRANT);
+    });
+
+    it("revokeDelegationGrant validates id", async () => {
+      const client = new HeadsDownClient({ ...CLIENT_OPTS, fetch: mockGraphQL({}) });
+      await expect(client.revokeDelegationGrant("")).rejects.toThrow(ValidationError);
+    });
+
+    it("bulk revokes delegation grants", async () => {
+      let capturedBody: string | undefined;
+      const fetchFn = ((_url: string, init: RequestInit) => {
+        capturedBody = init.body as string;
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () =>
+            Promise.resolve({
+              data: { revokeDelegationGrants: RAW_REVOKE_DELEGATION_GRANTS_RESULT },
+            }),
+        });
+      }) as unknown as typeof globalThis.fetch;
+
+      const client = new HeadsDownClient({ ...CLIENT_OPTS, fetch: fetchFn });
+      const result = await client.revokeDelegationGrants({ scope: "workspace" });
+
+      expect(result.revokedCount).toBe(2);
+      const body = JSON.parse(capturedBody!);
+      expect(body.variables.filter.scope).toBe("WORKSPACE");
     });
   });
 

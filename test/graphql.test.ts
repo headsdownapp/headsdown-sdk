@@ -43,6 +43,42 @@ describe("GraphQLClient", () => {
       expect(body.query).toBe("query { test }");
     });
 
+    it("sends actor context header when configured", async () => {
+      let capturedInit: RequestInit | undefined;
+
+      const fetchFn = ((_url: string, init: RequestInit) => {
+        capturedInit = init;
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ data: {} }),
+        });
+      }) as unknown as typeof globalThis.fetch;
+
+      const client = new GraphQLClient({
+        ...BASE_OPTIONS,
+        fetch: fetchFn,
+        actorContext: {
+          source: "pi",
+          agentId: "agent-1",
+          sessionId: "session-1",
+          workspaceRef: "headsdown/sdk",
+        },
+      });
+
+      await client.request("query { test }");
+
+      const headers = capturedInit?.headers as Record<string, string>;
+      expect(headers["x-headsdown-actor-context"]).toBe(
+        JSON.stringify({
+          source: "pi",
+          agentId: "agent-1",
+          sessionId: "session-1",
+          workspaceRef: "headsdown/sdk",
+        }),
+      );
+    });
+
     it("sends variables when provided", async () => {
       let capturedBody: string | undefined;
 
@@ -92,6 +128,30 @@ describe("GraphQLClient", () => {
 
       expect(data.proposals[0].verdict).toBe("approved");
       expect(data.proposals[1].verdict).toBe("deferred");
+    });
+
+    it("normalizes enum arrays for delegation permissions", async () => {
+      const client = new GraphQLClient({
+        ...BASE_OPTIONS,
+        fetch: mockGraphQL({
+          delegationGrants: [
+            {
+              scope: "SESSION",
+              permissions: ["AVAILABILITY_OVERRIDE_CREATE", "PRESET_APPLY"],
+            },
+          ],
+        }),
+      });
+
+      const data = await client.request<{
+        delegationGrants: Array<{ scope: string; permissions: string[] }>;
+      }>("query { delegationGrants { scope permissions } }");
+
+      expect(data.delegationGrants[0].scope).toBe("session");
+      expect(data.delegationGrants[0].permissions).toEqual([
+        "availability_override_create",
+        "preset_apply",
+      ]);
     });
 
     it("throws AuthError on 401", async () => {

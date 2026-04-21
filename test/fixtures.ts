@@ -4,8 +4,10 @@ import type {
   Contract,
   ScheduleResolution,
   CalibrationProfile,
+  DelegationGrant,
   DigestSummary,
   InterruptResult,
+  RevokeDelegationGrantsResult,
   Team,
   TeamPresence,
   Verdict,
@@ -216,6 +218,44 @@ export const NORMALIZED_VERDICT_OVERRIDE: VerdictOverride = {
   reason: "Urgent hotfix needed",
   proposalId: "proposal-def-456",
   insertedAt: "2025-06-15T15:00:00Z",
+};
+
+export const RAW_DELEGATION_GRANT = {
+  id: "grant-1",
+  scope: "SESSION",
+  sessionId: "session-123",
+  workspaceRef: null,
+  agentId: "agent-1",
+  permissions: ["AVAILABILITY_OVERRIDE_CREATE", "PRESET_APPLY"],
+  source: "pi",
+  expiresAt: "2025-06-15T18:00:00Z",
+  revokedAt: null,
+  expiredAt: null,
+  createdById: "user-1",
+  revokedById: null,
+  insertedAt: "2025-06-15T16:00:00Z",
+  updatedAt: "2025-06-15T16:00:00Z",
+};
+
+export const NORMALIZED_DELEGATION_GRANT: DelegationGrant = {
+  id: "grant-1",
+  scope: "session",
+  sessionId: "session-123",
+  workspaceRef: null,
+  agentId: "agent-1",
+  permissions: ["availability_override_create", "preset_apply"],
+  source: "pi",
+  expiresAt: "2025-06-15T18:00:00Z",
+  revokedAt: null,
+  expiredAt: null,
+  createdById: "user-1",
+  revokedById: null,
+  insertedAt: "2025-06-15T16:00:00Z",
+  updatedAt: "2025-06-15T16:00:00Z",
+};
+
+export const RAW_REVOKE_DELEGATION_GRANTS_RESULT: RevokeDelegationGrantsResult = {
+  revokedCount: 2,
 };
 
 export const RAW_INTERRUPT_ALLOWED: InterruptResult = {
