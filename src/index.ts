@@ -19,6 +19,10 @@ export type { CalibrationTrackerOptions } from "./calibration.js";
 // Errors
 export { HeadsDownError, AuthError, ApiError, NetworkError, ValidationError } from "./errors.js";
 
+// Wrap-Up guidance helpers
+export { describeWrapUpGuidance } from "./wrap-up.js";
+export type { WrapUpInstruction } from "./wrap-up.js";
+
 // Types
 export type {
   // Enums
