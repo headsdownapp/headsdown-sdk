@@ -10,6 +10,7 @@ import {
   mockGraphQLError,
   mockHttpError,
   RAW_CONTRACT,
+  RAW_AVAILABILITY_OVERRIDE,
   RAW_SCHEDULE,
   RAW_VERDICT_APPROVED,
   RAW_VERDICT_DEFERRED,
@@ -29,6 +30,7 @@ import {
   RAW_COMPANY,
   RAW_TEAM_PRESENCE,
   NORMALIZED_CONTRACT,
+  NORMALIZED_AVAILABILITY_OVERRIDE,
   NORMALIZED_SCHEDULE,
   NORMALIZED_VERDICT_APPROVED,
   NORMALIZED_PRESET,
@@ -268,6 +270,102 @@ describe("HeadsDownClient", () => {
 
       expect(result.contract).toBeNull();
       expect(result.schedule).toEqual(NORMALIZED_SCHEDULE);
+    });
+  });
+
+  // === availability overrides ===
+
+  describe("availability overrides", () => {
+    it("creates availability override with enum conversion", async () => {
+      let capturedBody: string | undefined;
+      const fetchFn = ((_url: string, init: RequestInit) => {
+        capturedBody = init.body as string;
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () =>
+            Promise.resolve({ data: { createAvailabilityOverride: RAW_AVAILABILITY_OVERRIDE } }),
+        });
+      }) as unknown as typeof globalThis.fetch;
+
+      const client = new HeadsDownClient({ ...CLIENT_OPTS, fetch: fetchFn });
+      const override = await client.createAvailabilityOverride({
+        mode: "limited",
+        durationMinutes: 30,
+        reason: "In call",
+      });
+
+      expect(override).toEqual(NORMALIZED_AVAILABILITY_OVERRIDE);
+
+      const body = JSON.parse(capturedBody!);
+      expect(body.variables.input.mode).toBe("LIMITED");
+      expect(body.variables.input.durationMinutes).toBe(30);
+    });
+
+    it("validates exactly one of durationMinutes or expiresAt", async () => {
+      const client = new HeadsDownClient({ ...CLIENT_OPTS, fetch: mockGraphQL({}) });
+
+      await expect(
+        client.createAvailabilityOverride({ mode: "online", reason: "manual" }),
+      ).rejects.toThrow(ValidationError);
+
+      await expect(
+        client.createAvailabilityOverride({
+          mode: "online",
+          durationMinutes: 15,
+          expiresAt: "2025-06-15T16:45:00Z",
+        }),
+      ).rejects.toThrow(ValidationError);
+    });
+
+    it("gets active availability override", async () => {
+      const client = new HeadsDownClient({
+        ...CLIENT_OPTS,
+        fetch: mockGraphQL({ activeAvailabilityOverride: RAW_AVAILABILITY_OVERRIDE }),
+      });
+
+      const active = await client.getActiveAvailabilityOverride();
+      expect(active).toEqual(NORMALIZED_AVAILABILITY_OVERRIDE);
+    });
+
+    it("returns null when no active availability override", async () => {
+      const client = new HeadsDownClient({
+        ...CLIENT_OPTS,
+        fetch: mockGraphQL({ activeAvailabilityOverride: null }),
+      });
+
+      const active = await client.getActiveAvailabilityOverride();
+      expect(active).toBeNull();
+    });
+
+    it("cancels availability override", async () => {
+      let capturedBody: string | undefined;
+      const fetchFn = ((_url: string, init: RequestInit) => {
+        capturedBody = init.body as string;
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () =>
+            Promise.resolve({ data: { cancelAvailabilityOverride: RAW_AVAILABILITY_OVERRIDE } }),
+        });
+      }) as unknown as typeof globalThis.fetch;
+
+      const client = new HeadsDownClient({ ...CLIENT_OPTS, fetch: fetchFn });
+      const cancelled = await client.cancelAvailabilityOverride("override-live-1", {
+        reason: "done",
+        source: "pi",
+      });
+
+      expect(cancelled).toEqual(NORMALIZED_AVAILABILITY_OVERRIDE);
+      const body = JSON.parse(capturedBody!);
+      expect(body.variables.id).toBe("override-live-1");
+      expect(body.variables.reason).toBe("done");
+      expect(body.variables.source).toBe("pi");
+    });
+
+    it("cancelAvailabilityOverride validates id", async () => {
+      const client = new HeadsDownClient({ ...CLIENT_OPTS, fetch: mockGraphQL({}) });
+      await expect(client.cancelAvailabilityOverride("")).rejects.toThrow(ValidationError);
     });
   });
 

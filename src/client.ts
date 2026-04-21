@@ -2,6 +2,7 @@ import { CredentialStore, DeviceFlow } from "./auth.js";
 import { ApiError, AuthError, ValidationError } from "./errors.js";
 import { GraphQLClient, toGraphQLEnum } from "./graphql.js";
 import {
+  ACTIVE_AVAILABILITY_OVERRIDE_QUERY,
   ACTIVE_CONTRACT_QUERY,
   ACTIVE_DELEGATION_GRANTS_QUERY,
   APPLY_PRESET_MUTATION,
@@ -9,6 +10,7 @@ import {
   AVAILABILITY_QUERY,
   CALIBRATION_PROFILES_QUERY,
   COMPANY_QUERY,
+  CREATE_AVAILABILITY_OVERRIDE_MUTATION,
   CREATE_CONTRACT_MUTATION,
   CREATE_DELEGATION_GRANT_MUTATION,
   DIGEST_SUMMARIES_QUERY,
@@ -22,6 +24,7 @@ import {
   REPORT_OUTCOME_MUTATION,
   REVOKE_DELEGATION_GRANT_MUTATION,
   REVOKE_DELEGATION_GRANTS_MUTATION,
+  CANCEL_AVAILABILITY_OVERRIDE_MUTATION,
   SCHEDULE_QUERY,
   SUBMIT_PROPOSAL_MUTATION,
   TEAM_PRESENCE_QUERY,
@@ -33,6 +36,8 @@ import {
 import type {
   ActorContext,
   AutoResponderSettings,
+  AvailabilityOverride,
+  AvailabilityOverrideInput,
   CalibrationProfile,
   ClientOptions,
   DelegationGrant,
@@ -264,6 +269,64 @@ export class HeadsDownClient {
       }
       throw error;
     }
+  }
+
+  /** Create a temporary availability override. */
+  async createAvailabilityOverride(
+    input: AvailabilityOverrideInput,
+  ): Promise<AvailabilityOverride> {
+    validateAvailabilityOverrideInput(input);
+
+    const variables = {
+      input: stripUndefined({
+        mode: toGraphQLEnum(input.mode),
+        durationMinutes: input.durationMinutes,
+        expiresAt: input.expiresAt,
+        reason: input.reason,
+        source: input.source,
+      }),
+    };
+
+    const data = await this.graphql.request<{
+      createAvailabilityOverride: AvailabilityOverride | null;
+    }>(CREATE_AVAILABILITY_OVERRIDE_MUTATION, variables);
+
+    if (!data.createAvailabilityOverride) {
+      throw new ApiError("HeadsDown API returned no createAvailabilityOverride data.");
+    }
+
+    return data.createAvailabilityOverride as AvailabilityOverride;
+  }
+
+  /** Cancel a temporary availability override by id. */
+  async cancelAvailabilityOverride(
+    id: string,
+    options?: { reason?: string; source?: string },
+  ): Promise<AvailabilityOverride> {
+    if (!id?.trim()) {
+      throw new ValidationError("Availability override ID is required.", "id");
+    }
+
+    const variables = stripUndefined({ id, reason: options?.reason, source: options?.source });
+
+    const data = await this.graphql.request<{
+      cancelAvailabilityOverride: AvailabilityOverride | null;
+    }>(CANCEL_AVAILABILITY_OVERRIDE_MUTATION, variables);
+
+    if (!data.cancelAvailabilityOverride) {
+      throw new ApiError("HeadsDown API returned no cancelAvailabilityOverride data.");
+    }
+
+    return data.cancelAvailabilityOverride as AvailabilityOverride;
+  }
+
+  /** Get the currently active temporary availability override, if any. */
+  async getActiveAvailabilityOverride(): Promise<AvailabilityOverride | null> {
+    const data = await this.graphql.request<{
+      activeAvailabilityOverride: AvailabilityOverride | null;
+    }>(ACTIVE_AVAILABILITY_OVERRIDE_QUERY);
+
+    return data.activeAvailabilityOverride as AvailabilityOverride | null;
   }
 
   // === Verdicts ===
@@ -715,6 +778,18 @@ export class HeadsDownClient {
 }
 
 // === Helpers ===
+
+function validateAvailabilityOverrideInput(input: AvailabilityOverrideInput): void {
+  const hasDuration = input.durationMinutes !== undefined;
+  const hasExpiry = input.expiresAt !== undefined;
+
+  if (hasDuration === hasExpiry) {
+    throw new ValidationError(
+      "Provide exactly one of durationMinutes or expiresAt for availability override.",
+      "durationMinutes",
+    );
+  }
+}
 
 function validateDelegationGrantInput(input: DelegationGrantInput): void {
   if (!input.permissions || input.permissions.length === 0) {

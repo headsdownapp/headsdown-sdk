@@ -260,6 +260,21 @@ export interface UserProfile {
   updatedAt: string;
 }
 
+/** Temporary availability override that takes precedence over schedule-derived mode. */
+export interface AvailabilityOverride {
+  id: string;
+  mode: Mode;
+  reason: string | null;
+  source: string;
+  expiresAt: string;
+  cancelledAt: string | null;
+  expiredAt: string | null;
+  createdById: string;
+  cancelledById: string | null;
+  insertedAt: string;
+  updatedAt: string;
+}
+
 /** Delegated permission grant for actor-scoped authorization. */
 export interface DelegationGrant {
   id: string;
@@ -335,6 +350,15 @@ export interface ContractInput {
   duration?: number;
   ruleSetType?: string;
   ruleSetParams?: Record<string, unknown>;
+}
+
+/** Input for creating a temporary availability override. */
+export interface AvailabilityOverrideInput {
+  mode: Mode;
+  durationMinutes?: number;
+  expiresAt?: string;
+  reason?: string;
+  source?: string;
 }
 
 /** Input for overriding a verdict. */
