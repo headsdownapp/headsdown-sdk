@@ -26,6 +26,7 @@ import {
   VERDICT_SETTINGS_QUERY,
 } from "./queries.js";
 import type {
+  ActorContext,
   AutoResponderSettings,
   CalibrationProfile,
   ClientOptions,
@@ -97,6 +98,7 @@ import type {
  */
 export class HeadsDownClient {
   private readonly graphql: GraphQLClient;
+  private readonly clientOptions: ClientOptions & { apiKey: string };
 
   constructor(options: ClientOptions = {}) {
     const apiKey = resolveApiKey(options.apiKey);
@@ -107,6 +109,18 @@ export class HeadsDownClient {
       );
     }
 
+    validateActorContext(options.actorContext);
+
+    this.clientOptions = {
+      apiKey,
+      baseUrl: options.baseUrl,
+      fetch: options.fetch,
+      timeout: options.timeout,
+      retry: options.retry,
+      hooks: options.hooks,
+      actorContext: options.actorContext,
+    };
+
     this.graphql = new GraphQLClient({
       apiKey,
       baseUrl: options.baseUrl,
@@ -115,7 +129,20 @@ export class HeadsDownClient {
       retries: options.retry?.retries,
       retryDelayMs: options.retry?.retryDelayMs,
       hooks: options.hooks,
+      actorContext: options.actorContext,
     });
+  }
+
+  /**
+   * Create a derived client with actor context override for scoped authorization.
+   *
+   * @example
+   * ```ts
+   * await client.withActor({ source: "pi", sessionId: "sess_123" }).submitProposal({ ... });
+   * ```
+   */
+  withActor(actorContext?: ActorContext): HeadsDownClient {
+    return new HeadsDownClient({ ...this.clientOptions, actorContext });
   }
 
   /**
@@ -171,6 +198,9 @@ export class HeadsDownClient {
       baseUrl: options?.baseUrl,
       fetch: options?.fetch,
       timeout: options?.timeout,
+      retry: options?.retry,
+      hooks: options?.hooks,
+      actorContext: options?.actorContext,
     });
   }
 
@@ -564,6 +594,35 @@ export class HeadsDownClient {
 }
 
 // === Helpers ===
+
+function validateActorContext(actorContext?: ActorContext): void {
+  if (!actorContext) return;
+
+  validateActorContextField("source", actorContext.source, true);
+  validateActorContextField("agentId", actorContext.agentId, false);
+  validateActorContextField("sessionId", actorContext.sessionId, false);
+  validateActorContextField("workspaceRef", actorContext.workspaceRef, false);
+}
+
+function validateActorContextField(
+  field: keyof ActorContext,
+  value: unknown,
+  required: boolean,
+): void {
+  if (value === undefined || value === null) {
+    if (required) {
+      throw new ValidationError(`Actor context ${field} is required.`, `actorContext.${field}`);
+    }
+    return;
+  }
+
+  if (typeof value !== "string" || value.trim().length === 0) {
+    throw new ValidationError(
+      `Actor context ${field} must be a non-empty string when provided.`,
+      `actorContext.${field}`,
+    );
+  }
+}
 
 function resolveApiKey(explicit?: string): string | undefined {
   if (explicit) return explicit;

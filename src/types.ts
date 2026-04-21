@@ -397,6 +397,18 @@ export interface RetryOptions {
   retryDelayMs?: number;
 }
 
+/** Runtime actor identity metadata used for session/workspace-aware authorization. */
+export interface ActorContext {
+  /** Client source identifier, for example "pi" or "headsdown-sdk". */
+  source: string;
+  /** Optional agent instance identifier. */
+  agentId?: string;
+  /** Optional session identifier for session-scoped grants. */
+  sessionId?: string;
+  /** Optional workspace/repo reference for workspace-scoped grants. */
+  workspaceRef?: string;
+}
+
 /** Request lifecycle hooks for debugging and observability. */
 export interface RequestHooks {
   /** Called before each request attempt. */
@@ -432,6 +444,8 @@ export interface ClientOptions {
   retry?: RetryOptions;
   /** Optional request lifecycle hooks for debugging/telemetry. */
   hooks?: RequestHooks;
+  /** Optional default actor context sent on each GraphQL request. */
+  actorContext?: ActorContext;
 }
 
 /** Options for the Device Flow authentication. */
