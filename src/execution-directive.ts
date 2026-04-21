@@ -1,4 +1,12 @@
-import type { Contract, Mode, ScheduleResolution, Verdict, WrapUpMode } from "./types.js";
+import type {
+  Contract,
+  Mode,
+  ScheduleResolution,
+  Verdict,
+  WrapUpGuidance,
+  WrapUpGuidanceSource,
+  WrapUpMode,
+} from "./types.js";
 
 export type DirectiveCode = "proceed" | "proceed_with_caution" | "defer";
 export type EnforcementLevel = "hard" | "soft";
@@ -23,6 +31,7 @@ export type ExecutionDirective = {
     availabilityMode: Mode | null;
     locked: boolean;
     wrapUpMode: WrapUpMode;
+    wrapUpSource: WrapUpGuidanceSource | null;
     wrapUpActive: boolean;
     remainingMinutes: number | null;
     verdictDecision: Verdict["decision"] | null;
@@ -35,14 +44,19 @@ export type ExecutionDirective = {
 export type ExecutionDirectiveInput = {
   contract?: Contract | null;
   schedule?: ScheduleResolution | null;
-  verdict?: Pick<Verdict, "decision" | "reason"> | null;
+  verdict?: Pick<Verdict, "decision" | "reason" | "wrapUpGuidance"> | null;
   generatedAt?: string;
 };
 
-function defaultRefreshAt(schedule: ScheduleResolution | null | undefined): string | null {
-  if (!schedule) return null;
+function defaultRefreshAt(
+  schedule: ScheduleResolution | null | undefined,
+  guidance: WrapUpGuidance | null,
+): string | null {
+  if (!schedule && !guidance) return null;
 
-  return schedule.wrapUpGuidance?.deadlineAt ?? schedule.nextTransitionAt ?? null;
+  return (
+    schedule?.attentionDeadlineAt ?? guidance?.deadlineAt ?? schedule?.nextTransitionAt ?? null
+  );
 }
 
 function availabilityDirective(mode: Mode | null): {
@@ -109,6 +123,18 @@ function directiveInstruction(
   return "Execution policy: proceed normally with the requested task outcome.";
 }
 
+function hasWrapUpBehavior(guidance: WrapUpGuidance | null): boolean {
+  if (!guidance) return false;
+
+  return guidance.active || guidance.source === "forced_wrap_up" || guidance.source === "threshold";
+}
+
+function hasFullDepthBehavior(guidance: WrapUpGuidance | null): boolean {
+  if (!guidance) return false;
+
+  return guidance.selectedMode === "full_depth" || guidance.source === "forced_full_depth";
+}
+
 export function describeExecutionDirective(input: ExecutionDirectiveInput): ExecutionDirective {
   const contract = input.contract ?? null;
   const schedule = input.schedule ?? null;
@@ -116,8 +142,9 @@ export function describeExecutionDirective(input: ExecutionDirectiveInput): Exec
 
   const mode = contract?.mode ?? null;
   const locked = contract?.lock === true;
-  const wrapUpGuidance = schedule?.wrapUpGuidance;
+  const wrapUpGuidance = verdict?.wrapUpGuidance ?? schedule?.wrapUpGuidance ?? null;
   const wrapUpMode = wrapUpGuidance?.selectedMode ?? "auto";
+  const wrapUpSource = wrapUpGuidance?.source ?? null;
   const wrapUpActive = wrapUpGuidance?.active === true;
 
   const base = availabilityDirective(mode);
@@ -131,29 +158,30 @@ export function describeExecutionDirective(input: ExecutionDirectiveInput): Exec
   let requireHandoffIfIncomplete = base.requireHandoffIfIncomplete;
   let prioritizeTests: "minimal" | "standard" | "robust" = base.prioritizeTests;
 
-  if (wrapUpActive) {
-    if (wrapUpMode === "wrap_up") {
-      if (directiveCode === "proceed") {
-        directiveCode = "proceed_with_caution";
-      }
-      reasonCode = "wrap_up_active";
-      explanation =
-        "Wrap-Up guidance is active, so execution should emphasize finishing current scope over starting new work.";
-      maxScope = "minimal";
-      avoidNewRefactors = true;
-      requireHandoffIfIncomplete = true;
-      prioritizeTests = "minimal";
+  if (hasWrapUpBehavior(wrapUpGuidance)) {
+    if (directiveCode === "proceed") {
+      directiveCode = "proceed_with_caution";
     }
 
-    if (wrapUpMode === "full_depth" && directiveCode !== "defer") {
-      reasonCode = "wrap_up_full_depth_override";
-      explanation =
-        "A full-depth override is active, so execution should prioritize complete implementation depth despite deadline proximity.";
-      maxScope = "full_depth";
-      avoidNewRefactors = false;
-      requireHandoffIfIncomplete = true;
-      prioritizeTests = "robust";
-    }
+    reasonCode = wrapUpSource ?? "threshold";
+    explanation =
+      wrapUpGuidance?.reason ||
+      "Wrap-Up guidance is active, so execution should emphasize finishing current scope over starting new work.";
+    maxScope = "minimal";
+    avoidNewRefactors = true;
+    requireHandoffIfIncomplete = true;
+    prioritizeTests = "minimal";
+  }
+
+  if (hasFullDepthBehavior(wrapUpGuidance) && directiveCode !== "defer") {
+    reasonCode = wrapUpSource ?? "forced_full_depth";
+    explanation =
+      wrapUpGuidance?.reason ||
+      "A full-depth override is active, so execution should prioritize complete implementation depth despite deadline proximity.";
+    maxScope = "full_depth";
+    avoidNewRefactors = false;
+    requireHandoffIfIncomplete = true;
+    prioritizeTests = "robust";
   }
 
   if (locked) {
@@ -161,7 +189,7 @@ export function describeExecutionDirective(input: ExecutionDirectiveInput): Exec
       directiveCode = "proceed_with_caution";
     }
 
-    reasonCode = "status_locked";
+    reasonCode = "locked";
     explanation =
       "The user has locked status behavior. Large or risky changes require confirmation before proceeding.";
   }
@@ -174,10 +202,8 @@ export function describeExecutionDirective(input: ExecutionDirectiveInput): Exec
   }
 
   if (verdict?.decision === "approved") {
-    directiveCode = "proceed";
     enforcement = "hard";
-    reasonCode = "verdict_approved";
-    explanation = verdict.reason || "HeadsDown approved this task under current conditions.";
+    explanation = verdict.reason || explanation;
   }
 
   const context: string[] = [];
@@ -210,7 +236,7 @@ export function describeExecutionDirective(input: ExecutionDirectiveInput): Exec
     reasonCode,
     explanation,
     generatedAt: input.generatedAt ?? new Date().toISOString(),
-    refreshAt: defaultRefreshAt(schedule),
+    refreshAt: defaultRefreshAt(schedule, wrapUpGuidance),
     summary: `${directiveCode.toUpperCase()} (${reasonCode})`,
     hardLimits: {
       requireConfirmationBeforeLargeChanges: locked,
@@ -223,6 +249,7 @@ export function describeExecutionDirective(input: ExecutionDirectiveInput): Exec
       availabilityMode: mode,
       locked,
       wrapUpMode,
+      wrapUpSource,
       wrapUpActive,
       remainingMinutes: wrapUpGuidance?.remainingMinutes ?? null,
       verdictDecision: verdict?.decision ?? null,

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { describeExecutionDirective } from "../src/execution-directive.js";
-import type { Contract, ScheduleResolution } from "../src/types.js";
+import type { Contract, ScheduleResolution, Verdict } from "../src/types.js";
 
 function makeContract(overrides: Partial<Contract> = {}): Contract {
   return {
@@ -42,6 +42,17 @@ function makeSchedule(overrides: Partial<ScheduleResolution> = {}): ScheduleReso
   };
 }
 
+function makeVerdict(overrides: Partial<Verdict> = {}): Verdict {
+  return {
+    decision: "approved",
+    reason: "Within scope",
+    proposalId: "proposal-1",
+    evaluatedAt: "2026-04-21T22:30:00Z",
+    wrapUpGuidance: null,
+    ...overrides,
+  };
+}
+
 describe("describeExecutionDirective", () => {
   it("handles online + wrap-up active", () => {
     const directive = describeExecutionDirective({
@@ -63,6 +74,7 @@ describe("describeExecutionDirective", () => {
     });
 
     expect(directive.directiveCode).toBe("proceed_with_caution");
+    expect(directive.reasonCode).toBe("threshold");
     expect(directive.hardLimits.maxScope).toBe("minimal");
     expect(directive.hardLimits.avoidNewRefactors).toBe(true);
     expect(directive.primaryDirective).toContain("Execution policy");
@@ -77,14 +89,18 @@ describe("describeExecutionDirective", () => {
 
     expect(directive.directiveCode).toBe("proceed_with_caution");
     expect(directive.hardLimits.requireConfirmationBeforeLargeChanges).toBe(true);
-    expect(directive.reasonCode).toBe("status_locked");
+    expect(directive.reasonCode).toBe("locked");
   });
 
   it("handles deferred verdict with reason as highest priority", () => {
     const directive = describeExecutionDirective({
       contract: makeContract({ mode: "online" }),
       schedule: makeSchedule(),
-      verdict: { decision: "deferred", reason: "Too large for current focus window" },
+      verdict: {
+        decision: "deferred",
+        reason: "Too large for current focus window",
+        wrapUpGuidance: null,
+      },
     });
 
     expect(directive.directiveCode).toBe("defer");
@@ -93,12 +109,28 @@ describe("describeExecutionDirective", () => {
     expect(directive.explanation).toContain("Too large");
   });
 
-  it("handles full-depth override with active deadline context", () => {
+  it("keeps caution semantics when verdict is approved", () => {
+    const directive = describeExecutionDirective({
+      contract: makeContract({ mode: "busy" }),
+      schedule: makeSchedule(),
+      verdict: {
+        decision: "approved",
+        reason: "Approved within busy constraints",
+        wrapUpGuidance: null,
+      },
+    });
+
+    expect(directive.directiveCode).toBe("proceed_with_caution");
+    expect(directive.enforcement).toBe("hard");
+    expect(directive.hardLimits.maxScope).toBe("minimal");
+  });
+
+  it("handles full-depth override with inactive guidance", () => {
     const directive = describeExecutionDirective({
       contract: makeContract({ mode: "online" }),
       schedule: makeSchedule({
         wrapUpGuidance: {
-          active: true,
+          active: false,
           deadlineAt: "2026-04-22T01:00:00Z",
           remainingMinutes: 18,
           profile: "normal",
@@ -112,8 +144,47 @@ describe("describeExecutionDirective", () => {
     });
 
     expect(directive.directiveCode).toBe("proceed");
+    expect(directive.reasonCode).toBe("forced_full_depth");
     expect(directive.hardLimits.maxScope).toBe("full_depth");
     expect(directive.hardLimits.prioritizeTests).toBe("robust");
     expect(directive.primaryDirective).toContain("full implementation depth");
+  });
+
+  it("prefers verdict wrap-up guidance over schedule guidance", () => {
+    const verdict = makeVerdict({
+      wrapUpGuidance: {
+        active: true,
+        deadlineAt: "2026-04-22T01:10:00Z",
+        remainingMinutes: 10,
+        profile: "wrap_up",
+        source: "forced_wrap_up",
+        reason: "Forced by policy",
+        hints: ["ship_handoff_if_needed"],
+        thresholdMinutes: 30,
+        selectedMode: "wrap_up",
+      },
+    });
+
+    const directive = describeExecutionDirective({
+      contract: makeContract({ mode: "online" }),
+      schedule: makeSchedule({
+        wrapUpGuidance: {
+          active: false,
+          deadlineAt: null,
+          remainingMinutes: null,
+          profile: "normal",
+          source: "inactive",
+          reason: "",
+          hints: [],
+          thresholdMinutes: 30,
+          selectedMode: "auto",
+        },
+      }),
+      verdict,
+    });
+
+    expect(directive.reasonCode).toBe("forced_wrap_up");
+    expect(directive.supportingSignals.remainingMinutes).toBe(10);
+    expect(directive.primaryDirective).toContain("10 minutes");
   });
 });
