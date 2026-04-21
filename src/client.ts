@@ -295,6 +295,7 @@ export class HeadsDownClient {
         estimatedMinutes: input.estimatedMinutes,
         scopeSummary: input.scopeSummary,
         sourceRef,
+        deliveryMode: input.deliveryMode ? toGraphQLEnum(input.deliveryMode) : undefined,
       }),
     };
 
@@ -657,11 +658,27 @@ export class HeadsDownClient {
     return data.verdictSettings as VerdictSettings;
   }
 
-  /** Update the verdict evaluation mode thresholds. */
-  async updateVerdictSettings(modeThresholds: Record<string, unknown>): Promise<VerdictSettings> {
+  /** Update verdict evaluation settings. */
+  async updateVerdictSettings(input: {
+    modeThresholds?: Record<string, unknown>;
+    defaultWrapUpMode?: "auto" | "wrap_up" | "full_depth";
+    wrapUpThresholdMinutes?: number;
+  }): Promise<VerdictSettings> {
+    if (!input || Object.keys(input).length === 0) {
+      throw new ValidationError("At least one verdict settings field must be provided.", "input");
+    }
+
+    const variables = stripUndefined({
+      modeThresholds: input.modeThresholds,
+      defaultWrapUpMode: input.defaultWrapUpMode
+        ? toGraphQLEnum(input.defaultWrapUpMode)
+        : undefined,
+      wrapUpThresholdMinutes: input.wrapUpThresholdMinutes,
+    });
+
     const data = await this.graphql.request<UpdateVerdictSettingsMutation>(
       UPDATE_VERDICT_SETTINGS_MUTATION,
-      { modeThresholds },
+      variables,
     );
     if (!data.updateVerdictSettings) {
       throw new ApiError("HeadsDown API returned no updateVerdictSettings data.");

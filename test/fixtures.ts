@@ -53,6 +53,18 @@ export const NORMALIZED_CONTRACT: Contract = {
 export const RAW_SCHEDULE = {
   inReachableHours: true,
   nextTransitionAt: "2025-06-15T17:00:00-06:00",
+  attentionDeadlineAt: "2025-06-15T17:00:00-06:00",
+  wrapUpGuidance: {
+    active: true,
+    deadlineAt: "2025-06-15T17:00:00-06:00",
+    remainingMinutes: 25,
+    profile: "WRAP_UP",
+    source: "THRESHOLD",
+    reason: "Within wrap-up threshold",
+    hints: ["completion_first", "defer_non_critical"],
+    thresholdMinutes: 30,
+    selectedMode: "AUTO",
+  },
   activeWindow: {
     id: "window-1",
     label: "Work Hours",
@@ -74,6 +86,18 @@ export const RAW_SCHEDULE = {
 export const NORMALIZED_SCHEDULE: ScheduleResolution = {
   inReachableHours: true,
   nextTransitionAt: "2025-06-15T17:00:00-06:00",
+  attentionDeadlineAt: "2025-06-15T17:00:00-06:00",
+  wrapUpGuidance: {
+    active: true,
+    deadlineAt: "2025-06-15T17:00:00-06:00",
+    remainingMinutes: 25,
+    profile: "wrap_up",
+    source: "threshold",
+    reason: "Within wrap-up threshold",
+    hints: ["completion_first", "defer_non_critical"],
+    thresholdMinutes: 30,
+    selectedMode: "auto",
+  },
   activeWindow: {
     id: "window-1",
     label: "Work Hours",
@@ -97,6 +121,17 @@ export const RAW_VERDICT_APPROVED = {
   reason: "Task is within scope for online mode",
   proposalId: "proposal-abc-123",
   evaluatedAt: "2025-06-15T14:30:00Z",
+  wrapUpGuidance: {
+    active: true,
+    deadlineAt: "2025-06-15T17:00:00-06:00",
+    remainingMinutes: 25,
+    profile: "WRAP_UP",
+    source: "THRESHOLD",
+    reason: "Within wrap-up threshold",
+    hints: ["completion_first", "defer_non_critical"],
+    thresholdMinutes: 30,
+    selectedMode: "AUTO",
+  },
 };
 
 export const NORMALIZED_VERDICT_APPROVED: Verdict = {
@@ -104,6 +139,17 @@ export const NORMALIZED_VERDICT_APPROVED: Verdict = {
   reason: "Task is within scope for online mode",
   proposalId: "proposal-abc-123",
   evaluatedAt: "2025-06-15T14:30:00Z",
+  wrapUpGuidance: {
+    active: true,
+    deadlineAt: "2025-06-15T17:00:00-06:00",
+    remainingMinutes: 25,
+    profile: "wrap_up",
+    source: "threshold",
+    reason: "Within wrap-up threshold",
+    hints: ["completion_first", "defer_non_critical"],
+    thresholdMinutes: 30,
+    selectedMode: "auto",
+  },
 };
 
 export const RAW_VERDICT_DEFERRED = {
@@ -111,6 +157,7 @@ export const RAW_VERDICT_DEFERRED = {
   reason: "User is in offline mode; defers all proposals",
   proposalId: "proposal-def-456",
   evaluatedAt: "2025-06-15T14:35:00Z",
+  wrapUpGuidance: null,
 };
 
 export const NORMALIZED_VERDICT_DEFERRED: Verdict = {
@@ -118,9 +165,10 @@ export const NORMALIZED_VERDICT_DEFERRED: Verdict = {
   reason: "User is in offline mode; defers all proposals",
   proposalId: "proposal-def-456",
   evaluatedAt: "2025-06-15T14:35:00Z",
+  wrapUpGuidance: null,
 };
 
-export const RAW_PROPOSAL: TaskProposal = {
+export const RAW_PROPOSAL = {
   id: "prop-1",
   agentRef: "claude-code",
   model: "claude-sonnet-4",
@@ -130,8 +178,10 @@ export const RAW_PROPOSAL: TaskProposal = {
   estimatedMinutes: 20,
   scopeSummary: "4 files in lib/auth",
   sourceRef: "ticket-142",
-  verdict: "APPROVED" as "approved",
+  deliveryMode: "AUTO",
+  verdict: "APPROVED",
   verdictReason: "Within scope",
+  wrapUpGuidanceSnapshot: { selected_mode: "auto", active: true },
   insertedAt: "2025-06-15T14:30:00Z",
 };
 
@@ -145,8 +195,10 @@ export const NORMALIZED_PROPOSAL: TaskProposal = {
   estimatedMinutes: 20,
   scopeSummary: "4 files in lib/auth",
   sourceRef: "ticket-142",
+  deliveryMode: "auto",
   verdict: "approved",
   verdictReason: "Within scope",
+  wrapUpGuidanceSnapshot: { selected_mode: "auto", active: true },
   insertedAt: "2025-06-15T14:30:00Z",
 };
 
@@ -300,11 +352,16 @@ export const NORMALIZED_CALIBRATION_PROFILE: CalibrationProfile = {
 export const RAW_VERDICT_SETTINGS = {
   id: "settings-1",
   modeThresholds: { online: 60, busy: 15, limited: 5, offline: 0 },
+  defaultWrapUpMode: "AUTO",
+  wrapUpThresholdMinutes: 30,
   insertedAt: "2025-06-01T00:00:00Z",
   updatedAt: "2025-06-10T00:00:00Z",
 };
 
-export const NORMALIZED_VERDICT_SETTINGS: VerdictSettings = { ...RAW_VERDICT_SETTINGS };
+export const NORMALIZED_VERDICT_SETTINGS: VerdictSettings = {
+  ...RAW_VERDICT_SETTINGS,
+  defaultWrapUpMode: "auto",
+};
 
 export const RAW_DIGEST_SUMMARY = {
   id: "digest-1",

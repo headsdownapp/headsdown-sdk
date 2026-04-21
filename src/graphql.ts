@@ -224,6 +224,11 @@ const ENUM_FIELDS = new Set([
   "alertsPolicy",
   "scope",
   "permissions",
+  "profile",
+  "source",
+  "selectedMode",
+  "defaultWrapUpMode",
+  "deliveryMode",
 ]);
 
 /** Convert SCREAMING_CASE enum values to lowercase in a response object. */

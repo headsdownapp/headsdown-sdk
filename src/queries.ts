@@ -24,6 +24,18 @@ export const SCHEDULE_QUERY = `
     schedule: availability(at: $at) {
       inReachableHours
       nextTransitionAt
+      attentionDeadlineAt
+      wrapUpGuidance {
+        active
+        deadlineAt
+        remainingMinutes
+        profile
+        source
+        reason
+        hints
+        thresholdMinutes
+        selectedMode
+      }
       activeWindow {
         id
         label
@@ -78,6 +90,18 @@ export const AVAILABILITY_QUERY = `
     schedule: availability(at: $at) {
       inReachableHours
       nextTransitionAt
+      attentionDeadlineAt
+      wrapUpGuidance {
+        active
+        deadlineAt
+        remainingMinutes
+        profile
+        source
+        reason
+        hints
+        thresholdMinutes
+        selectedMode
+      }
       activeWindow {
         id
         label
@@ -120,6 +144,17 @@ export const SUBMIT_PROPOSAL_MUTATION = `
       reason
       proposalId
       evaluatedAt
+      wrapUpGuidance {
+        active
+        deadlineAt
+        remainingMinutes
+        profile
+        source
+        reason
+        hints
+        thresholdMinutes
+        selectedMode
+      }
     }
   }
 `;
@@ -137,8 +172,10 @@ export const LIST_PROPOSALS_QUERY = `
       estimatedMinutes
       scopeSummary
       sourceRef
+      deliveryMode
       verdict
       verdictReason
+      wrapUpGuidanceSnapshot
       insertedAt
     }
   }
@@ -375,6 +412,8 @@ export const VERDICT_SETTINGS_QUERY = `
     verdictSettings {
       id
       modeThresholds
+      defaultWrapUpMode
+      wrapUpThresholdMinutes
       insertedAt
       updatedAt
     }
@@ -383,10 +422,12 @@ export const VERDICT_SETTINGS_QUERY = `
 
 /** Update verdict evaluation settings. */
 export const UPDATE_VERDICT_SETTINGS_MUTATION = `
-  mutation UpdateVerdictSettings($modeThresholds: JSON!) {
-    updateVerdictSettings(modeThresholds: $modeThresholds) {
+  mutation UpdateVerdictSettings($modeThresholds: JSON, $defaultWrapUpMode: WrapUpMode, $wrapUpThresholdMinutes: Int) {
+    updateVerdictSettings(modeThresholds: $modeThresholds, defaultWrapUpMode: $defaultWrapUpMode, wrapUpThresholdMinutes: $wrapUpThresholdMinutes) {
       id
       modeThresholds
+      defaultWrapUpMode
+      wrapUpThresholdMinutes
       insertedAt
       updatedAt
     }

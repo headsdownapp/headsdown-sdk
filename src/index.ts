@@ -24,6 +24,9 @@ export type {
   // Enums
   Mode,
   VerdictDecision,
+  WrapUpMode,
+  WrapUpProfile,
+  WrapUpGuidanceSource,
   ConfidenceLevel,
   VisibilityLevel,
   AlertsPolicy,
@@ -39,6 +42,7 @@ export type {
   Verdict,
   VerdictOverride,
   VerdictSettings,
+  WrapUpGuidance,
   InterruptResult,
   CalibrationProfile,
   DigestSummary,
