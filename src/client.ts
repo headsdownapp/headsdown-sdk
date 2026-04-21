@@ -358,14 +358,18 @@ export class HeadsDownClient {
       }),
     };
 
-    const data = await this.graphql.request<{ createDelegationGrant: DelegationGrant | null }>(
-      CREATE_DELEGATION_GRANT_MUTATION,
-      variables,
-    );
-    if (!data.createDelegationGrant) {
-      throw new ApiError("HeadsDown API returned no createDelegationGrant data.");
+    try {
+      const data = await this.graphql.request<{ createDelegationGrant: DelegationGrant | null }>(
+        CREATE_DELEGATION_GRANT_MUTATION,
+        variables,
+      );
+      if (!data.createDelegationGrant) {
+        throw new ApiError("HeadsDown API returned no createDelegationGrant data.");
+      }
+      return data.createDelegationGrant as DelegationGrant;
+    } catch (error) {
+      throw mapDelegationAuthError(error);
     }
-    return data.createDelegationGrant as DelegationGrant;
   }
 
   /** List delegation grants, optionally filtered. */
@@ -406,16 +410,20 @@ export class HeadsDownClient {
       throw new ValidationError("Delegation grant ID is required.", "id");
     }
 
-    const data = await this.graphql.request<{ revokeDelegationGrant: DelegationGrant | null }>(
-      REVOKE_DELEGATION_GRANT_MUTATION,
-      { id },
-    );
+    try {
+      const data = await this.graphql.request<{ revokeDelegationGrant: DelegationGrant | null }>(
+        REVOKE_DELEGATION_GRANT_MUTATION,
+        { id },
+      );
 
-    if (!data.revokeDelegationGrant) {
-      throw new ApiError("HeadsDown API returned no revokeDelegationGrant data.");
+      if (!data.revokeDelegationGrant) {
+        throw new ApiError("HeadsDown API returned no revokeDelegationGrant data.");
+      }
+
+      return data.revokeDelegationGrant as DelegationGrant;
+    } catch (error) {
+      throw mapDelegationAuthError(error);
     }
-
-    return data.revokeDelegationGrant as DelegationGrant;
   }
 
   /** Revoke delegation grants in bulk, optionally filtered. */
@@ -437,15 +445,19 @@ export class HeadsDownClient {
         }
       : undefined;
 
-    const data = await this.graphql.request<{
-      revokeDelegationGrants: RevokeDelegationGrantsResult | null;
-    }>(REVOKE_DELEGATION_GRANTS_MUTATION, variables);
+    try {
+      const data = await this.graphql.request<{
+        revokeDelegationGrants: RevokeDelegationGrantsResult | null;
+      }>(REVOKE_DELEGATION_GRANTS_MUTATION, variables);
 
-    if (!data.revokeDelegationGrants) {
-      throw new ApiError("HeadsDown API returned no revokeDelegationGrants data.");
+      if (!data.revokeDelegationGrants) {
+        throw new ApiError("HeadsDown API returned no revokeDelegationGrants data.");
+      }
+
+      return data.revokeDelegationGrants as RevokeDelegationGrantsResult;
+    } catch (error) {
+      throw mapDelegationAuthError(error);
     }
-
-    return data.revokeDelegationGrants as RevokeDelegationGrantsResult;
   }
 
   /** List previously submitted proposals, optionally filtered by verdict or limited. */
@@ -475,13 +487,17 @@ export class HeadsDownClient {
       throw new ValidationError("Preset ID is required.", "presetId");
     }
 
-    const data = await this.graphql.request<ApplyPresetMutation>(APPLY_PRESET_MUTATION, {
-      id: presetId,
-    });
-    if (!data.applyPreset) {
-      throw new ApiError("HeadsDown API returned no applyPreset data.");
+    try {
+      const data = await this.graphql.request<ApplyPresetMutation>(APPLY_PRESET_MUTATION, {
+        id: presetId,
+      });
+      if (!data.applyPreset) {
+        throw new ApiError("HeadsDown API returned no applyPreset data.");
+      }
+      return data.applyPreset as Contract;
+    } catch (error) {
+      throw mapPresetAuthError(error);
     }
-    return data.applyPreset as Contract;
   }
 
   // === Contracts ===
@@ -491,6 +507,8 @@ export class HeadsDownClient {
    * This sets the user's current mode, status, and availability.
    */
   async createContract(input: ContractInput): Promise<Contract> {
+    validateContractInput(input);
+
     const variables = {
       input: stripUndefined({
         mode: toGraphQLEnum(input.mode),
@@ -668,6 +686,8 @@ export class HeadsDownClient {
       throw new ValidationError("At least one verdict settings field must be provided.", "input");
     }
 
+    validateVerdictSettingsInput(input);
+
     const variables = stripUndefined({
       modeThresholds: input.modeThresholds,
       defaultWrapUpMode: input.defaultWrapUpMode
@@ -733,6 +753,22 @@ export class HeadsDownClient {
 
 // === Helpers ===
 
+const WRAP_UP_FIELDS = new Set([
+  "default_wrap_up_mode",
+  "wrap_up_threshold_minutes",
+  "delivery_mode",
+  "wrapUpGuidance",
+]);
+
+const AVAILABILITY_FIELDS = new Set([
+  "status",
+  "statusEmoji",
+  "statusText",
+  "mode",
+  "autoRespond",
+  "lock",
+]);
+
 function validateDelegationGrantInput(input: DelegationGrantInput): void {
   if (!input.permissions || input.permissions.length === 0) {
     throw new ValidationError(
@@ -775,6 +811,63 @@ function validateDelegationGrantFilter(filter?: DelegationGrantFilterInput): voi
 
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
+}
+
+function validateContractInput(input: ContractInput): void {
+  if (!input.ruleSetParams || typeof input.ruleSetParams !== "object") {
+    return;
+  }
+
+  for (const key of Object.keys(input.ruleSetParams)) {
+    if (WRAP_UP_FIELDS.has(key)) {
+      throw new ValidationError(
+        "Wrap-Up fields are not valid in createContract. Configure Wrap-Up through updateVerdictSettings or per-task deliveryMode.",
+        "ruleSetParams",
+      );
+    }
+  }
+}
+
+function validateVerdictSettingsInput(input: {
+  modeThresholds?: Record<string, unknown>;
+  defaultWrapUpMode?: "auto" | "wrap_up" | "full_depth";
+  wrapUpThresholdMinutes?: number;
+}): void {
+  if (!input.modeThresholds || typeof input.modeThresholds !== "object") {
+    return;
+  }
+
+  for (const key of Object.keys(input.modeThresholds)) {
+    if (AVAILABILITY_FIELDS.has(key)) {
+      throw new ValidationError(
+        "Availability fields are not valid in updateVerdictSettings modeThresholds.",
+        "modeThresholds",
+      );
+    }
+  }
+}
+
+function mapDelegationAuthError(error: unknown): Error {
+  if (
+    error instanceof ApiError &&
+    error.message.includes("Delegation grants require session-token auth")
+  ) {
+    return new AuthError(
+      "Delegation grant management requires a session-token auth path. API keys cannot create or revoke grants.",
+    );
+  }
+
+  return error instanceof Error ? error : new ApiError(String(error));
+}
+
+function mapPresetAuthError(error: unknown): Error {
+  if (error instanceof ApiError && error.message.includes("Missing actor context")) {
+    return new AuthError(
+      "applyPreset with API key authorization requires actor context. Set actorContext on the client or use withActor().",
+    );
+  }
+
+  return error instanceof Error ? error : new ApiError(String(error));
 }
 
 function validateActorContext(actorContext?: ActorContext): void {

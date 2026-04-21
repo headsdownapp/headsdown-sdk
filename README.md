@@ -81,7 +81,7 @@ if (!schedule.inReachableHours) {
 }
 
 if (schedule.wrapUpGuidance.active) {
-  console.log(`Finish Today active: ${schedule.wrapUpGuidance.remainingMinutes} minutes left`);
+  console.log(`Wrap-Up active: ${schedule.wrapUpGuidance.remainingMinutes} minutes left`);
   console.log(`Guidance source: ${schedule.wrapUpGuidance.source}`);
 }
 ```
@@ -130,7 +130,7 @@ const verdict = await client.submitProposal({
 if (verdict.decision === "approved") {
   // Proceed with the task
   if (verdict.wrapUpGuidance?.active) {
-    console.log(`Finish Today is active until ${verdict.wrapUpGuidance.deadlineAt}`);
+    console.log(`Wrap-Up is active until ${verdict.wrapUpGuidance.deadlineAt}`);
   }
 } else {
   // verdict.decision === "deferred"
@@ -168,22 +168,27 @@ const contract = await client.createContract({
   ruleSetType: "focus",
   ruleSetParams: { maxInterruptions: 0 },
 });
+
+// Two-axis boundary: createContract is availability status only.
+// Wrap-Up fields are rejected here and should be set via updateVerdictSettings or deliveryMode.
 ```
 
 ### Delegation Grants
 
+Delegation grant management mutations now require a session-token auth path in the backend. Because this SDK authenticates with API keys, create/revoke grant calls will raise an auth error with actionable guidance.
+
 ```typescript
-const grant = await client.createDelegationGrant({
-  scope: "session",
-  sessionId: "session-123",
-  permissions: ["availability_override_create", "availability_override_cancel"],
-  durationMinutes: 30,
-  source: "pi",
-});
-
-const active = await client.listActiveDelegationGrants();
-
-await client.revokeDelegationGrant(grant.id);
+try {
+  await client.createDelegationGrant({
+    scope: "session",
+    sessionId: "session-123",
+    permissions: ["availability_override_create", "availability_override_cancel"],
+    durationMinutes: 30,
+    source: "pi",
+  });
+} catch (error) {
+  // AuthError: Delegation grant management requires a session-token auth path.
+}
 ```
 
 ### Verdict and Calibration Utilities
