@@ -1,6 +1,6 @@
 {
   "name": "@headsdown/sdk",
-  "version": "0.2.12",
+  "version": "0.2.13",
   "description": "TypeScript client SDK for the HeadsDown availability API",
   "type": "module",
   "main": "./dist/index.js",
@@ -14,6 +14,7 @@
   "files": [
     "dist",
     "README.md",
+    "CHANGELOG.md",
     "LICENSE"
   ],
   "scripts": {

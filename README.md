@@ -92,6 +92,24 @@ You can also check availability at a specific point in time:
 const later = await client.getAvailability({ at: "2025-06-16T09:00:00Z" });
 ```
 
+### Execution Directive (cold-start model guidance)
+
+Use `describeExecutionDirective()` to convert availability, Wrap-Up guidance, and verdict context into one canonical instruction payload for LLMs.
+
+```typescript
+import { describeExecutionDirective } from "@headsdown/sdk";
+
+const { contract, schedule } = await client.getAvailability();
+const verdict = await client.submitProposal({
+  agentRef: "pi",
+  framework: "pi",
+  description: "Ship the scoped fix",
+});
+
+const directive = describeExecutionDirective({ contract, schedule, verdict });
+console.log(directive.primaryDirective);
+```
+
 ### Actor Context (session/workspace-aware authorization)
 
 For endpoints protected by delegation grants, the backend can require actor context metadata. Set it once at client construction, or override it for one call with `withActor()`.
