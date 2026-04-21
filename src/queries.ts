@@ -220,6 +220,63 @@ export const PROFILE_QUERY = `
   }
 `;
 
+/** Create a temporary availability override. */
+export const CREATE_AVAILABILITY_OVERRIDE_MUTATION = `
+  mutation CreateAvailabilityOverride($input: AvailabilityOverrideInput!) {
+    createAvailabilityOverride(input: $input) {
+      id
+      mode
+      reason
+      source
+      expiresAt
+      cancelledAt
+      expiredAt
+      createdById
+      cancelledById
+      insertedAt
+      updatedAt
+    }
+  }
+`;
+
+/** Cancel a temporary availability override by id. */
+export const CANCEL_AVAILABILITY_OVERRIDE_MUTATION = `
+  mutation CancelAvailabilityOverride($id: ID!, $reason: String, $source: String) {
+    cancelAvailabilityOverride(id: $id, reason: $reason, source: $source) {
+      id
+      mode
+      reason
+      source
+      expiresAt
+      cancelledAt
+      expiredAt
+      createdById
+      cancelledById
+      insertedAt
+      updatedAt
+    }
+  }
+`;
+
+/** Get active temporary availability override. */
+export const ACTIVE_AVAILABILITY_OVERRIDE_QUERY = `
+  query ActiveAvailabilityOverride {
+    activeAvailabilityOverride {
+      id
+      mode
+      reason
+      source
+      expiresAt
+      cancelledAt
+      expiredAt
+      createdById
+      cancelledById
+      insertedAt
+      updatedAt
+    }
+  }
+`;
+
 /** Override a verdict decision. */
 export const OVERRIDE_VERDICT_MUTATION = `
   mutation OverrideVerdict($input: OverrideInput!) {

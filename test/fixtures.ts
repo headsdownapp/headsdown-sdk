@@ -1,5 +1,6 @@
 import type {
   AutoResponderSettings,
+  AvailabilityOverride,
   Company,
   Contract,
   ScheduleResolution,
@@ -218,6 +219,34 @@ export const NORMALIZED_VERDICT_OVERRIDE: VerdictOverride = {
   reason: "Urgent hotfix needed",
   proposalId: "proposal-def-456",
   insertedAt: "2025-06-15T15:00:00Z",
+};
+
+export const RAW_AVAILABILITY_OVERRIDE = {
+  id: "override-live-1",
+  mode: "LIMITED",
+  reason: "In call",
+  source: "pi",
+  expiresAt: "2025-06-15T16:45:00Z",
+  cancelledAt: null,
+  expiredAt: null,
+  createdById: "user-1",
+  cancelledById: null,
+  insertedAt: "2025-06-15T16:00:00Z",
+  updatedAt: "2025-06-15T16:00:00Z",
+};
+
+export const NORMALIZED_AVAILABILITY_OVERRIDE: AvailabilityOverride = {
+  id: "override-live-1",
+  mode: "limited",
+  reason: "In call",
+  source: "pi",
+  expiresAt: "2025-06-15T16:45:00Z",
+  cancelledAt: null,
+  expiredAt: null,
+  createdById: "user-1",
+  cancelledById: null,
+  insertedAt: "2025-06-15T16:00:00Z",
+  updatedAt: "2025-06-15T16:00:00Z",
 };
 
 export const RAW_DELEGATION_GRANT = {

@@ -161,6 +161,24 @@ const contract = await client.createContract({
 });
 ```
 
+### Temporary Availability Overrides
+
+```typescript
+const override = await client.createAvailabilityOverride({
+  mode: "limited",
+  durationMinutes: 30,
+  reason: "In a meeting",
+  source: "pi",
+});
+
+const activeOverride = await client.getActiveAvailabilityOverride();
+
+await client.cancelAvailabilityOverride(override.id, {
+  reason: "Meeting ended early",
+  source: "pi",
+});
+```
+
 ### Delegation Grants
 
 ```typescript

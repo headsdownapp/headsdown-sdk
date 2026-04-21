@@ -33,6 +33,7 @@ export type {
   DelegationGrantPermission,
   // Response types
   Contract,
+  AvailabilityOverride,
   ScheduleResolution,
   ReachabilityWindow,
   Preset,
@@ -56,6 +57,7 @@ export type {
   // Input types
   ProposalInput,
   ContractInput,
+  AvailabilityOverrideInput,
   OverrideInput,
   UpdateAutoResponderInput,
   ListProposalsOptions,
