@@ -23,6 +23,15 @@ export { HeadsDownError, AuthError, ApiError, NetworkError, ValidationError } fr
 export { describeWrapUpGuidance } from "./wrap-up.js";
 export type { WrapUpInstruction } from "./wrap-up.js";
 
+// Execution directive helpers
+export { describeExecutionDirective } from "./execution-directive.js";
+export type {
+  DirectiveCode,
+  EnforcementLevel,
+  ExecutionDirective,
+  ExecutionDirectiveInput,
+} from "./execution-directive.js";
+
 // Types
 export type {
   // Enums
