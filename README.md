@@ -122,7 +122,11 @@ const client = new HeadsDownClient({
 
 // Per-request override via a derived client
 await client
-  .withActor({ source: "pi", workspaceRef: "headsdown/headsdown-pi", sessionId: "session-override" })
+  .withActor({
+    source: "pi",
+    workspaceRef: "headsdown/headsdown-pi",
+    sessionId: "session-override",
+  })
   .submitProposal({ agentRef: "pi", description: "Refactor auth resolver" });
 ```
 
@@ -141,7 +145,8 @@ const verdict = await client.submitProposal({
   estimatedFiles: 4,
   estimatedMinutes: 30,
   scopeSummary: "4 files in lib/auth/",
-  sourceRef: "ticket-142",
+  sourceRef: "ticket-142", // provenance (ticket/PR/chat reference)
+  idempotencyKey: "pi-toolcall-123", // retry safety for this invocation
   deliveryMode: "auto", // optional: "auto" | "wrap_up" | "full_depth"
 });
 
@@ -277,15 +282,15 @@ const client = new HeadsDownClient({
 });
 ```
 
-| Option               | Default                     | Description                                  |
-| -------------------- | --------------------------- | -------------------------------------------- |
-| `apiKey`             | `HEADSDOWN_API_KEY` env var | HeadsDown API key (`hd_` prefix)             |
-| `baseUrl`            | `https://headsdown.app`     | API endpoint                                 |
-| `timeout`            | `30000`                     | Request timeout in milliseconds              |
-| `fetch`              | `globalThis.fetch`          | Custom fetch (for testing or proxies)        |
-| `retry.retries`      | `2`                         | Number of retries for transient failures     |
-| `retry.retryDelayMs` | `250`                       | Base retry delay in ms (exponential backoff) |
-| `hooks`              | `undefined`                 | Optional onRequest/onResponse/onRetry hooks  |
+| Option               | Default                     | Description                                               |
+| -------------------- | --------------------------- | --------------------------------------------------------- |
+| `apiKey`             | `HEADSDOWN_API_KEY` env var | HeadsDown API key (`hd_` prefix)                          |
+| `baseUrl`            | `https://headsdown.app`     | API endpoint                                              |
+| `timeout`            | `30000`                     | Request timeout in milliseconds                           |
+| `fetch`              | `globalThis.fetch`          | Custom fetch (for testing or proxies)                     |
+| `retry.retries`      | `2`                         | Number of retries for transient failures                  |
+| `retry.retryDelayMs` | `250`                       | Base retry delay in ms (exponential backoff)              |
+| `hooks`              | `undefined`                 | Optional onRequest/onResponse/onRetry hooks               |
 | `actorContext`       | `undefined`                 | Default actor context sent as `x-headsdown-actor-context` |
 
 ## Data Transparency

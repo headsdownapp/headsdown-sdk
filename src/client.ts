@@ -283,8 +283,10 @@ export class HeadsDownClient {
       throw new ValidationError("Agent reference is required.", "agentRef");
     }
 
-    // Generate a unique sourceRef if not provided, to avoid duplicate-key errors.
+    // sourceRef is provenance; idempotencyKey is for retry safety.
     const sourceRef = input.sourceRef ?? `${input.agentRef}-${Date.now()}-${randomHex(6)}`;
+    const idempotencyKey =
+      input.idempotencyKey ?? `${input.agentRef}-${Date.now()}-${randomHex(8)}`;
 
     const variables = {
       input: stripUndefined({
@@ -296,6 +298,7 @@ export class HeadsDownClient {
         estimatedMinutes: input.estimatedMinutes,
         scopeSummary: input.scopeSummary,
         sourceRef,
+        idempotencyKey,
         deliveryMode: input.deliveryMode ? toGraphQLEnum(input.deliveryMode) : undefined,
       }),
     };

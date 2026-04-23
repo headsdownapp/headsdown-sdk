@@ -287,6 +287,7 @@ export interface TaskProposal {
   estimatedMinutes: number | null;
   scopeSummary: string | null;
   sourceRef: string;
+  idempotencyKey: string | null;
   deliveryMode: WrapUpMode;
   verdict: VerdictDecision;
   verdictReason: string | null;
@@ -372,6 +373,11 @@ export interface ProposalInput {
   scopeSummary?: string;
   /** Reference to the task source: ticket number, PR URL, etc. */
   sourceRef?: string;
+  /**
+   * Optional idempotency key for safe retries.
+   * Reusing the same key for the same user returns the original proposal verdict.
+   */
+  idempotencyKey?: string;
   /** Optional per-task override for delivery style. */
   deliveryMode?: WrapUpMode;
 }
