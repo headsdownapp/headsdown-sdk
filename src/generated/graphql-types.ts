@@ -332,6 +332,7 @@ export type ProposalInput = {
   estimatedFiles: InputMaybe<Scalars["Int"]["input"]>;
   estimatedMinutes: InputMaybe<Scalars["Int"]["input"]>;
   framework: InputMaybe<Scalars["String"]["input"]>;
+  idempotencyKey: InputMaybe<Scalars["String"]["input"]>;
   model: InputMaybe<Scalars["String"]["input"]>;
   scopeSummary: InputMaybe<Scalars["String"]["input"]>;
   sourceRef: Scalars["String"]["input"];
