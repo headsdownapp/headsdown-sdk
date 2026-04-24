@@ -287,7 +287,6 @@ export interface TaskProposal {
   estimatedMinutes: number | null;
   scopeSummary: string | null;
   sourceRef: string;
-  idempotencyKey: string | null;
   deliveryMode: WrapUpMode;
   verdict: VerdictDecision;
   verdictReason: string | null;
