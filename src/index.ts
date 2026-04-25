@@ -52,6 +52,46 @@ export {
 } from "./agent-control-actions.js";
 export type { HeadsDownCallFallback } from "./agent-control.js";
 export { HEADSDOWN_CALL_KEYS, HEADSDOWN_ACTION_KEYS } from "./types.js";
+export {
+  AGENT_RUN_EVENT_PRIVACY_MODE,
+  AGENT_RUN_EVENT_SCHEMA_VERSION,
+  AGENT_RUN_PROGRESS_EVENT_TYPE,
+  assertPrivacySafe,
+  bucketFileCount,
+  bucketScopeGrowth,
+  buildAgentRunEventIdempotencyKey,
+  buildAgentRunEventInput,
+  cancelledEvent,
+  completedEvent,
+  continuationSavedEvent,
+  failedEvent,
+  progressEvent,
+  queuedForLaterEvent,
+  queuedForMorningEvent,
+  resumedEvent,
+  scopeDriftDetectedEvent,
+  startedEvent,
+  steeringOutcomeReportedEvent,
+} from "./agent-run-events.js";
+export type {
+  AgentRunConfidenceBucket,
+  AgentRunEvent,
+  AgentRunEventActorMetadata,
+  AgentRunEventClientMetadata,
+  AgentRunEventContext,
+  AgentRunEventInput,
+  AgentRunEventPrivacyMode,
+  AgentRunEventType,
+  AgentRunFileCountBucket,
+  AgentRunProgressMetadata,
+  AgentRunProgressState,
+  AgentRunScopeGrowthBucket,
+  AgentRunSpendEstimateBucket,
+  AgentRunValidationLevel,
+  AgentRunValidationStatus,
+  ReportAgentRunEventPayload,
+  RequiredEnvelopeInput,
+} from "./agent-run-events.js";
 
 // Types
 export type {

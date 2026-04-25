@@ -168,6 +168,49 @@ export const AGENT_CONTROL_OVERVIEW_QUERY = `
   }
 `;
 
+/** Report a privacy-safe agent run event. */
+export const REPORT_AGENT_RUN_EVENT_MUTATION = `
+  mutation ReportAgentRunEvent($input: ReportAgentRunEventInput!) {
+    reportAgentRunEvent(input: $input) {
+      ok
+      error {
+        code
+        message
+        details
+      }
+      event {
+        id
+        eventId
+        eventType
+        schemaVersion
+        occurredAt
+        receivedAt
+        workspaceRef
+        client {
+          kind
+          name
+          version
+        }
+        actor {
+          kind
+          ref
+        }
+        runId
+        source
+        privacyMode
+        idempotencyKey
+        correlationId
+        causationEventId
+        sequence
+        emitterKey
+        proposalRef
+        payload
+        insertedAt
+      }
+    }
+  }
+`;
+
 /** Apply a canonical HeadsDown action to a run. */
 export const APPLY_HEADSDOWN_ACTION_MUTATION = `
   mutation ApplyHeadsdownAction($input: ApplyHeadsdownActionInput!) {

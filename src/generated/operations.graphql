@@ -159,6 +159,46 @@ query AgentControlOverview {
     }
   }
 
+mutation ReportAgentRunEvent($input: ReportAgentRunEventInput!) {
+    reportAgentRunEvent(input: $input) {
+      ok
+      error {
+        code
+        message
+        details
+      }
+      event {
+        id
+        eventId
+        eventType
+        schemaVersion
+        occurredAt
+        receivedAt
+        workspaceRef
+        client {
+          kind
+          name
+          version
+        }
+        actor {
+          kind
+          ref
+        }
+        runId
+        source
+        privacyMode
+        idempotencyKey
+        correlationId
+        causationEventId
+        sequence
+        emitterKey
+        proposalRef
+        payload
+        insertedAt
+      }
+    }
+  }
+
 mutation ApplyHeadsdownAction($input: ApplyHeadsdownActionInput!) {
     applyHeadsdownAction(input: $input) {
       ok
