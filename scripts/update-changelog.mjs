@@ -1,11 +1,11 @@
-import fs from 'node:fs';
-import { execSync } from 'node:child_process';
+import fs from "node:fs";
+import { execSync } from "node:child_process";
 
-const pkg = JSON.parse(fs.readFileSync('./package.json', 'utf8'));
+const pkg = JSON.parse(fs.readFileSync("./package.json", "utf8"));
 const version = pkg.version;
-const changelogPath = './CHANGELOG.md';
+const changelogPath = "./CHANGELOG.md";
 
-let changelog = fs.readFileSync(changelogPath, 'utf8');
+let changelog = fs.readFileSync(changelogPath, "utf8");
 
 // Check if version already exists in changelog to avoid duplicates
 if (changelog.includes(`## ${version}`)) {
@@ -13,7 +13,7 @@ if (changelog.includes(`## ${version}`)) {
 }
 
 // Insert the new version header after the main title
-const titleLine = '# Changelog\n';
+const titleLine = "# Changelog\n";
 if (changelog.startsWith(titleLine)) {
   const newContent = `${titleLine}\n## ${version}\n\n- (Add changes here)\n${changelog.slice(titleLine.length)}`;
   fs.writeFileSync(changelogPath, newContent);
