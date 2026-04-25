@@ -27,6 +27,8 @@
     "schema:sync": "node scripts/schema-sync.mjs",
     "codegen:types": "node scripts/codegen-types.mjs",
     "codegen": "npm run codegen:types",
+    "preversion": "git diff --exit-code CHANGELOG.md && (echo 'Error: Update CHANGELOG.md before bumping version' && exit 1) || exit 0",
+    "version": "node scripts/update-changelog.mjs && git add CHANGELOG.md",
     "prepare": "npm run build",
     "prepublishOnly": "npm run build",
     "clean": "rm -rf dist"
