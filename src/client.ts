@@ -1,3 +1,8 @@
+import {
+  buildActionIdempotencyKey,
+  mapHeadsDownActionError,
+  mapHeadsDownActionPayloadError,
+} from "./agent-control-actions.js";
 import { CredentialStore, DeviceFlow } from "./auth.js";
 import { ApiError, AuthError, ValidationError } from "./errors.js";
 import { GraphQLClient, toGraphQLEnum } from "./graphql.js";
@@ -5,6 +10,7 @@ import {
   ACTIVE_CONTRACT_QUERY,
   ACTIVE_DELEGATION_GRANTS_QUERY,
   AGENT_CONTROL_OVERVIEW_QUERY,
+  APPLY_HEADSDOWN_ACTION_MUTATION,
   APPLY_PRESET_MUTATION,
   AUTO_RESPONDER_SETTINGS_QUERY,
   AVAILABILITY_QUERY,
@@ -34,7 +40,9 @@ import {
 import type {
   ActorContext,
   AgentControlOverview,
+  AllowForDurationActionOptions,
   AutoResponderSettings,
+  CreateTemporaryExceptionActionOptions,
   CalibrationProfile,
   ClientOptions,
   DelegationGrant,
@@ -42,7 +50,12 @@ import type {
   DelegationGrantInput,
   Company,
   Contract,
+  HeadsDownActionInputByKey,
+  HeadsDownActionMutationPayload,
+  HeadsDownActionKey,
+  HeadsDownActionOptions,
   ContractInput,
+  TemporaryExceptionActionOptions,
   DeviceAuthorization,
   DeviceFlowOptions,
   DigestSummary,
@@ -70,6 +83,8 @@ import type {
 import type {
   ActiveContractQuery,
   AgentControlOverviewQuery,
+  ApplyHeadsdownActionMutation,
+  ApplyHeadsdownActionMutationVariables,
   ApplyPresetMutation,
   AutoResponderSettingsQuery,
   AvailabilityQuery,
@@ -251,6 +266,112 @@ export class HeadsDownClient {
       AGENT_CONTROL_OVERVIEW_QUERY,
     );
     return data.agentControlOverview as AgentControlOverview;
+  }
+
+  /**
+   * Apply a canonical HeadsDown action to a run.
+   * Prefer the named helper methods for common actions; use this for newly added canonical actions.
+   */
+  async applyHeadsDownAction<K extends HeadsDownActionKey>(
+    actionKey: K,
+    input: HeadsDownActionInputByKey[K],
+  ): Promise<HeadsDownActionMutationPayload> {
+    return this.executeHeadsDownAction(actionKey, input);
+  }
+
+  /**
+   * Apply continue to let approved work proceed.
+   */
+  async continueRun(input: HeadsDownActionOptions): Promise<HeadsDownActionMutationPayload> {
+    return this.executeHeadsDownAction("continue", input);
+  }
+
+  /**
+   * Apply continue_with_limit to proceed inside tighter bounds.
+   */
+  async continueWithLimit(input: HeadsDownActionOptions): Promise<HeadsDownActionMutationPayload> {
+    return this.executeHeadsDownAction("continue_with_limit", input);
+  }
+
+  /**
+   * Apply narrow_scope to keep the run inside a tighter slice.
+   */
+  async narrowScope(input: HeadsDownActionOptions): Promise<HeadsDownActionMutationPayload> {
+    return this.executeHeadsDownAction("narrow_scope", input);
+  }
+
+  /**
+   * Apply ask_user when the run needs a human decision before going deeper.
+   */
+  async askUser(input: HeadsDownActionOptions): Promise<HeadsDownActionMutationPayload> {
+    return this.executeHeadsDownAction("ask_user", input);
+  }
+
+  /**
+   * Apply queue_for_later to defer work without losing the thread.
+   */
+  async queueForLater(input: HeadsDownActionOptions): Promise<HeadsDownActionMutationPayload> {
+    return this.executeHeadsDownAction("queue_for_later", input);
+  }
+
+  /**
+   * Apply queue_for_morning to keep non-urgent work queued for the next work window.
+   */
+  async queueForMorning(input: HeadsDownActionOptions): Promise<HeadsDownActionMutationPayload> {
+    return this.executeHeadsDownAction("queue_for_morning", input);
+  }
+
+  /**
+   * Apply pause_and_summarize to save a handoff before a run drifts further.
+   */
+  async pauseAndSummarize(input: HeadsDownActionOptions): Promise<HeadsDownActionMutationPayload> {
+    return this.executeHeadsDownAction("pause_and_summarize", input);
+  }
+
+  /**
+   * Apply stop_run to halt the run immediately.
+   */
+  async stopRun(input: HeadsDownActionOptions): Promise<HeadsDownActionMutationPayload> {
+    return this.executeHeadsDownAction("stop_run", input);
+  }
+
+  /**
+   * Apply resume_run to restart queued or paused work.
+   */
+  async resumeRun(input: HeadsDownActionOptions): Promise<HeadsDownActionMutationPayload> {
+    return this.executeHeadsDownAction("resume_run", input);
+  }
+
+  /**
+   * Apply allow_once for a short temporary continuation window.
+   */
+  async allowOnce(input: TemporaryExceptionActionOptions): Promise<HeadsDownActionMutationPayload> {
+    return this.executeHeadsDownAction("allow_once", input);
+  }
+
+  /**
+   * Apply allow_for_duration for a temporary continuation window.
+   */
+  async allowForDuration(
+    input: AllowForDurationActionOptions,
+  ): Promise<HeadsDownActionMutationPayload> {
+    return this.executeHeadsDownAction("allow_for_duration", input);
+  }
+
+  /**
+   * Apply create_temporary_exception for an explicit temporary exception mode/window.
+   */
+  async createTemporaryException(
+    input: CreateTemporaryExceptionActionOptions,
+  ): Promise<HeadsDownActionMutationPayload> {
+    return this.executeHeadsDownAction("create_temporary_exception", input);
+  }
+
+  /**
+   * Apply keep_queued to leave queued work untouched.
+   */
+  async keepQueued(input: HeadsDownActionOptions): Promise<HeadsDownActionMutationPayload> {
+    return this.executeHeadsDownAction("keep_queued", input);
   }
 
   /**
@@ -761,6 +882,70 @@ export class HeadsDownClient {
       throw new ApiError("HeadsDown API returned no reportOutcome data.");
     }
     return data.reportOutcome as TaskOutcome;
+  }
+
+  private async executeHeadsDownAction(
+    actionKey: HeadsDownActionKey,
+    input: HeadsDownActionInputByKey[HeadsDownActionKey],
+  ): Promise<HeadsDownActionMutationPayload> {
+    if (!input.runId?.trim()) {
+      throw new ValidationError("Run ID is required.", "runId");
+    }
+
+    const idempotencyKey =
+      input.idempotencyKey ?? buildActionIdempotencyKey(actionKey, input.runId);
+    const durationMinutes =
+      "durationMinutes" in input && typeof input.durationMinutes === "number"
+        ? input.durationMinutes
+        : undefined;
+
+    if (
+      durationMinutes !== undefined &&
+      (!Number.isInteger(durationMinutes) || durationMinutes <= 0)
+    ) {
+      throw new ValidationError("durationMinutes must be a positive integer.", "durationMinutes");
+    }
+
+    const variables: ApplyHeadsdownActionMutationVariables = {
+      input: stripUndefined({
+        runId: input.runId,
+        actionKey,
+        sourceState: input.sourceState,
+        actionExpiresAt: input.actionExpiresAt,
+        expiresAt: input.expiresAt,
+        reason: input.reason,
+        client: input.client,
+        source: input.source,
+        durationMinutes,
+        overrideExpiresAt: "overrideExpiresAt" in input ? input.overrideExpiresAt : undefined,
+        mode: "mode" in input && input.mode ? toGraphQLEnum(input.mode) : undefined,
+        idempotencyKey,
+      }) as ApplyHeadsdownActionMutationVariables["input"],
+    };
+
+    try {
+      const data = await this.graphql.request<ApplyHeadsdownActionMutation>(
+        APPLY_HEADSDOWN_ACTION_MUTATION,
+        variables,
+      );
+      const payload = data.applyHeadsdownAction;
+
+      if (!payload) {
+        throw new ApiError("HeadsDown API returned no applyHeadsdownAction data.");
+      }
+
+      if (payload.error) {
+        throw mapHeadsDownActionPayloadError(payload.error, { actionKey, runId: input.runId });
+      }
+
+      if (!payload.ok || !payload.result) {
+        throw new ApiError("HeadsDown API reported action apply failure without an error payload.");
+      }
+
+      return payload as HeadsDownActionMutationPayload;
+    } catch (error) {
+      throw mapHeadsDownActionError(error, { actionKey, runId: input.runId });
+    }
   }
 }
 
