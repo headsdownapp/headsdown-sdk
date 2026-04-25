@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.15
+
+- Added SDK helpers for applying canonical HeadsDown actions, including queueing, pausing, resuming, narrowing, stopping, and temporary exception flows.
+- Added typed action errors for invalid state, expired action, feature disabled, and auth failure.
+- Added idempotency key derivation for HeadsDown action helpers and typed GraphQL operation coverage for `applyHeadsdownAction`.
+
 ## 0.2.13
 
 - Added `describeExecutionDirective()` for canonical cold-start LLM execution guidance.
