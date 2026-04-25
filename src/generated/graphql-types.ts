@@ -1222,6 +1222,86 @@ export type AgentControlOverviewQuery = {
   };
 };
 
+export type ApplyHeadsdownActionMutationVariables = Exact<{
+  input: ApplyHeadsdownActionInput;
+}>;
+
+export type ApplyHeadsdownActionMutation = {
+  applyHeadsdownAction: {
+    ok: boolean;
+    error: { code: string; message: string; details: Record<string, unknown> } | null;
+    result: {
+      actionKey: HeadsdownActionKey;
+      replayed: boolean;
+      sourceState: HeadsdownActionState;
+      resultingState: HeadsdownActionState;
+      eventId: string;
+      availabilityOverrideId: string | null;
+    } | null;
+    currentCall: {
+      callKey: HeadsdownCallKey;
+      title: string;
+      body: string;
+      primaryActionLabel: string | null;
+      primaryActionIntent: AgentControlUiIntent;
+      secondaryActionLabel: string | null;
+      secondaryActionIntent: AgentControlUiIntent;
+      recommendedActionKey: HeadsdownActionKey | null;
+      allowedActionKeys: Array<HeadsdownActionKey>;
+      reasonCodes: Array<string>;
+      dataState: AgentControlDataState;
+      evaluatedAt: string | null;
+    } | null;
+    headsdownCall: {
+      key: string;
+      knownKey: HeadsdownCallKey | null;
+      title: string;
+      body: string;
+      severity: HeadsdownCallSeverity;
+      urgency: HeadsdownCallUrgency;
+      primaryActionLabel: string | null;
+      primaryActionKey: string | null;
+      primaryActionKnownKey: HeadsdownActionKey | null;
+      primaryActionIntent: AgentControlUiIntent;
+      secondaryActionLabel: string | null;
+      secondaryActionKey: string | null;
+      secondaryActionKnownKey: HeadsdownActionKey | null;
+      secondaryActionIntent: AgentControlUiIntent;
+      recommendedActionKey: string | null;
+      recommendedActionKnownKey: HeadsdownActionKey | null;
+      allowedActionKeys: Array<string>;
+      allowedActionKnownKeys: Array<HeadsdownActionKey>;
+      allowedUiIntents: Array<AgentControlUiIntent>;
+      reasonCodes: Array<string>;
+      confidence: HeadsdownCallConfidence;
+      evidenceSource: HeadsdownCallEvidenceSource;
+      privacyMode: HeadsdownCallPrivacyMode;
+      expiresAt: string | null;
+    } | null;
+    runSummary: {
+      runId: string;
+      callKey: HeadsdownCallKey;
+      runState: AgentRunState;
+      actionState: AgentRunActionState;
+      clientLabel: string;
+      safeTitle: string;
+      recommendedActionKey: HeadsdownActionKey | null;
+      allowedActionKeys: Array<HeadsdownActionKey>;
+      reasonCodes: Array<string>;
+      elapsedSeconds: number;
+      deadlineState: AgentControlDataState;
+      budgetState: AgentControlDataState;
+      nextActionLabel: string | null;
+      nextActionIntent: AgentControlUiIntent;
+      dataState: AgentControlDataState;
+      detailsState: AgentControlDataState;
+      progressState: AgentControlDataState;
+      insertedAt: string;
+      updatedAt: string;
+    } | null;
+  };
+};
+
 export type AvailabilityQueryVariables = Exact<{
   at: InputMaybe<Scalars["DateTime"]["input"]>;
 }>;

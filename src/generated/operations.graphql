@@ -159,6 +159,86 @@ query AgentControlOverview {
     }
   }
 
+mutation ApplyHeadsdownAction($input: ApplyHeadsdownActionInput!) {
+    applyHeadsdownAction(input: $input) {
+      ok
+      error {
+        code
+        message
+        details
+      }
+      result {
+        actionKey
+        replayed
+        sourceState
+        resultingState
+        eventId
+        availabilityOverrideId
+      }
+      currentCall {
+        callKey
+        title
+        body
+        primaryActionLabel
+        primaryActionIntent
+        secondaryActionLabel
+        secondaryActionIntent
+        recommendedActionKey
+        allowedActionKeys
+        reasonCodes
+        dataState
+        evaluatedAt
+      }
+      headsdownCall {
+        key
+        knownKey
+        title
+        body
+        severity
+        urgency
+        primaryActionLabel
+        primaryActionKey
+        primaryActionKnownKey
+        primaryActionIntent
+        secondaryActionLabel
+        secondaryActionKey
+        secondaryActionKnownKey
+        secondaryActionIntent
+        recommendedActionKey
+        recommendedActionKnownKey
+        allowedActionKeys
+        allowedActionKnownKeys
+        allowedUiIntents
+        reasonCodes
+        confidence
+        evidenceSource
+        privacyMode
+        expiresAt
+      }
+      runSummary {
+        runId
+        callKey
+        runState
+        actionState
+        clientLabel
+        safeTitle
+        recommendedActionKey
+        allowedActionKeys
+        reasonCodes
+        elapsedSeconds
+        deadlineState
+        budgetState
+        nextActionLabel
+        nextActionIntent
+        dataState
+        detailsState
+        progressState
+        insertedAt
+        updatedAt
+      }
+    }
+  }
+
 query Availability($at: DateTime) {
     activeContract {
       id

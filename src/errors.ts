@@ -74,3 +74,94 @@ export class ValidationError extends HeadsDownError {
     this.field = field;
   }
 }
+
+/**
+ * Base error for applyHeadsdownAction and SDK action helpers.
+ */
+export class HeadsDownActionApplyError extends HeadsDownError {
+  readonly actionKey?: string;
+  readonly runId?: string;
+  readonly code?: string;
+  readonly details?: Record<string, unknown>;
+
+  constructor(
+    message: string,
+    options?: {
+      actionKey?: string;
+      runId?: string;
+      code?: string;
+      details?: Record<string, unknown>;
+    },
+  ) {
+    super(message);
+    this.name = "HeadsDownActionApplyError";
+    this.actionKey = options?.actionKey;
+    this.runId = options?.runId;
+    this.code = options?.code;
+    this.details = options?.details;
+  }
+}
+
+/** Action is not valid for the current run/call state. */
+export class HeadsDownActionInvalidStateError extends HeadsDownActionApplyError {
+  constructor(
+    message: string,
+    options?: {
+      actionKey?: string;
+      runId?: string;
+      code?: string;
+      details?: Record<string, unknown>;
+    },
+  ) {
+    super(message, options);
+    this.name = "HeadsDownActionInvalidStateError";
+  }
+}
+
+/** Action request expired before it was applied. */
+export class HeadsDownActionExpiredError extends HeadsDownActionApplyError {
+  constructor(
+    message: string,
+    options?: {
+      actionKey?: string;
+      runId?: string;
+      code?: string;
+      details?: Record<string, unknown>;
+    },
+  ) {
+    super(message, options);
+    this.name = "HeadsDownActionExpiredError";
+  }
+}
+
+/** Action is currently unavailable because the backend feature is disabled. */
+export class HeadsDownActionFeatureDisabledError extends HeadsDownActionApplyError {
+  constructor(
+    message: string,
+    options?: {
+      actionKey?: string;
+      runId?: string;
+      code?: string;
+      details?: Record<string, unknown>;
+    },
+  ) {
+    super(message, options);
+    this.name = "HeadsDownActionFeatureDisabledError";
+  }
+}
+
+/** Authorization failed while applying an action. */
+export class HeadsDownActionAuthError extends HeadsDownActionApplyError {
+  constructor(
+    message: string,
+    options?: {
+      actionKey?: string;
+      runId?: string;
+      code?: string;
+      details?: Record<string, unknown>;
+    },
+  ) {
+    super(message, options);
+    this.name = "HeadsDownActionAuthError";
+  }
+}

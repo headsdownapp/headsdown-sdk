@@ -137,7 +137,11 @@ describe("GraphQLClient", () => {
           delegationGrants: [
             {
               scope: "SESSION",
-              permissions: ["AVAILABILITY_OVERRIDE_CREATE", "PRESET_APPLY"],
+              permissions: [
+                "AVAILABILITY_OVERRIDE_CREATE",
+                "HEADSDOWN_ACTION_APPLY",
+                "PRESET_APPLY",
+              ],
             },
           ],
         }),
@@ -150,6 +154,7 @@ describe("GraphQLClient", () => {
       expect(data.delegationGrants[0].scope).toBe("session");
       expect(data.delegationGrants[0].permissions).toEqual([
         "availability_override_create",
+        "headsdown_action_apply",
         "preset_apply",
       ]);
     });

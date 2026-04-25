@@ -168,6 +168,89 @@ export const AGENT_CONTROL_OVERVIEW_QUERY = `
   }
 `;
 
+/** Apply a canonical HeadsDown action to a run. */
+export const APPLY_HEADSDOWN_ACTION_MUTATION = `
+  mutation ApplyHeadsdownAction($input: ApplyHeadsdownActionInput!) {
+    applyHeadsdownAction(input: $input) {
+      ok
+      error {
+        code
+        message
+        details
+      }
+      result {
+        actionKey
+        replayed
+        sourceState
+        resultingState
+        eventId
+        availabilityOverrideId
+      }
+      currentCall {
+        callKey
+        title
+        body
+        primaryActionLabel
+        primaryActionIntent
+        secondaryActionLabel
+        secondaryActionIntent
+        recommendedActionKey
+        allowedActionKeys
+        reasonCodes
+        dataState
+        evaluatedAt
+      }
+      headsdownCall {
+        key
+        knownKey
+        title
+        body
+        severity
+        urgency
+        primaryActionLabel
+        primaryActionKey
+        primaryActionKnownKey
+        primaryActionIntent
+        secondaryActionLabel
+        secondaryActionKey
+        secondaryActionKnownKey
+        secondaryActionIntent
+        recommendedActionKey
+        recommendedActionKnownKey
+        allowedActionKeys
+        allowedActionKnownKeys
+        allowedUiIntents
+        reasonCodes
+        confidence
+        evidenceSource
+        privacyMode
+        expiresAt
+      }
+      runSummary {
+        runId
+        callKey
+        runState
+        actionState
+        clientLabel
+        safeTitle
+        recommendedActionKey
+        allowedActionKeys
+        reasonCodes
+        elapsedSeconds
+        deadlineState
+        budgetState
+        nextActionLabel
+        nextActionIntent
+        dataState
+        detailsState
+        progressState
+        insertedAt
+        updatedAt
+      }
+    }
+  }
+`;
+
 /** Get both contract and schedule in a single request. */
 export const AVAILABILITY_QUERY = `
   query Availability($at: DateTime) {

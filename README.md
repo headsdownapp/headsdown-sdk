@@ -66,7 +66,7 @@ await store.save(apiKey, "My Tool");
 
 ### Read the HeadsDown call
 
-Lead with what HeadsDown recommends for the agent, then use availability as supporting context.
+Lead with what HeadsDown recommends for the run, then use availability as supporting context.
 
 ```typescript
 import { resolveHeadsDownCallFallback } from "@headsdown/sdk";
@@ -74,7 +74,47 @@ import { resolveHeadsDownCallFallback } from "@headsdown/sdk";
 const overview = await client.getAgentControlOverview();
 const call = resolveHeadsDownCallFallback(overview.headsdownCall);
 console.log(`${call.title}: ${call.body}`);
-console.log(`Next move: ${call.primaryActionKey ?? call.primaryActionIntent}`);
+console.log(`HeadsDown call: ${call.primaryActionKey ?? call.primaryActionIntent}`);
+```
+
+### Apply canonical HeadsDown actions
+
+Use the built-in action helpers so clients do not hand-roll mutation payloads. Helpers send canonical action keys and derive idempotency keys by default.
+
+```typescript
+const queued = await client.queueForMorning({ runId: "run_123" });
+console.log(queued.result?.actionKey); // "queue_for_morning"
+
+await client.continueRun({ runId: "run_123" });
+await client.continueWithLimit({ runId: "run_123" });
+await client.askUser({ runId: "run_123" });
+await client.queueForLater({ runId: "run_123" });
+
+await client.pauseAndSummarize({
+  runId: "run_123",
+  reason: "Rabbit hole detected. Save the handoff.",
+});
+
+await client.allowForDuration({
+  runId: "run_123",
+  durationMinutes: 15,
+  reason: "One targeted validation path",
+});
+
+await client.allowOnce({ runId: "run_123" });
+await client.createTemporaryException({
+  runId: "run_123",
+  durationMinutes: 30,
+  mode: "limited",
+});
+
+await client.keepQueued({ runId: "run_123" });
+await client.resumeRun({ runId: "run_123" });
+await client.narrowScope({ runId: "run_123" });
+await client.stopRun({ runId: "run_123" });
+
+// For a lower-level integration, use the typed generic action surface.
+await client.applyHeadsDownAction("queue_for_morning", { runId: "run_123" });
 ```
 
 ### Check Availability
@@ -262,17 +302,35 @@ console.log(`Authenticated as ${profile.name} (${profile.email})`);
 The SDK uses a typed error hierarchy. All errors extend `HeadsDownError`.
 
 ```typescript
-import { AuthError, ApiError, NetworkError, ValidationError } from "@headsdown/sdk";
+import {
+  AuthError,
+  ApiError,
+  NetworkError,
+  ValidationError,
+  HeadsDownActionInvalidStateError,
+  HeadsDownActionExpiredError,
+  HeadsDownActionFeatureDisabledError,
+  HeadsDownActionAuthError,
+} from "@headsdown/sdk";
 
 try {
-  const verdict = await client.submitProposal({ ... });
+  await client.pauseAndSummarize({
+    runId: "run_123",
+    reason: "Rabbit hole detected. Save the handoff.",
+  });
 } catch (error) {
-  if (error instanceof AuthError) {
-    // API key missing, invalid, or expired. Re-authenticate.
+  if (error instanceof HeadsDownActionInvalidStateError) {
+    // Action no longer matches the current call state.
+  } else if (error instanceof HeadsDownActionExpiredError) {
+    // Action request expired before apply.
+  } else if (error instanceof HeadsDownActionFeatureDisabledError) {
+    // Backend feature is disabled for this workspace/user.
+  } else if (error instanceof HeadsDownActionAuthError || error instanceof AuthError) {
+    // Auth failed. Re-authenticate or refresh actor context.
   } else if (error instanceof NetworkError) {
     // Connection failed, DNS error, or timeout.
   } else if (error instanceof ValidationError) {
-    // Bad input (e.g., empty description). Check error.field.
+    // Bad input (for example missing runId or invalid durationMinutes).
   } else if (error instanceof ApiError) {
     // Server returned an error. Check error.status, error.graphqlErrors.
   }
@@ -310,7 +368,7 @@ const client = new HeadsDownClient({
 
 This SDK sends requests only to the HeadsDown API (`https://headsdown.app/graphql` by default). Every request includes your API key as a Bearer token. The exact GraphQL queries are in [`src/queries.ts`](src/queries.ts), readable in full.
 
-**What is sent:** Your API key, the specific query/mutation being executed (availability checks, task proposals, preset operations, verdict settings, interrupt evaluation), and optional actor context metadata when configured (`source`, `agentId`, `sessionId`, `workspaceRef`).
+**What is sent:** Your API key, the specific query/mutation being executed (HeadsDown call reads, canonical action applies, availability checks, task proposals, preset operations, verdict settings, interrupt evaluation), and optional actor context metadata when configured (`source`, `agentId`, `sessionId`, `workspaceRef`).
 
 **What is received:** HeadsDown call metadata, availability boundaries, schedule resolution, task verdicts, calibration data, and preset configurations.
 

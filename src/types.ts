@@ -61,6 +61,7 @@ export type DelegationGrantScope = "session" | "workspace" | "agent";
 export type DelegationGrantPermission =
   | "availability_override_create"
   | "availability_override_cancel"
+  | "headsdown_action_apply"
   | "preset_apply";
 
 /** Canonical HeadsDown call keys used across app, SDK, CLI, and agent clients. */
@@ -97,6 +98,111 @@ export const HEADSDOWN_ACTION_KEYS = [
 
 /** Canonical action key for HeadsDown call actions. */
 export type HeadsDownActionKey = (typeof HEADSDOWN_ACTION_KEYS)[number];
+
+/** Action lifecycle state returned by the action mutation result. */
+export type HeadsDownActionState =
+  | "all_contained"
+  | "good_to_run"
+  | "keep_it_tight"
+  | "needs_agent_scope"
+  | "needs_user"
+  | "needs_your_yes"
+  | "not_worth_starting_now"
+  | "off_the_clock"
+  | "paused"
+  | "queued"
+  | "rabbit_hole_detected"
+  | "ready_to_resume"
+  | "running"
+  | "running_limited"
+  | "stopped"
+  | "temporary_exception";
+
+/** Common options accepted by canonical HeadsDown action helpers. */
+export interface HeadsDownActionOptions {
+  runId: string;
+  /** Optional source state expected by the caller when applying this action. */
+  sourceState?: string;
+  /** Optional expiry timestamp for this action request. */
+  actionExpiresAt?: string;
+  /** Compatibility alias for actionExpiresAt accepted by the GraphQL contract. */
+  expiresAt?: string;
+  /** Optional free-form reason attached to the action event. */
+  reason?: string;
+  /** Optional client identifier for tracing. */
+  client?: string;
+  /** Optional source identifier for tracing. */
+  source?: string;
+  /** Optional idempotency key. When omitted, SDK helpers derive one. */
+  idempotencyKey?: string;
+}
+
+/** Input for temporary exception actions. */
+export interface TemporaryExceptionActionOptions extends HeadsDownActionOptions {
+  /** Duration for the temporary exception window. */
+  durationMinutes?: number;
+  /** Explicit expiry timestamp for the temporary exception window. */
+  overrideExpiresAt?: string;
+  /** Temporary mode to apply. Defaults server-side except for createTemporaryException. */
+  mode?: Mode;
+}
+
+/** Input for allow-for-duration actions. */
+export interface AllowForDurationActionOptions extends TemporaryExceptionActionOptions {
+  durationMinutes: number;
+}
+
+type TemporaryExceptionWindow =
+  | { durationMinutes: number; overrideExpiresAt?: string }
+  | { durationMinutes?: never; overrideExpiresAt: string };
+
+/** Input for create-temporary-exception actions. */
+export type CreateTemporaryExceptionActionOptions = HeadsDownActionOptions &
+  TemporaryExceptionWindow & { mode: Mode };
+
+/** Typed inputs accepted by each canonical HeadsDown action key. */
+export interface HeadsDownActionInputByKey {
+  continue: HeadsDownActionOptions;
+  continue_with_limit: HeadsDownActionOptions;
+  narrow_scope: HeadsDownActionOptions;
+  ask_user: HeadsDownActionOptions;
+  queue_for_later: HeadsDownActionOptions;
+  queue_for_morning: HeadsDownActionOptions;
+  pause_and_summarize: HeadsDownActionOptions;
+  stop_run: HeadsDownActionOptions;
+  resume_run: HeadsDownActionOptions;
+  allow_once: TemporaryExceptionActionOptions;
+  allow_for_duration: AllowForDurationActionOptions;
+  create_temporary_exception: CreateTemporaryExceptionActionOptions;
+  keep_queued: HeadsDownActionOptions;
+}
+
+/** Normalized error payload returned by applyHeadsdownAction. */
+export interface HeadsDownActionErrorPayload {
+  code: string;
+  message: string;
+  details: Record<string, unknown>;
+}
+
+/** Normalized action result payload returned by applyHeadsdownAction. */
+export interface HeadsDownActionMutationResult {
+  actionKey: HeadsDownActionKey;
+  availabilityOverrideId: string | null;
+  eventId: string;
+  replayed: boolean;
+  resultingState: HeadsDownActionState;
+  sourceState: HeadsDownActionState;
+}
+
+/** Aggregate result from applying a canonical HeadsDown action. */
+export interface HeadsDownActionMutationPayload {
+  ok: boolean;
+  result: HeadsDownActionMutationResult | null;
+  error: HeadsDownActionErrorPayload | null;
+  currentCall: CurrentCallView | null;
+  headsdownCall: HeadsDownCall | null;
+  runSummary: AgentRunSummary | null;
+}
 
 /** UI intents clients can use to render secondary navigation or action affordances. */
 export type AgentControlUiIntent =

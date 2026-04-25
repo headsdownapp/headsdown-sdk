@@ -17,7 +17,18 @@ export { CalibrationTracker } from "./calibration.js";
 export type { CalibrationTrackerOptions } from "./calibration.js";
 
 // Errors
-export { HeadsDownError, AuthError, ApiError, NetworkError, ValidationError } from "./errors.js";
+export {
+  HeadsDownError,
+  AuthError,
+  ApiError,
+  NetworkError,
+  ValidationError,
+  HeadsDownActionApplyError,
+  HeadsDownActionInvalidStateError,
+  HeadsDownActionExpiredError,
+  HeadsDownActionFeatureDisabledError,
+  HeadsDownActionAuthError,
+} from "./errors.js";
 
 // Wrap-Up guidance helpers
 export { describeWrapUpGuidance } from "./wrap-up.js";
@@ -34,6 +45,11 @@ export type {
 
 // Agent-control helpers and constants
 export { resolveHeadsDownCallFallback } from "./agent-control.js";
+export {
+  buildActionIdempotencyKey,
+  mapHeadsDownActionError,
+  mapHeadsDownActionPayloadError,
+} from "./agent-control-actions.js";
 export type { HeadsDownCallFallback } from "./agent-control.js";
 export { HEADSDOWN_CALL_KEYS, HEADSDOWN_ACTION_KEYS } from "./types.js";
 
@@ -54,6 +70,7 @@ export type {
   DelegationGrantPermission,
   HeadsDownCallKey,
   HeadsDownActionKey,
+  HeadsDownActionState,
   AgentControlUiIntent,
   HeadsDownCallSeverity,
   HeadsDownCallUrgency,
@@ -94,6 +111,9 @@ export type {
   AgentRunSummary,
   ValueMetricSummary,
   AgentControlOverview,
+  HeadsDownActionErrorPayload,
+  HeadsDownActionMutationResult,
+  HeadsDownActionMutationPayload,
   // Input types
   ProposalInput,
   ContractInput,
@@ -105,6 +125,11 @@ export type {
   OutcomeInput,
   DelegationGrantInput,
   DelegationGrantFilterInput,
+  HeadsDownActionOptions,
+  HeadsDownActionInputByKey,
+  TemporaryExceptionActionOptions,
+  AllowForDurationActionOptions,
+  CreateTemporaryExceptionActionOptions,
   // Auth types
   DeviceAuthorization,
   Credentials,
