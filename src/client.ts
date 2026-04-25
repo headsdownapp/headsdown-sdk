@@ -4,6 +4,7 @@ import { GraphQLClient, toGraphQLEnum } from "./graphql.js";
 import {
   ACTIVE_CONTRACT_QUERY,
   ACTIVE_DELEGATION_GRANTS_QUERY,
+  AGENT_CONTROL_OVERVIEW_QUERY,
   APPLY_PRESET_MUTATION,
   AUTO_RESPONDER_SETTINGS_QUERY,
   AVAILABILITY_QUERY,
@@ -32,6 +33,7 @@ import {
 } from "./queries.js";
 import type {
   ActorContext,
+  AgentControlOverview,
   AutoResponderSettings,
   CalibrationProfile,
   ClientOptions,
@@ -67,6 +69,7 @@ import type {
 } from "./types.js";
 import type {
   ActiveContractQuery,
+  AgentControlOverviewQuery,
   ApplyPresetMutation,
   AutoResponderSettingsQuery,
   AvailabilityQuery,
@@ -238,6 +241,16 @@ export class HeadsDownClient {
       throw new ApiError("HeadsDown API returned no schedule data.");
     }
     return data.schedule as ScheduleResolution;
+  }
+
+  /**
+   * Get the current HeadsDown call and agent-control read models.
+   */
+  async getAgentControlOverview(): Promise<AgentControlOverview> {
+    const data = await this.graphql.request<AgentControlOverviewQuery>(
+      AGENT_CONTROL_OVERVIEW_QUERY,
+    );
+    return data.agentControlOverview as AgentControlOverview;
   }
 
   /**

@@ -63,6 +63,218 @@ export type DelegationGrantPermission =
   | "availability_override_cancel"
   | "preset_apply";
 
+/** Canonical HeadsDown call keys used across app, SDK, CLI, and agent clients. */
+export const HEADSDOWN_CALL_KEYS = [
+  "good_to_run",
+  "keep_it_tight",
+  "not_worth_starting_now",
+  "off_the_clock",
+  "rabbit_hole_detected",
+  "ready_to_resume",
+  "all_contained",
+  "needs_your_yes",
+] as const;
+
+/** Canonical HeadsDown call key. */
+export type HeadsDownCallKey = (typeof HEADSDOWN_CALL_KEYS)[number];
+
+/** Canonical action keys that HeadsDown can expose for a call. */
+export const HEADSDOWN_ACTION_KEYS = [
+  "continue",
+  "continue_with_limit",
+  "narrow_scope",
+  "ask_user",
+  "queue_for_later",
+  "queue_for_morning",
+  "pause_and_summarize",
+  "stop_run",
+  "resume_run",
+  "allow_once",
+  "allow_for_duration",
+  "create_temporary_exception",
+  "keep_queued",
+] as const;
+
+/** Canonical action key for HeadsDown call actions. */
+export type HeadsDownActionKey = (typeof HEADSDOWN_ACTION_KEYS)[number];
+
+/** UI intents clients can use to render secondary navigation or action affordances. */
+export type AgentControlUiIntent =
+  | "view_details"
+  | "review_request"
+  | "review_runs"
+  | "review_handoff"
+  | "view_queue"
+  | "view_receipts"
+  | "adjust_playbooks"
+  | "start_run"
+  | "none";
+
+/** Visual severity bucket for the current HeadsDown call. */
+export type HeadsDownCallSeverity =
+  | "positive"
+  | "neutral"
+  | "caution"
+  | "boundary"
+  | "action_required"
+  | "critical";
+
+/** Relative urgency level for a HeadsDown call. */
+export type HeadsDownCallUrgency = "low" | "normal" | "elevated" | "high";
+
+/** Which backend signal produced the current HeadsDown call. */
+export type HeadsDownCallEvidenceSource =
+  | "contract"
+  | "engine"
+  | "run_summary"
+  | "needs_your_yes"
+  | "fallback";
+
+/** Data handling mode for call payloads. */
+export type HeadsDownCallPrivacyMode = "privacy_safe" | "privacy_restricted" | "unknown";
+
+/** Confidence for call/value payloads. */
+export type HeadsDownCallConfidence = "exact" | "estimated" | "unknown";
+
+/** Data completeness status for read-model sections. */
+export type AgentControlDataState =
+  | "ready"
+  | "empty"
+  | "unknown"
+  | "feature_disabled"
+  | "privacy_restricted";
+
+/** Current run lifecycle state. */
+export type AgentRunState =
+  | "active"
+  | "queued"
+  | "ready_to_resume"
+  | "awaiting_input"
+  | "completed"
+  | "unknown";
+
+/** Whether user action is required for a run. */
+export type AgentRunActionState = "required" | "optional" | "none" | "unknown";
+
+/** State of an item in the Needs your yes queue. */
+export type NeedsYourYesItemState = "action_required" | "queued" | "ready_to_resume" | "unknown";
+
+/** Value metric keys exposed by the agent-control overview read model. */
+export type ValueMetricKey =
+  | "time_not_wasted"
+  | "spend_avoided"
+  | "rabbit_holes_prevented"
+  | "off_hours_interruptions_avoided";
+
+/** Current call view as returned by `agentControlOverview.currentCall`. */
+export interface CurrentCallView {
+  callKey: HeadsDownCallKey;
+  title: string;
+  body: string;
+  primaryActionLabel: string | null;
+  primaryActionIntent: AgentControlUiIntent;
+  secondaryActionLabel: string | null;
+  secondaryActionIntent: AgentControlUiIntent;
+  recommendedActionKey: HeadsDownActionKey | null;
+  allowedActionKeys: HeadsDownActionKey[];
+  reasonCodes: string[];
+  dataState: AgentControlDataState;
+  evaluatedAt: string | null;
+}
+
+/** Canonical HeadsDown call payload used by SDK/CLI/Pi/Claude renderers. */
+export interface HeadsDownCall {
+  key: string;
+  knownKey: HeadsDownCallKey | null;
+  title: string;
+  body: string;
+  severity: HeadsDownCallSeverity;
+  urgency: HeadsDownCallUrgency;
+  primaryActionLabel: string | null;
+  primaryActionKey: string | null;
+  primaryActionKnownKey: HeadsDownActionKey | null;
+  primaryActionIntent: AgentControlUiIntent;
+  secondaryActionLabel: string | null;
+  secondaryActionKey: string | null;
+  secondaryActionKnownKey: HeadsDownActionKey | null;
+  secondaryActionIntent: AgentControlUiIntent;
+  recommendedActionKey: string | null;
+  recommendedActionKnownKey: HeadsDownActionKey | null;
+  allowedActionKeys: string[];
+  allowedActionKnownKeys: HeadsDownActionKey[];
+  allowedUiIntents: AgentControlUiIntent[];
+  reasonCodes: string[];
+  confidence: HeadsDownCallConfidence;
+  evidenceSource: HeadsDownCallEvidenceSource;
+  privacyMode: HeadsDownCallPrivacyMode;
+  expiresAt: string | null;
+}
+
+/** Action-needed item shown in `agentControlOverview.needsYourYes`. */
+export interface NeedsYourYesItem {
+  runId: string;
+  callKey: HeadsDownCallKey;
+  title: string;
+  body: string;
+  itemState: NeedsYourYesItemState;
+  primaryActionLabel: string | null;
+  primaryActionIntent: AgentControlUiIntent;
+  recommendedActionKey: HeadsDownActionKey | null;
+  allowedActionKeys: HeadsDownActionKey[];
+  reasonCodes: string[];
+  dataState: AgentControlDataState;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Safe run summary for `agentControlOverview.runSummaries`. */
+export interface AgentRunSummary {
+  runId: string;
+  callKey: HeadsDownCallKey;
+  runState: AgentRunState;
+  actionState: AgentRunActionState;
+  clientLabel: string;
+  safeTitle: string;
+  recommendedActionKey: HeadsDownActionKey | null;
+  allowedActionKeys: HeadsDownActionKey[];
+  reasonCodes: string[];
+  elapsedSeconds: number;
+  deadlineState: AgentControlDataState;
+  budgetState: AgentControlDataState;
+  nextActionLabel: string | null;
+  nextActionIntent: AgentControlUiIntent;
+  dataState: AgentControlDataState;
+  detailsState: AgentControlDataState;
+  progressState: AgentControlDataState;
+  insertedAt: string;
+  updatedAt: string;
+}
+
+/** Value metric summary from `agentControlOverview.valueMetrics`. */
+export interface ValueMetricSummary {
+  metricKey: ValueMetricKey;
+  label: string;
+  value: number | null;
+  unit: string | null;
+  confidence: HeadsDownCallConfidence;
+  evidenceCount: number | null;
+  explanation: string;
+  dataState: AgentControlDataState;
+}
+
+/** Aggregate read model for HeadsDown command-center and agent-control clients. */
+export interface AgentControlOverview {
+  currentCall: CurrentCallView;
+  headsdownCall: HeadsDownCall;
+  needsYourYes: NeedsYourYesItem[];
+  needsYourYesState: AgentControlDataState;
+  runSummaries: AgentRunSummary[];
+  runSummariesState: AgentControlDataState;
+  valueMetrics: ValueMetricSummary[];
+  valueMetricsState: AgentControlDataState;
+  generatedAt: string;
+}
+
 // === Digest Types ===
 
 /** A single event within a digest summary. */
