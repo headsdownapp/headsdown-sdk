@@ -3,6 +3,20 @@ import {
   mapHeadsDownActionError,
   mapHeadsDownActionPayloadError,
 } from "./agent-control-actions.js";
+import {
+  buildAgentRunEventInput,
+  cancelledEvent,
+  completedEvent,
+  continuationSavedEvent,
+  failedEvent,
+  progressEvent,
+  queuedForLaterEvent,
+  queuedForMorningEvent,
+  resumedEvent,
+  scopeDriftDetectedEvent,
+  startedEvent,
+  steeringOutcomeReportedEvent,
+} from "./agent-run-events.js";
 import { CredentialStore, DeviceFlow } from "./auth.js";
 import { ApiError, AuthError, ValidationError } from "./errors.js";
 import { GraphQLClient, toGraphQLEnum } from "./graphql.js";
@@ -26,6 +40,7 @@ import {
   LIST_PROPOSALS_QUERY,
   OVERRIDE_VERDICT_MUTATION,
   PROFILE_QUERY,
+  REPORT_AGENT_RUN_EVENT_MUTATION,
   REPORT_OUTCOME_MUTATION,
   REVOKE_DELEGATION_GRANT_MUTATION,
   REVOKE_DELEGATION_GRANTS_MUTATION,
@@ -80,6 +95,12 @@ import type {
   VerdictOverride,
   VerdictSettings,
 } from "./types.js";
+import type {
+  AgentRunEventContext,
+  AgentRunEventInput,
+  AgentRunProgressMetadata,
+  ReportAgentRunEventPayload,
+} from "./agent-run-events.js";
 import type {
   ActiveContractQuery,
   AgentControlOverviewQuery,
@@ -840,6 +861,104 @@ export class HeadsDownClient {
     return data.updateVerdictSettings as VerdictSettings;
   }
 
+  // === Agent run events ===
+
+  /** Report a privacy-safe agent run event through the canonical taxonomy. */
+  async reportAgentRunEvent(input: AgentRunEventInput): Promise<ReportAgentRunEventPayload> {
+    const variables = { input: serializeAgentRunEventInput(buildAgentRunEventInput(input)) };
+    const data = await this.graphql.request<{ reportAgentRunEvent?: ReportAgentRunEventPayload }>(
+      REPORT_AGENT_RUN_EVENT_MUTATION,
+      variables,
+    );
+
+    if (!data.reportAgentRunEvent) {
+      throw new ApiError("HeadsDown API returned no reportAgentRunEvent data.");
+    }
+
+    if (data.reportAgentRunEvent.error) {
+      throw new ApiError(data.reportAgentRunEvent.error.message);
+    }
+
+    return data.reportAgentRunEvent;
+  }
+
+  async reportAgentRunStarted(
+    context: AgentRunEventContext,
+    payload: Record<string, unknown>,
+  ): Promise<ReportAgentRunEventPayload> {
+    return this.reportAgentRunEvent(startedEvent(context, payload));
+  }
+
+  async reportAgentRunProgress(
+    context: AgentRunEventContext,
+    progressPayload: AgentRunProgressMetadata,
+  ): Promise<ReportAgentRunEventPayload> {
+    return this.reportAgentRunEvent(progressEvent(context, progressPayload));
+  }
+
+  async reportScopeDriftDetected(
+    context: AgentRunEventContext,
+    payload: Record<string, unknown>,
+  ): Promise<ReportAgentRunEventPayload> {
+    return this.reportAgentRunEvent(scopeDriftDetectedEvent(context, payload));
+  }
+
+  async reportAgentRunContinuationSaved(
+    context: AgentRunEventContext,
+    payload: Record<string, unknown>,
+  ): Promise<ReportAgentRunEventPayload> {
+    return this.reportAgentRunEvent(continuationSavedEvent(context, payload));
+  }
+
+  async reportAgentRunQueuedForMorning(
+    context: AgentRunEventContext,
+    payload: Record<string, unknown>,
+  ): Promise<ReportAgentRunEventPayload> {
+    return this.reportAgentRunEvent(queuedForMorningEvent(context, payload));
+  }
+
+  async reportAgentRunQueuedForLater(
+    context: AgentRunEventContext,
+    payload: Record<string, unknown>,
+  ): Promise<ReportAgentRunEventPayload> {
+    return this.reportAgentRunEvent(queuedForLaterEvent(context, payload));
+  }
+
+  async reportAgentRunResumed(
+    context: AgentRunEventContext,
+    payload: Record<string, unknown>,
+  ): Promise<ReportAgentRunEventPayload> {
+    return this.reportAgentRunEvent(resumedEvent(context, payload));
+  }
+
+  async reportAgentRunCompleted(
+    context: AgentRunEventContext,
+    payload: Record<string, unknown>,
+  ): Promise<ReportAgentRunEventPayload> {
+    return this.reportAgentRunEvent(completedEvent(context, payload));
+  }
+
+  async reportAgentRunFailed(
+    context: AgentRunEventContext,
+    payload: Record<string, unknown>,
+  ): Promise<ReportAgentRunEventPayload> {
+    return this.reportAgentRunEvent(failedEvent(context, payload));
+  }
+
+  async reportAgentRunCancelled(
+    context: AgentRunEventContext,
+    payload: Record<string, unknown>,
+  ): Promise<ReportAgentRunEventPayload> {
+    return this.reportAgentRunEvent(cancelledEvent(context, payload));
+  }
+
+  async reportSteeringOutcome(
+    context: AgentRunEventContext,
+    payload: Record<string, unknown>,
+  ): Promise<ReportAgentRunEventPayload> {
+    return this.reportAgentRunEvent(steeringOutcomeReportedEvent(context, payload));
+  }
+
   // === Calibration ===
 
   /**
@@ -950,6 +1069,52 @@ export class HeadsDownClient {
 }
 
 // === Helpers ===
+
+function serializeAgentRunEventInput(
+  input: ReturnType<typeof buildAgentRunEventInput>,
+): Record<string, unknown> {
+  const progressPayload = input.progressPayload
+    ? {
+        elapsedSeconds: input.progressPayload.elapsedSeconds,
+        toolCallsCount: input.progressPayload.toolCallsCount,
+        toolReadCount: input.progressPayload.toolReadCount,
+        toolWriteCount: input.progressPayload.toolWriteCount,
+        toolExternalCount: input.progressPayload.toolExternalCount,
+        filesReadBucket: toAgentRunGraphQLEnum(input.progressPayload.filesReadBucket),
+        filesModifiedBucket: toAgentRunGraphQLEnum(input.progressPayload.filesModifiedBucket),
+        validationLevel: toGraphQLEnum(input.progressPayload.validationLevel),
+        validationStatus: toGraphQLEnum(input.progressPayload.validationStatus),
+        retryCount: input.progressPayload.retryCount,
+        failureCount: input.progressPayload.failureCount,
+        scopeChanged: input.progressPayload.scopeChanged,
+        redirectCount: input.progressPayload.redirectCount,
+        progressState: toGraphQLEnum(input.progressPayload.progressState),
+        testsPassed: input.progressPayload.testsPassed,
+        validationKind: input.progressPayload.validationKind,
+        noProgressDurationSeconds: input.progressPayload.noProgressDurationSeconds,
+        scopeGrowthBucket: input.progressPayload.scopeGrowthBucket
+          ? toAgentRunGraphQLEnum(input.progressPayload.scopeGrowthBucket)
+          : undefined,
+        confidenceBucket: input.progressPayload.confidenceBucket
+          ? toGraphQLEnum(input.progressPayload.confidenceBucket)
+          : undefined,
+        spendEstimateBucket: input.progressPayload.spendEstimateBucket
+          ? toAgentRunGraphQLEnum(input.progressPayload.spendEstimateBucket)
+          : undefined,
+        blockedReasonCode: input.progressPayload.blockedReasonCode,
+      }
+    : undefined;
+
+  return stripUndefined({
+    ...input,
+    privacyMode: toGraphQLEnum(input.privacyMode),
+    progressPayload: progressPayload ? stripUndefined(progressPayload) : undefined,
+  });
+}
+
+function toAgentRunGraphQLEnum(value: string): string {
+  return /^\d/.test(value) ? `_${value.toUpperCase()}` : value.toUpperCase();
+}
 
 const WRAP_UP_FIELDS = new Set([
   "default_wrap_up_mode",

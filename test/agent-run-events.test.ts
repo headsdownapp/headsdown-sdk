@@ -1,0 +1,175 @@
+import { describe, expect, it } from "vitest";
+import {
+  HeadsDownClient,
+  ValidationError,
+  bucketFileCount,
+  bucketScopeGrowth,
+  buildAgentRunEventInput,
+} from "../src/index.js";
+
+const CLIENT_OPTS = { apiKey: "hd_test_key", baseUrl: "https://test.headsdown.app" };
+
+function captureGraphQL(data: unknown) {
+  const calls: Array<{ query: string; variables?: Record<string, unknown> }> = [];
+  const fetch = (async (_url: string, init: RequestInit) => {
+    const body = JSON.parse(String(init.body ?? "{}")) as {
+      query: string;
+      variables?: Record<string, unknown>;
+    };
+    calls.push(body);
+    return {
+      ok: true,
+      status: 200,
+      json: async () => ({ data }),
+      text: async () => JSON.stringify({ data }),
+      headers: new Headers(),
+    };
+  }) as unknown as typeof globalThis.fetch;
+
+  return { fetch, calls };
+}
+
+describe("agent run event helpers", () => {
+  it("serializes progress events through progressPayload with GraphQL enum names", async () => {
+    const { fetch, calls } = captureGraphQL({
+      reportAgentRunEvent: {
+        ok: true,
+        error: null,
+        event: {
+          id: "evt-row-1",
+          eventId: "018f3f3a-5555-7cc8-9a20-000000000005",
+          eventType: "AGENT_RUN.PROGRESS_REPORTED",
+          schemaVersion: 1,
+          occurredAt: "2026-04-24T17:29:00Z",
+          receivedAt: "2026-04-24T17:29:01Z",
+          workspaceRef: "unknown",
+          client: { kind: "pi", name: "Pi", version: "0.2.0" },
+          actor: { kind: "agent", ref: "pi" },
+          runId: "run_1",
+          source: "pi_skill",
+          privacyMode: "METADATA_ONLY",
+          idempotencyKey: "run_1:progress:1",
+          sequence: 1,
+          emitterKey: "pi:agent",
+          proposalRef: "proposal-1",
+          payload: { elapsed_seconds: 30 },
+          insertedAt: "2026-04-24T17:29:01Z",
+        },
+      },
+    });
+    const client = new HeadsDownClient({ ...CLIENT_OPTS, fetch });
+
+    await client.reportAgentRunProgress(
+      {
+        runId: "run_1",
+        workspaceRef: "unknown",
+        source: "pi_skill",
+        client: { kind: "pi", name: "Pi", version: "0.2.0" },
+        actor: { kind: "agent", ref: "pi" },
+        proposalRef: "proposal-1",
+        sequence: 1,
+        idempotencyKey: "run_1:progress:1",
+      },
+      {
+        elapsedSeconds: 30,
+        toolCallsCount: 3,
+        toolReadCount: 1,
+        toolWriteCount: 1,
+        toolExternalCount: 1,
+        filesReadBucket: "0",
+        filesModifiedBucket: "3_to_5",
+        validationLevel: "targeted",
+        validationStatus: "running",
+        retryCount: 0,
+        failureCount: 0,
+        scopeChanged: true,
+        redirectCount: 1,
+        progressState: "working",
+        scopeGrowthBucket: "1_to_2_files",
+        spendEstimateBucket: "1_to_5",
+      },
+    );
+
+    const input = calls[0]!.variables!.input as Record<string, unknown>;
+    expect(calls[0]!.query).toContain("reportAgentRunEvent");
+    expect(input.eventType).toBe("agent_run.progress_reported");
+    expect(input.privacyMode).toBe("METADATA_ONLY");
+    expect(input.payload).toBeUndefined();
+    expect(input.progressPayload).toMatchObject({
+      filesReadBucket: "_0",
+      filesModifiedBucket: "_3_TO_5",
+      validationLevel: "TARGETED",
+      validationStatus: "RUNNING",
+      progressState: "WORKING",
+      scopeGrowthBucket: "_1_TO_2_FILES",
+      spendEstimateBucket: "_1_TO_5",
+    });
+  });
+
+  it("serializes non-progress taxonomy events as metadata-only payloads", async () => {
+    const { fetch, calls } = captureGraphQL({
+      reportAgentRunEvent: { ok: true, error: null, event: null },
+    });
+    const client = new HeadsDownClient({ ...CLIENT_OPTS, fetch });
+
+    await client.reportAgentRunStarted(
+      {
+        runId: "run_2",
+        workspaceRef: "unknown",
+        idempotencyKey: "run_2:started",
+      },
+      {
+        task_category: "coding_agent_change",
+        task_size_bucket: "small",
+        started_by: "agent",
+        initial_call_key: "good_to_run",
+      },
+    );
+
+    const input = calls[0]!.variables!.input as Record<string, unknown>;
+    expect(input.progressPayload).toBeUndefined();
+    expect(input.client).toEqual({ kind: "sdk", name: "SDK", version: "unknown" });
+    expect(input.actor).toEqual({ kind: "agent", ref: "sdk" });
+    expect(input.source).toBe("sdk");
+    expect(input.payload).toEqual({
+      task_category: "coding_agent_change",
+      task_size_bucket: "small",
+      started_by: "agent",
+      initial_call_key: "good_to_run",
+    });
+  });
+
+  it("rejects prohibited raw-content fields and unsafe values before GraphQL", () => {
+    expect(() =>
+      buildAgentRunEventInput({
+        eventType: "agent_run.started",
+        runId: "run_3",
+        payload: {
+          task_category: "coding_agent_change",
+          file_path: "/private/repo/src/foo.ts",
+        },
+      }),
+    ).toThrow(ValidationError);
+
+    expect(() =>
+      buildAgentRunEventInput({
+        eventType: "agent_run.started",
+        runId: "run_3",
+        payload: {
+          task_category: "coding_agent_change",
+          branch_hint: "feature/my-branch",
+        },
+      }),
+    ).toThrow(ValidationError);
+  });
+
+  it("buckets file counts and scope growth without exposing names", () => {
+    expect(bucketFileCount(0)).toBe("0");
+    expect(bucketFileCount(2)).toBe("1_to_2");
+    expect(bucketFileCount(5)).toBe("3_to_5");
+    expect(bucketFileCount(10)).toBe("6_to_10");
+    expect(bucketFileCount(11)).toBe("over_10");
+    expect(bucketScopeGrowth(0)).toBe("none");
+    expect(bucketScopeGrowth(2)).toBe("1_to_2_files");
+  });
+});

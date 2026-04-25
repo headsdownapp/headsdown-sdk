@@ -20,6 +20,7 @@ export type Scalars = {
   HttpUrl: { input: string; output: string };
   JSON: { input: Record<string, unknown>; output: Record<string, unknown> };
   Time: { input: string; output: string };
+  UUID4: { input: string; output: string };
 };
 
 export type AgentControlDataState =
@@ -54,6 +55,130 @@ export type AgentControlUiIntent =
 
 export type AgentRunActionState = "NONE" | "OPTIONAL" | "REQUIRED" | "UNKNOWN";
 
+export type AgentRunConfidenceBucket = "HIGH" | "LOW" | "MEDIUM" | "UNKNOWN";
+
+export type AgentRunEvent = {
+  actor: AgentRunEventActor;
+  causationEventId: Maybe<Scalars["UUID4"]["output"]>;
+  client: AgentRunEventClient;
+  correlationId: Maybe<Scalars["String"]["output"]>;
+  emitterKey: Scalars["String"]["output"];
+  eventId: Scalars["UUID4"]["output"];
+  eventType: Scalars["String"]["output"];
+  id: Scalars["ID"]["output"];
+  idempotencyKey: Scalars["String"]["output"];
+  insertedAt: Scalars["DateTime"]["output"];
+  occurredAt: Scalars["DateTime"]["output"];
+  payload: Scalars["JSON"]["output"];
+  privacyMode: AgentRunEventPrivacyMode;
+  proposalRef: Maybe<Scalars["String"]["output"]>;
+  receivedAt: Scalars["DateTime"]["output"];
+  runId: Scalars["ID"]["output"];
+  schemaVersion: Scalars["Int"]["output"];
+  sequence: Maybe<Scalars["Int"]["output"]>;
+  source: Scalars["String"]["output"];
+  /** @deprecated Use proposalRef. This field is an opaque legacy alias and does not join to task_proposals. */
+  taskProposalId: Maybe<Scalars["ID"]["output"]>;
+  workspaceRef: Scalars["String"]["output"];
+};
+
+export type AgentRunEventActor = {
+  kind: Scalars["String"]["output"];
+  ref: Maybe<Scalars["String"]["output"]>;
+};
+
+export type AgentRunEventActorInput = {
+  kind: Scalars["String"]["input"];
+  ref: InputMaybe<Scalars["String"]["input"]>;
+};
+
+export type AgentRunEventClient = {
+  kind: Scalars["String"]["output"];
+  name: Scalars["String"]["output"];
+  version: Scalars["String"]["output"];
+};
+
+export type AgentRunEventClientInput = {
+  kind: Scalars["String"]["input"];
+  name: Scalars["String"]["input"];
+  version: Scalars["String"]["input"];
+};
+
+export type AgentRunEventError = {
+  code: Scalars["String"]["output"];
+  details: Scalars["JSON"]["output"];
+  message: Scalars["String"]["output"];
+};
+
+export type AgentRunEventPrivacyMode = "EXPLICIT_USER_CONTENT" | "METADATA_ONLY" | "REDACTED";
+
+export type AgentRunEventReportPrivacyMode = "METADATA_ONLY";
+
+export type AgentRunFileCountBucket =
+  | "OVER_10"
+  | "UNKNOWN"
+  | "_0"
+  | "_1_TO_2"
+  | "_3_TO_5"
+  | "_6_TO_10";
+
+export type AgentRunHandoffMetadata = {
+  capturedAt: Maybe<Scalars["DateTime"]["output"]>;
+  kind: Maybe<Scalars["String"]["output"]>;
+  source: Maybe<Scalars["String"]["output"]>;
+};
+
+export type AgentRunHandoffState = "MISSING" | "SAVED" | "UNKNOWN";
+
+export type AgentRunProgressPayloadInput = {
+  blockedReasonCode: InputMaybe<Scalars["String"]["input"]>;
+  confidenceBucket: InputMaybe<AgentRunConfidenceBucket>;
+  elapsedSeconds: Scalars["Int"]["input"];
+  failureCount: Scalars["Int"]["input"];
+  filesModifiedBucket: AgentRunFileCountBucket;
+  filesReadBucket: AgentRunFileCountBucket;
+  noProgressDurationSeconds: InputMaybe<Scalars["Int"]["input"]>;
+  progressState: AgentRunProgressState;
+  redirectCount: Scalars["Int"]["input"];
+  retryCount: Scalars["Int"]["input"];
+  scopeChanged: Scalars["Boolean"]["input"];
+  scopeGrowthBucket: InputMaybe<AgentRunScopeGrowthBucket>;
+  spendEstimateBucket: InputMaybe<AgentRunSpendEstimateBucket>;
+  testsPassed: InputMaybe<Scalars["Boolean"]["input"]>;
+  toolCallsCount: Scalars["Int"]["input"];
+  toolExternalCount: Scalars["Int"]["input"];
+  toolReadCount: Scalars["Int"]["input"];
+  toolWriteCount: Scalars["Int"]["input"];
+  validationKind: InputMaybe<Scalars["String"]["input"]>;
+  validationLevel: AgentRunValidationLevel;
+  validationStatus: AgentRunValidationStatus;
+};
+
+export type AgentRunProgressState =
+  | "BLOCKED"
+  | "LOW_PROGRESS"
+  | "READY_FOR_REVIEW"
+  | "STARTING"
+  | "VALIDATING"
+  | "WAITING_ON_USER"
+  | "WORKING";
+
+export type AgentRunScopeGrowthBucket =
+  | "NONE"
+  | "OVER_10_FILES"
+  | "UNKNOWN"
+  | "_1_TO_2_FILES"
+  | "_3_TO_5_FILES"
+  | "_6_TO_10_FILES";
+
+export type AgentRunSpendEstimateBucket =
+  | "NONE"
+  | "OVER_20"
+  | "UNDER_1"
+  | "UNKNOWN"
+  | "_1_TO_5"
+  | "_5_TO_20";
+
 export type AgentRunState =
   | "ACTIVE"
   | "AWAITING_INPUT"
@@ -72,17 +197,38 @@ export type AgentRunSummary = {
   deadlineState: AgentControlDataState;
   detailsState: AgentControlDataState;
   elapsedSeconds: Scalars["Int"]["output"];
+  handoffAvailable: Scalars["Boolean"]["output"];
+  handoffMetadata: Maybe<AgentRunHandoffMetadata>;
+  handoffState: AgentRunHandoffState;
   insertedAt: Scalars["DateTime"]["output"];
   nextActionIntent: AgentControlUiIntent;
   nextActionLabel: Maybe<Scalars["String"]["output"]>;
+  nextWorkWindowStartsAt: Maybe<Scalars["DateTime"]["output"]>;
   progressState: AgentControlDataState;
   reasonCodes: Array<Scalars["String"]["output"]>;
   recommendedActionKey: Maybe<HeadsdownActionKey>;
+  resumeEligibleAt: Maybe<Scalars["DateTime"]["output"]>;
   runId: Scalars["ID"]["output"];
   runState: AgentRunState;
   safeTitle: Scalars["String"]["output"];
   updatedAt: Scalars["DateTime"]["output"];
 };
+
+export type AgentRunValidationLevel =
+  | "FULL"
+  | "MANUAL"
+  | "NONE"
+  | "PLANNED"
+  | "TARGETED"
+  | "UNKNOWN";
+
+export type AgentRunValidationStatus =
+  | "FAILED"
+  | "NOT_STARTED"
+  | "PASSED"
+  | "RUNNING"
+  | "SKIPPED"
+  | "UNKNOWN";
 
 export type AlertValues =
   | "AFTER_HOURS"
@@ -104,10 +250,17 @@ export type ApplyHeadsdownActionInput = {
   client: InputMaybe<Scalars["String"]["input"]>;
   durationMinutes: InputMaybe<Scalars["Int"]["input"]>;
   expiresAt: InputMaybe<Scalars["DateTime"]["input"]>;
+  handoffAvailable: InputMaybe<Scalars["Boolean"]["input"]>;
+  handoffCapturedAt: InputMaybe<Scalars["DateTime"]["input"]>;
+  handoffKind: InputMaybe<Scalars["String"]["input"]>;
+  handoffSource: InputMaybe<Scalars["String"]["input"]>;
+  handoffState: InputMaybe<AgentRunHandoffState>;
   idempotencyKey: InputMaybe<Scalars["String"]["input"]>;
   mode: InputMaybe<Mode>;
+  nextWorkWindowStartsAt: InputMaybe<Scalars["DateTime"]["input"]>;
   overrideExpiresAt: InputMaybe<Scalars["DateTime"]["input"]>;
   reason: InputMaybe<Scalars["String"]["input"]>;
+  resumeEligibleAt: InputMaybe<Scalars["DateTime"]["input"]>;
   runId: Scalars["ID"]["input"];
   source: InputMaybe<Scalars["String"]["input"]>;
   sourceState: InputMaybe<Scalars["String"]["input"]>;
@@ -622,6 +775,33 @@ export type ReachabilityWindowUpdateInput = {
   statusText: InputMaybe<Scalars["String"]["input"]>;
 };
 
+export type ReportAgentRunEventInput = {
+  actor: AgentRunEventActorInput;
+  causationEventId: InputMaybe<Scalars["UUID4"]["input"]>;
+  client: AgentRunEventClientInput;
+  correlationId: InputMaybe<Scalars["String"]["input"]>;
+  eventId: Scalars["UUID4"]["input"];
+  eventType: Scalars["String"]["input"];
+  idempotencyKey: Scalars["String"]["input"];
+  occurredAt: Scalars["DateTime"]["input"];
+  payload: InputMaybe<Scalars["JSON"]["input"]>;
+  privacyMode: AgentRunEventReportPrivacyMode;
+  progressPayload: InputMaybe<AgentRunProgressPayloadInput>;
+  proposalRef: InputMaybe<Scalars["String"]["input"]>;
+  runId: Scalars["ID"]["input"];
+  schemaVersion: Scalars["Int"]["input"];
+  sequence: InputMaybe<Scalars["Int"]["input"]>;
+  source: Scalars["String"]["input"];
+  taskProposalId: InputMaybe<Scalars["ID"]["input"]>;
+  workspaceRef: Scalars["String"]["input"];
+};
+
+export type ReportAgentRunEventPayload = {
+  error: Maybe<AgentRunEventError>;
+  event: Maybe<AgentRunEvent>;
+  ok: Scalars["Boolean"]["output"];
+};
+
 export type RevokeDelegationGrantsResult = {
   revokedCount: Scalars["Int"]["output"];
 };
@@ -640,6 +820,7 @@ export type RootMutationType = {
   dismissDigestEntry: Maybe<DigestSummary>;
   overrideVerdict: Maybe<VerdictOverride>;
   registerMobileClient: Maybe<MobileClient>;
+  reportAgentRunEvent: ReportAgentRunEventPayload;
   /**
    * Report an agent task outcome (insert or update).
    *
@@ -713,6 +894,10 @@ export type RootMutationTypeRegisterMobileClientArgs = {
   input: InputMaybe<MobileClientInput>;
 };
 
+export type RootMutationTypeReportAgentRunEventArgs = {
+  input: ReportAgentRunEventInput;
+};
+
 export type RootMutationTypeReportOutcomeArgs = {
   input: OutcomeInput;
 };
@@ -765,6 +950,8 @@ export type RootQueryType = {
   activeContract: Maybe<Contract>;
   activeDelegationGrants: Array<DelegationGrant>;
   agentControlOverview: AgentControlOverview;
+  agentRunEvent: Maybe<AgentRunEvent>;
+  agentRunEvents: Array<AgentRunEvent>;
   autoResponderSettings: Maybe<AutoResponderSettings>;
   availability: Maybe<AvailabilityResolution>;
   /**
@@ -790,6 +977,23 @@ export type RootQueryType = {
   teamPresence: Maybe<Array<TeamPresence>>;
   teams: Maybe<Array<Team>>;
   verdictSettings: Maybe<VerdictSettings>;
+};
+
+export type RootQueryTypeAgentRunEventArgs = {
+  eventId: Scalars["UUID4"]["input"];
+};
+
+export type RootQueryTypeAgentRunEventsArgs = {
+  emitterKey: InputMaybe<Scalars["String"]["input"]>;
+  eventType: InputMaybe<Scalars["String"]["input"]>;
+  insertedAfter: InputMaybe<Scalars["DateTime"]["input"]>;
+  insertedBefore: InputMaybe<Scalars["DateTime"]["input"]>;
+  limit: InputMaybe<Scalars["Int"]["input"]>;
+  occurredAfter: InputMaybe<Scalars["DateTime"]["input"]>;
+  occurredBefore: InputMaybe<Scalars["DateTime"]["input"]>;
+  proposalRef: InputMaybe<Scalars["String"]["input"]>;
+  runId: InputMaybe<Scalars["ID"]["input"]>;
+  taskProposalId: InputMaybe<Scalars["ID"]["input"]>;
 };
 
 export type RootQueryTypeAvailabilityArgs = {
@@ -1219,6 +1423,39 @@ export type AgentControlOverviewQuery = {
       explanation: string;
       dataState: AgentControlDataState;
     }>;
+  };
+};
+
+export type ReportAgentRunEventMutationVariables = Exact<{
+  input: ReportAgentRunEventInput;
+}>;
+
+export type ReportAgentRunEventMutation = {
+  reportAgentRunEvent: {
+    ok: boolean;
+    error: { code: string; message: string; details: Record<string, unknown> } | null;
+    event: {
+      id: string;
+      eventId: string;
+      eventType: string;
+      schemaVersion: number;
+      occurredAt: string;
+      receivedAt: string;
+      workspaceRef: string;
+      runId: string;
+      source: string;
+      privacyMode: AgentRunEventPrivacyMode;
+      idempotencyKey: string;
+      correlationId: string | null;
+      causationEventId: string | null;
+      sequence: number | null;
+      emitterKey: string;
+      proposalRef: string | null;
+      payload: Record<string, unknown>;
+      insertedAt: string;
+      client: { kind: string; name: string; version: string };
+      actor: { kind: string; ref: string | null };
+    } | null;
   };
 };
 
