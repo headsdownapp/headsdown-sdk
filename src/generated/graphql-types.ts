@@ -22,6 +22,68 @@ export type Scalars = {
   Time: { input: string; output: string };
 };
 
+export type AgentControlDataState =
+  | "EMPTY"
+  | "FEATURE_DISABLED"
+  | "PRIVACY_RESTRICTED"
+  | "READY"
+  | "UNKNOWN";
+
+export type AgentControlOverview = {
+  currentCall: CurrentCallView;
+  generatedAt: Scalars["DateTime"]["output"];
+  headsdownCall: HeadsdownCall;
+  needsYourYes: Array<NeedsYourYesItem>;
+  needsYourYesState: AgentControlDataState;
+  runSummaries: Array<AgentRunSummary>;
+  runSummariesState: AgentControlDataState;
+  valueMetrics: Array<ValueMetricSummary>;
+  valueMetricsState: AgentControlDataState;
+};
+
+export type AgentControlUiIntent =
+  | "ADJUST_PLAYBOOKS"
+  | "NONE"
+  | "REVIEW_HANDOFF"
+  | "REVIEW_REQUEST"
+  | "REVIEW_RUNS"
+  | "START_RUN"
+  | "VIEW_DETAILS"
+  | "VIEW_QUEUE"
+  | "VIEW_RECEIPTS";
+
+export type AgentRunActionState = "NONE" | "OPTIONAL" | "REQUIRED" | "UNKNOWN";
+
+export type AgentRunState =
+  | "ACTIVE"
+  | "AWAITING_INPUT"
+  | "COMPLETED"
+  | "QUEUED"
+  | "READY_TO_RESUME"
+  | "UNKNOWN";
+
+export type AgentRunSummary = {
+  actionState: AgentRunActionState;
+  allowedActionKeys: Array<HeadsdownActionKey>;
+  budgetState: AgentControlDataState;
+  callKey: HeadsdownCallKey;
+  clientLabel: Scalars["String"]["output"];
+  dataState: AgentControlDataState;
+  deadlineState: AgentControlDataState;
+  detailsState: AgentControlDataState;
+  elapsedSeconds: Scalars["Int"]["output"];
+  insertedAt: Scalars["DateTime"]["output"];
+  nextActionIntent: AgentControlUiIntent;
+  nextActionLabel: Maybe<Scalars["String"]["output"]>;
+  progressState: AgentControlDataState;
+  reasonCodes: Array<Scalars["String"]["output"]>;
+  recommendedActionKey: Maybe<HeadsdownActionKey>;
+  runId: Scalars["ID"]["output"];
+  runState: AgentRunState;
+  safeTitle: Scalars["String"]["output"];
+  updatedAt: Scalars["DateTime"]["output"];
+};
+
 export type AlertValues =
   | "AFTER_HOURS"
   | "DO_NOT_DISTURB"
@@ -35,6 +97,30 @@ export type AlertsPolicy =
   | "INTERRUPTABLE"
   | "OFF"
   | "TAKE_A_NUMBER";
+
+export type ApplyHeadsdownActionInput = {
+  actionExpiresAt: InputMaybe<Scalars["DateTime"]["input"]>;
+  actionKey: Scalars["String"]["input"];
+  client: InputMaybe<Scalars["String"]["input"]>;
+  durationMinutes: InputMaybe<Scalars["Int"]["input"]>;
+  expiresAt: InputMaybe<Scalars["DateTime"]["input"]>;
+  idempotencyKey: InputMaybe<Scalars["String"]["input"]>;
+  mode: InputMaybe<Mode>;
+  overrideExpiresAt: InputMaybe<Scalars["DateTime"]["input"]>;
+  reason: InputMaybe<Scalars["String"]["input"]>;
+  runId: Scalars["ID"]["input"];
+  source: InputMaybe<Scalars["String"]["input"]>;
+  sourceState: InputMaybe<Scalars["String"]["input"]>;
+};
+
+export type ApplyHeadsdownActionPayload = {
+  currentCall: Maybe<CurrentCallView>;
+  error: Maybe<HeadsdownActionError>;
+  headsdownCall: Maybe<HeadsdownCall>;
+  ok: Scalars["Boolean"]["output"];
+  result: Maybe<HeadsdownActionResult>;
+  runSummary: Maybe<AgentRunSummary>;
+};
 
 export type AutoResponderSettings = {
   busyText: Scalars["String"]["output"];
@@ -162,6 +248,21 @@ export type ContractInput = {
   statusText: InputMaybe<Scalars["String"]["input"]>;
 };
 
+export type CurrentCallView = {
+  allowedActionKeys: Array<HeadsdownActionKey>;
+  body: Scalars["String"]["output"];
+  callKey: HeadsdownCallKey;
+  dataState: AgentControlDataState;
+  evaluatedAt: Maybe<Scalars["DateTime"]["output"]>;
+  primaryActionIntent: AgentControlUiIntent;
+  primaryActionLabel: Maybe<Scalars["String"]["output"]>;
+  reasonCodes: Array<Scalars["String"]["output"]>;
+  recommendedActionKey: Maybe<HeadsdownActionKey>;
+  secondaryActionIntent: AgentControlUiIntent;
+  secondaryActionLabel: Maybe<Scalars["String"]["output"]>;
+  title: Scalars["String"]["output"];
+};
+
 export type DelegationGrant = {
   agentId: Maybe<Scalars["String"]["output"]>;
   createdById: Scalars["ID"]["output"];
@@ -205,6 +306,8 @@ export type DelegationGrantPermission =
   | "AVAILABILITY_OVERRIDE_CANCEL"
   /** Create temporary availability overrides */
   | "AVAILABILITY_OVERRIDE_CREATE"
+  /** Apply canonical HeadsDown actions to agent runs */
+  | "HEADSDOWN_ACTION_APPLY"
   /** Apply an existing status preset */
   | "PRESET_APPLY";
 
@@ -229,6 +332,117 @@ export type DigestSummary = {
   lastEventAt: Scalars["DateTime"]["output"];
   sourceType: Scalars["String"]["output"];
 };
+
+export type HeadsdownActionError = {
+  code: Scalars["String"]["output"];
+  details: Scalars["JSON"]["output"];
+  message: Scalars["String"]["output"];
+};
+
+export type HeadsdownActionKey =
+  | "ALLOW_FOR_DURATION"
+  | "ALLOW_ONCE"
+  | "ASK_USER"
+  | "CONTINUE"
+  | "CONTINUE_WITH_LIMIT"
+  | "CREATE_TEMPORARY_EXCEPTION"
+  | "KEEP_QUEUED"
+  | "NARROW_SCOPE"
+  | "PAUSE_AND_SUMMARIZE"
+  | "QUEUE_FOR_LATER"
+  | "QUEUE_FOR_MORNING"
+  | "RESUME_RUN"
+  | "STOP_RUN";
+
+export type HeadsdownActionResult = {
+  actionKey: HeadsdownActionKey;
+  availabilityOverrideId: Maybe<Scalars["ID"]["output"]>;
+  eventId: Scalars["ID"]["output"];
+  replayed: Scalars["Boolean"]["output"];
+  resultingState: HeadsdownActionState;
+  sourceState: HeadsdownActionState;
+};
+
+export type HeadsdownActionState =
+  | "ALL_CONTAINED"
+  | "GOOD_TO_RUN"
+  | "KEEP_IT_TIGHT"
+  | "NEEDS_AGENT_SCOPE"
+  | "NEEDS_USER"
+  | "NEEDS_YOUR_YES"
+  | "NOT_WORTH_STARTING_NOW"
+  | "OFF_THE_CLOCK"
+  | "PAUSED"
+  | "QUEUED"
+  | "RABBIT_HOLE_DETECTED"
+  | "READY_TO_RESUME"
+  | "RUNNING"
+  | "RUNNING_LIMITED"
+  | "STOPPED"
+  | "TEMPORARY_EXCEPTION";
+
+/**
+ * Canonical HeadsDown call payload for client rendering.
+ *
+ * Use `key` and `allowedActionKeys` as forward-compatible strings. If a new key appears before your client updates, apply the unknown/future fallback rules from docs/headsdown-call-contract.md.
+ */
+export type HeadsdownCall = {
+  allowedActionKeys: Array<Scalars["String"]["output"]>;
+  allowedActionKnownKeys: Array<HeadsdownActionKey>;
+  allowedUiIntents: Array<AgentControlUiIntent>;
+  body: Scalars["String"]["output"];
+  confidence: HeadsdownCallConfidence;
+  evidenceSource: HeadsdownCallEvidenceSource;
+  expiresAt: Maybe<Scalars["DateTime"]["output"]>;
+  key: Scalars["String"]["output"];
+  knownKey: Maybe<HeadsdownCallKey>;
+  primaryActionIntent: AgentControlUiIntent;
+  primaryActionKey: Maybe<Scalars["String"]["output"]>;
+  primaryActionKnownKey: Maybe<HeadsdownActionKey>;
+  primaryActionLabel: Maybe<Scalars["String"]["output"]>;
+  privacyMode: HeadsdownCallPrivacyMode;
+  reasonCodes: Array<Scalars["String"]["output"]>;
+  recommendedActionKey: Maybe<Scalars["String"]["output"]>;
+  recommendedActionKnownKey: Maybe<HeadsdownActionKey>;
+  secondaryActionIntent: AgentControlUiIntent;
+  secondaryActionKey: Maybe<Scalars["String"]["output"]>;
+  secondaryActionKnownKey: Maybe<HeadsdownActionKey>;
+  secondaryActionLabel: Maybe<Scalars["String"]["output"]>;
+  severity: HeadsdownCallSeverity;
+  title: Scalars["String"]["output"];
+  urgency: HeadsdownCallUrgency;
+};
+
+export type HeadsdownCallConfidence = "ESTIMATED" | "EXACT" | "UNKNOWN";
+
+export type HeadsdownCallEvidenceSource =
+  | "CONTRACT"
+  | "ENGINE"
+  | "FALLBACK"
+  | "NEEDS_YOUR_YES"
+  | "RUN_SUMMARY";
+
+export type HeadsdownCallKey =
+  | "ALL_CONTAINED"
+  | "GOOD_TO_RUN"
+  | "KEEP_IT_TIGHT"
+  | "NEEDS_YOUR_YES"
+  | "NOT_WORTH_STARTING_NOW"
+  | "OFF_THE_CLOCK"
+  | "RABBIT_HOLE_DETECTED"
+  | "READY_TO_RESUME";
+
+export type HeadsdownCallPrivacyMode = "PRIVACY_RESTRICTED" | "PRIVACY_SAFE" | "UNKNOWN";
+
+export type HeadsdownCallSeverity =
+  | "ACTION_REQUIRED"
+  | "BOUNDARY"
+  | "CAUTION"
+  | "CRITICAL"
+  | "NEUTRAL"
+  | "POSITIVE";
+
+export type HeadsdownCallUrgency = "ELEVATED" | "HIGH" | "LOW" | "NORMAL";
 
 export type InterruptResult = {
   allowed: Scalars["Boolean"]["output"];
@@ -255,6 +469,24 @@ export type MobileClientInput = {
 
 /** Availability state for interruptibility and status */
 export type Mode = "BUSY" | "LIMITED" | "OFFLINE" | "ONLINE";
+
+export type NeedsYourYesItem = {
+  allowedActionKeys: Array<HeadsdownActionKey>;
+  body: Scalars["String"]["output"];
+  callKey: HeadsdownCallKey;
+  createdAt: Scalars["DateTime"]["output"];
+  dataState: AgentControlDataState;
+  itemState: NeedsYourYesItemState;
+  primaryActionIntent: AgentControlUiIntent;
+  primaryActionLabel: Maybe<Scalars["String"]["output"]>;
+  reasonCodes: Array<Scalars["String"]["output"]>;
+  recommendedActionKey: Maybe<HeadsdownActionKey>;
+  runId: Scalars["ID"]["output"];
+  title: Scalars["String"]["output"];
+  updatedAt: Scalars["DateTime"]["output"];
+};
+
+export type NeedsYourYesItemState = "ACTION_REQUIRED" | "QUEUED" | "READY_TO_RESUME" | "UNKNOWN";
 
 export type OutcomeInput = {
   actualDurationMinutes: InputMaybe<Scalars["Int"]["input"]>;
@@ -395,6 +627,7 @@ export type RevokeDelegationGrantsResult = {
 };
 
 export type RootMutationType = {
+  applyHeadsdownAction: ApplyHeadsdownActionPayload;
   applyPreset: Maybe<Contract>;
   cancelAvailabilityOverride: Maybe<AvailabilityOverride>;
   createAvailabilityOverride: Maybe<AvailabilityOverride>;
@@ -424,6 +657,10 @@ export type RootMutationType = {
   updatePublicPageSettings: Maybe<User>;
   updateReachabilityWindow: Maybe<ReachabilityWindow>;
   updateVerdictSettings: Maybe<VerdictSettings>;
+};
+
+export type RootMutationTypeApplyHeadsdownActionArgs = {
+  input: ApplyHeadsdownActionInput;
 };
 
 export type RootMutationTypeApplyPresetArgs = {
@@ -527,6 +764,7 @@ export type RootQueryType = {
   activeAvailabilityOverride: Maybe<AvailabilityOverride>;
   activeContract: Maybe<Contract>;
   activeDelegationGrants: Array<DelegationGrant>;
+  agentControlOverview: AgentControlOverview;
   autoResponderSettings: Maybe<AutoResponderSettings>;
   availability: Maybe<AvailabilityResolution>;
   /**
@@ -541,6 +779,8 @@ export type RootQueryType = {
   delegationGrants: Array<DelegationGrant>;
   digestSummaries: Maybe<Array<DigestSummary>>;
   evaluateInterrupt: Maybe<InterruptResult>;
+  /** Canonical HeadsDown call catalog for client rendering and unknown-key fallback. Clients should still render the current `agentControlOverview.headsdownCall` as the source of truth for the active call. */
+  headsdownCallCatalog: Array<HeadsdownCall>;
   preset: Maybe<Preset>;
   presets: Maybe<Array<Preset>>;
   profile: Maybe<User>;
@@ -647,6 +887,7 @@ export type TaskProposal = {
   estimatedMinutes: Maybe<Scalars["Int"]["output"]>;
   framework: Maybe<Scalars["String"]["output"]>;
   id: Scalars["ID"]["output"];
+  idempotencyKey: Maybe<Scalars["String"]["output"]>;
   insertedAt: Scalars["DateTime"]["output"];
   model: Maybe<Scalars["String"]["output"]>;
   scopeSummary: Maybe<Scalars["String"]["output"]>;
@@ -696,6 +937,25 @@ export type User = {
   timezone: Maybe<Scalars["String"]["output"]>;
   updatedAt: Scalars["DateTime"]["output"];
   visibilityLevel: VisibilityLevel;
+};
+
+export type ValueMetricConfidence = "ESTIMATED" | "EXACT" | "UNKNOWN";
+
+export type ValueMetricKey =
+  | "OFF_HOURS_INTERRUPTIONS_AVOIDED"
+  | "RABBIT_HOLES_PREVENTED"
+  | "SPEND_AVOIDED"
+  | "TIME_NOT_WASTED";
+
+export type ValueMetricSummary = {
+  confidence: ValueMetricConfidence;
+  dataState: AgentControlDataState;
+  evidenceCount: Maybe<Scalars["Int"]["output"]>;
+  explanation: Scalars["String"]["output"];
+  label: Scalars["String"]["output"];
+  metricKey: ValueMetricKey;
+  unit: Maybe<Scalars["String"]["output"]>;
+  value: Maybe<Scalars["Float"]["output"]>;
 };
 
 export type Verdict = {
@@ -863,6 +1123,103 @@ export type ScheduleQuery = {
       autoActivate: boolean;
     } | null;
   } | null;
+};
+
+export type AgentControlOverviewQueryVariables = Exact<{ [key: string]: never }>;
+
+export type AgentControlOverviewQuery = {
+  agentControlOverview: {
+    needsYourYesState: AgentControlDataState;
+    runSummariesState: AgentControlDataState;
+    valueMetricsState: AgentControlDataState;
+    generatedAt: string;
+    currentCall: {
+      callKey: HeadsdownCallKey;
+      title: string;
+      body: string;
+      primaryActionLabel: string | null;
+      primaryActionIntent: AgentControlUiIntent;
+      secondaryActionLabel: string | null;
+      secondaryActionIntent: AgentControlUiIntent;
+      recommendedActionKey: HeadsdownActionKey | null;
+      allowedActionKeys: Array<HeadsdownActionKey>;
+      reasonCodes: Array<string>;
+      dataState: AgentControlDataState;
+      evaluatedAt: string | null;
+    };
+    headsdownCall: {
+      key: string;
+      knownKey: HeadsdownCallKey | null;
+      title: string;
+      body: string;
+      severity: HeadsdownCallSeverity;
+      urgency: HeadsdownCallUrgency;
+      primaryActionLabel: string | null;
+      primaryActionKey: string | null;
+      primaryActionKnownKey: HeadsdownActionKey | null;
+      primaryActionIntent: AgentControlUiIntent;
+      secondaryActionLabel: string | null;
+      secondaryActionKey: string | null;
+      secondaryActionKnownKey: HeadsdownActionKey | null;
+      secondaryActionIntent: AgentControlUiIntent;
+      recommendedActionKey: string | null;
+      recommendedActionKnownKey: HeadsdownActionKey | null;
+      allowedActionKeys: Array<string>;
+      allowedActionKnownKeys: Array<HeadsdownActionKey>;
+      allowedUiIntents: Array<AgentControlUiIntent>;
+      reasonCodes: Array<string>;
+      confidence: HeadsdownCallConfidence;
+      evidenceSource: HeadsdownCallEvidenceSource;
+      privacyMode: HeadsdownCallPrivacyMode;
+      expiresAt: string | null;
+    };
+    needsYourYes: Array<{
+      runId: string;
+      callKey: HeadsdownCallKey;
+      title: string;
+      body: string;
+      itemState: NeedsYourYesItemState;
+      primaryActionLabel: string | null;
+      primaryActionIntent: AgentControlUiIntent;
+      recommendedActionKey: HeadsdownActionKey | null;
+      allowedActionKeys: Array<HeadsdownActionKey>;
+      reasonCodes: Array<string>;
+      dataState: AgentControlDataState;
+      createdAt: string;
+      updatedAt: string;
+    }>;
+    runSummaries: Array<{
+      runId: string;
+      callKey: HeadsdownCallKey;
+      runState: AgentRunState;
+      actionState: AgentRunActionState;
+      clientLabel: string;
+      safeTitle: string;
+      recommendedActionKey: HeadsdownActionKey | null;
+      allowedActionKeys: Array<HeadsdownActionKey>;
+      reasonCodes: Array<string>;
+      elapsedSeconds: number;
+      deadlineState: AgentControlDataState;
+      budgetState: AgentControlDataState;
+      nextActionLabel: string | null;
+      nextActionIntent: AgentControlUiIntent;
+      dataState: AgentControlDataState;
+      detailsState: AgentControlDataState;
+      progressState: AgentControlDataState;
+      insertedAt: string;
+      updatedAt: string;
+    }>;
+    valueMetrics: Array<{
+      metricKey: ValueMetricKey;
+      label: string;
+      value: number | null;
+      unit: string | null;
+      confidence: ValueMetricConfidence;
+      evidenceCount: number | null;
+      explanation: string;
+      dataState: AgentControlDataState;
+    }>;
+  };
 };
 
 export type AvailabilityQueryVariables = Exact<{

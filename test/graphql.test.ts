@@ -154,6 +154,203 @@ describe("GraphQLClient", () => {
       ]);
     });
 
+    it("normalizes agent-control enum-backed fields to lowercase", async () => {
+      const client = new GraphQLClient({
+        ...BASE_OPTIONS,
+        fetch: mockGraphQL({
+          agentControlOverview: {
+            currentCall: {
+              callKey: "OFF_THE_CLOCK",
+              primaryActionIntent: "NONE",
+              secondaryActionIntent: "VIEW_DETAILS",
+              recommendedActionKey: "QUEUE_FOR_MORNING",
+              allowedActionKeys: ["QUEUE_FOR_MORNING", "KEEP_QUEUED"],
+              dataState: "READY",
+            },
+            headsdownCall: {
+              key: "future_call_alpha",
+              knownKey: null,
+              severity: "BOUNDARY",
+              urgency: "ELEVATED",
+              primaryActionKnownKey: "QUEUE_FOR_MORNING",
+              primaryActionIntent: "NONE",
+              secondaryActionKnownKey: "KEEP_QUEUED",
+              secondaryActionIntent: "VIEW_DETAILS",
+              recommendedActionKey: "QUEUE_FOR_MORNING",
+              recommendedActionKnownKey: "QUEUE_FOR_MORNING",
+              allowedActionKeys: ["QUEUE_FOR_MORNING", "KEEP_QUEUED"],
+              allowedActionKnownKeys: ["QUEUE_FOR_MORNING", "KEEP_QUEUED"],
+              allowedUiIntents: ["VIEW_DETAILS", "VIEW_QUEUE"],
+              confidence: "ESTIMATED",
+              evidenceSource: "ENGINE",
+              privacyMode: "PRIVACY_SAFE",
+            },
+            needsYourYes: [
+              {
+                callKey: "NEEDS_YOUR_YES",
+                itemState: "ACTION_REQUIRED",
+                primaryActionIntent: "REVIEW_REQUEST",
+                recommendedActionKey: "ALLOW_ONCE",
+                allowedActionKeys: ["ALLOW_ONCE", "KEEP_QUEUED"],
+                dataState: "READY",
+              },
+            ],
+            runSummaries: [
+              {
+                callKey: "KEEP_IT_TIGHT",
+                runState: "ACTIVE",
+                actionState: "OPTIONAL",
+                recommendedActionKey: "NARROW_SCOPE",
+                allowedActionKeys: ["NARROW_SCOPE", "ALLOW_FOR_DURATION"],
+                deadlineState: "READY",
+                budgetState: "PRIVACY_RESTRICTED",
+                nextActionIntent: "REVIEW_REQUEST",
+                dataState: "READY",
+                detailsState: "READY",
+                progressState: "UNKNOWN",
+              },
+            ],
+            valueMetrics: [
+              {
+                metricKey: "TIME_NOT_WASTED",
+                confidence: "EXACT",
+                dataState: "READY",
+              },
+            ],
+            needsYourYesState: "FEATURE_DISABLED",
+            runSummariesState: "READY",
+            valueMetricsState: "PRIVACY_RESTRICTED",
+          },
+        }),
+      });
+
+      const data = await client.request<{
+        agentControlOverview: Record<string, unknown>;
+      }>("query { agentControlOverview { headsdownCall { key knownKey } } }");
+
+      const overview = data.agentControlOverview as Record<string, unknown>;
+      const currentCall = overview.currentCall as Record<string, unknown>;
+      const headsdownCall = overview.headsdownCall as Record<string, unknown>;
+      const needsYourYes = overview.needsYourYes as Array<Record<string, unknown>>;
+      const runSummaries = overview.runSummaries as Array<Record<string, unknown>>;
+      const valueMetrics = overview.valueMetrics as Array<Record<string, unknown>>;
+
+      expect(currentCall.callKey).toBe("off_the_clock");
+      expect(currentCall.primaryActionIntent).toBe("none");
+      expect(currentCall.secondaryActionIntent).toBe("view_details");
+      expect(currentCall.recommendedActionKey).toBe("queue_for_morning");
+      expect(currentCall.allowedActionKeys).toEqual(["queue_for_morning", "keep_queued"]);
+      expect(currentCall.dataState).toBe("ready");
+
+      expect(headsdownCall.key).toBe("future_call_alpha");
+      expect(headsdownCall.knownKey).toBeNull();
+      expect(headsdownCall.severity).toBe("boundary");
+      expect(headsdownCall.urgency).toBe("elevated");
+      expect(headsdownCall.primaryActionKnownKey).toBe("queue_for_morning");
+      expect(headsdownCall.primaryActionIntent).toBe("none");
+      expect(headsdownCall.secondaryActionKnownKey).toBe("keep_queued");
+      expect(headsdownCall.secondaryActionIntent).toBe("view_details");
+      expect(headsdownCall.recommendedActionKey).toBe("queue_for_morning");
+      expect(headsdownCall.recommendedActionKnownKey).toBe("queue_for_morning");
+      expect(headsdownCall.allowedActionKeys).toEqual(["queue_for_morning", "keep_queued"]);
+      expect(headsdownCall.allowedActionKnownKeys).toEqual(["queue_for_morning", "keep_queued"]);
+      expect(headsdownCall.allowedUiIntents).toEqual(["view_details", "view_queue"]);
+      expect(headsdownCall.confidence).toBe("estimated");
+      expect(headsdownCall.evidenceSource).toBe("engine");
+      expect(headsdownCall.privacyMode).toBe("privacy_safe");
+
+      expect(needsYourYes[0].callKey).toBe("needs_your_yes");
+      expect(needsYourYes[0].itemState).toBe("action_required");
+      expect(needsYourYes[0].primaryActionIntent).toBe("review_request");
+      expect(needsYourYes[0].recommendedActionKey).toBe("allow_once");
+      expect(needsYourYes[0].allowedActionKeys).toEqual(["allow_once", "keep_queued"]);
+      expect(needsYourYes[0].dataState).toBe("ready");
+
+      expect(runSummaries[0].callKey).toBe("keep_it_tight");
+      expect(runSummaries[0].runState).toBe("active");
+      expect(runSummaries[0].actionState).toBe("optional");
+      expect(runSummaries[0].recommendedActionKey).toBe("narrow_scope");
+      expect(runSummaries[0].allowedActionKeys).toEqual(["narrow_scope", "allow_for_duration"]);
+      expect(runSummaries[0].deadlineState).toBe("ready");
+      expect(runSummaries[0].budgetState).toBe("privacy_restricted");
+      expect(runSummaries[0].nextActionIntent).toBe("review_request");
+      expect(runSummaries[0].dataState).toBe("ready");
+      expect(runSummaries[0].detailsState).toBe("ready");
+      expect(runSummaries[0].progressState).toBe("unknown");
+
+      expect(valueMetrics[0].metricKey).toBe("time_not_wasted");
+      expect(valueMetrics[0].confidence).toBe("exact");
+      expect(valueMetrics[0].dataState).toBe("ready");
+
+      expect(overview.needsYourYesState).toBe("feature_disabled");
+      expect(overview.runSummariesState).toBe("ready");
+      expect(overview.valueMetricsState).toBe("privacy_restricted");
+    });
+
+    it("normalizes agent-control action mutation enum-backed fields", async () => {
+      const client = new GraphQLClient({
+        ...BASE_OPTIONS,
+        fetch: mockGraphQL({
+          applyHeadsdownAction: {
+            ok: true,
+            result: {
+              actionKey: "PAUSE_AND_SUMMARIZE",
+              sourceState: "PENDING",
+              resultingState: "APPLIED",
+            },
+            error: null,
+          },
+        }),
+      });
+
+      const data = await client.request<{
+        applyHeadsdownAction: {
+          result: { actionKey: string; sourceState: string; resultingState: string };
+        };
+      }>(
+        'mutation { applyHeadsdownAction(input: { runId: "run-1", actionKey: "pause_and_summarize" }) { result { actionKey sourceState resultingState } } }',
+      );
+
+      expect(data.applyHeadsdownAction.result.actionKey).toBe("pause_and_summarize");
+      expect(data.applyHeadsdownAction.result.sourceState).toBe("pending");
+      expect(data.applyHeadsdownAction.result.resultingState).toBe("applied");
+    });
+
+    it("does not crash when headsdownCall.key is an unknown future value", async () => {
+      const client = new GraphQLClient({
+        ...BASE_OPTIONS,
+        fetch: mockGraphQL({
+          headsdownCallCatalog: [
+            {
+              key: "future_call_key_from_server",
+              knownKey: null,
+              title: "Future call",
+              body: "Future-proof payload",
+              severity: "CAUTION",
+              urgency: "NORMAL",
+              primaryActionIntent: "VIEW_DETAILS",
+              secondaryActionIntent: "NONE",
+              allowedActionKeys: [],
+              allowedActionKnownKeys: [],
+              allowedUiIntents: ["VIEW_DETAILS"],
+              reasonCodes: [],
+              confidence: "UNKNOWN",
+              evidenceSource: "FALLBACK",
+              privacyMode: "UNKNOWN",
+            },
+          ],
+        }),
+      });
+
+      const data = await client.request<{
+        headsdownCallCatalog: Array<{ key: string; knownKey: string | null; severity: string }>;
+      }>("query { headsdownCallCatalog { key knownKey severity } }");
+
+      expect(data.headsdownCallCatalog[0].key).toBe("future_call_key_from_server");
+      expect(data.headsdownCallCatalog[0].knownKey).toBeNull();
+      expect(data.headsdownCallCatalog[0].severity).toBe("caution");
+    });
+
     it("throws AuthError on 401", async () => {
       const client = new GraphQLClient({ ...BASE_OPTIONS, fetch: mockHttpError(401) });
 

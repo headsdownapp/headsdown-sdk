@@ -1,6 +1,6 @@
 # @headsdown/sdk
 
-TypeScript client SDK for the [HeadsDown](https://headsdown.app) availability API. Gives AI agents and developer tools typed access to availability status, focus modes, and task verdicts.
+TypeScript client SDK for the [HeadsDown](https://headsdown.app) API. Gives AI agents and developer tools typed access to HeadsDown calls, availability boundaries, focus modes, and task verdicts.
 
 Zero dependencies. Node 18+ (uses native `fetch`).
 
@@ -64,9 +64,22 @@ await store.save(apiKey, "My Tool");
 
 ## Usage
 
+### Read the HeadsDown call
+
+Lead with what HeadsDown recommends for the agent, then use availability as supporting context.
+
+```typescript
+import { resolveHeadsDownCallFallback } from "@headsdown/sdk";
+
+const overview = await client.getAgentControlOverview();
+const call = resolveHeadsDownCallFallback(overview.headsdownCall);
+console.log(`${call.title}: ${call.body}`);
+console.log(`Next move: ${call.primaryActionKey ?? call.primaryActionIntent}`);
+```
+
 ### Check Availability
 
-The primary use case: check whether the user is available before starting work.
+Use availability to understand the user’s current boundary when a workflow still needs the lower-level schedule or mode inputs.
 
 ```typescript
 const { contract, schedule } = await client.getAvailability();
@@ -299,7 +312,7 @@ This SDK sends requests only to the HeadsDown API (`https://headsdown.app/graphq
 
 **What is sent:** Your API key, the specific query/mutation being executed (availability checks, task proposals, preset operations, verdict settings, interrupt evaluation), and optional actor context metadata when configured (`source`, `agentId`, `sessionId`, `workspaceRef`).
 
-**What is received:** Your availability status, schedule resolution, task verdicts, calibration data, and preset configurations.
+**What is received:** HeadsDown call metadata, availability boundaries, schedule resolution, task verdicts, calibration data, and preset configurations.
 
 **What is stored locally:** Your API key at `~/.config/headsdown/credentials.json` (file permissions: 0600, user-only read/write).
 
@@ -322,6 +335,8 @@ Then regenerate operation and variable types:
 ```bash
 npm run codegen:types
 ```
+
+If a ticket only updates SDK runtime normalization or exported TypeScript aliases without changing `src/queries.ts` or the schema snapshot, regeneration is not required.
 
 The schema compatibility test uses this local snapshot to make drift obvious in CI.
 

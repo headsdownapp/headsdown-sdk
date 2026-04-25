@@ -70,6 +70,104 @@ export const SCHEDULE_QUERY = `
   }
 `;
 
+/** Get the agent-control overview read model for HeadsDown call rendering. */
+export const AGENT_CONTROL_OVERVIEW_QUERY = `
+  query AgentControlOverview {
+    agentControlOverview {
+      currentCall {
+        callKey
+        title
+        body
+        primaryActionLabel
+        primaryActionIntent
+        secondaryActionLabel
+        secondaryActionIntent
+        recommendedActionKey
+        allowedActionKeys
+        reasonCodes
+        dataState
+        evaluatedAt
+      }
+      headsdownCall {
+        key
+        knownKey
+        title
+        body
+        severity
+        urgency
+        primaryActionLabel
+        primaryActionKey
+        primaryActionKnownKey
+        primaryActionIntent
+        secondaryActionLabel
+        secondaryActionKey
+        secondaryActionKnownKey
+        secondaryActionIntent
+        recommendedActionKey
+        recommendedActionKnownKey
+        allowedActionKeys
+        allowedActionKnownKeys
+        allowedUiIntents
+        reasonCodes
+        confidence
+        evidenceSource
+        privacyMode
+        expiresAt
+      }
+      needsYourYes {
+        runId
+        callKey
+        title
+        body
+        itemState
+        primaryActionLabel
+        primaryActionIntent
+        recommendedActionKey
+        allowedActionKeys
+        reasonCodes
+        dataState
+        createdAt
+        updatedAt
+      }
+      needsYourYesState
+      runSummaries {
+        runId
+        callKey
+        runState
+        actionState
+        clientLabel
+        safeTitle
+        recommendedActionKey
+        allowedActionKeys
+        reasonCodes
+        elapsedSeconds
+        deadlineState
+        budgetState
+        nextActionLabel
+        nextActionIntent
+        dataState
+        detailsState
+        progressState
+        insertedAt
+        updatedAt
+      }
+      runSummariesState
+      valueMetrics {
+        metricKey
+        label
+        value
+        unit
+        confidence
+        evidenceCount
+        explanation
+        dataState
+      }
+      valueMetricsState
+      generatedAt
+    }
+  }
+`;
+
 /** Get both contract and schedule in a single request. */
 export const AVAILABILITY_QUERY = `
   query Availability($at: DateTime) {

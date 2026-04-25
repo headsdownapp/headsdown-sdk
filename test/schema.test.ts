@@ -3,6 +3,7 @@ import { buildClientSchema, parse, validate } from "graphql";
 import schemaJson from "./fixtures/app-schema.json";
 import {
   ACTIVE_CONTRACT_QUERY,
+  AGENT_CONTROL_OVERVIEW_QUERY,
   APPLY_PRESET_MUTATION,
   AUTO_RESPONDER_SETTINGS_QUERY,
   AVAILABILITY_QUERY,
@@ -30,6 +31,7 @@ const schema = buildClientSchema((schemaJson as { data?: unknown }).data ?? sche
 
 const DOCUMENTS = [
   ["ACTIVE_CONTRACT_QUERY", ACTIVE_CONTRACT_QUERY],
+  ["AGENT_CONTROL_OVERVIEW_QUERY", AGENT_CONTROL_OVERVIEW_QUERY],
   ["SCHEDULE_QUERY", SCHEDULE_QUERY],
   ["AVAILABILITY_QUERY", AVAILABILITY_QUERY],
   ["SUBMIT_PROPOSAL_MUTATION", SUBMIT_PROPOSAL_MUTATION],

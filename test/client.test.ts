@@ -177,6 +177,74 @@ describe("HeadsDownClient", () => {
     });
   });
 
+  // === getAgentControlOverview ===
+
+  describe("getAgentControlOverview", () => {
+    it("returns the current HeadsDown call overview", async () => {
+      const overview = {
+        currentCall: {
+          callKey: "ALL_CONTAINED",
+          title: "All contained",
+          body: "Nothing needs you right now.",
+          primaryActionLabel: null,
+          primaryActionIntent: "NONE",
+          secondaryActionLabel: "Why this call?",
+          secondaryActionIntent: "VIEW_DETAILS",
+          recommendedActionKey: null,
+          allowedActionKeys: [],
+          reasonCodes: ["NO_ACTION_NEEDED"],
+          dataState: "READY",
+          evaluatedAt: null,
+        },
+        headsdownCall: {
+          key: "all_contained",
+          knownKey: "ALL_CONTAINED",
+          title: "All contained",
+          body: "Nothing needs you right now.",
+          severity: "NEUTRAL",
+          urgency: "LOW",
+          primaryActionLabel: null,
+          primaryActionKey: null,
+          primaryActionKnownKey: null,
+          primaryActionIntent: "NONE",
+          secondaryActionLabel: "Why this call?",
+          secondaryActionKey: null,
+          secondaryActionKnownKey: null,
+          secondaryActionIntent: "VIEW_DETAILS",
+          recommendedActionKey: null,
+          recommendedActionKnownKey: null,
+          allowedActionKeys: [],
+          allowedActionKnownKeys: [],
+          allowedUiIntents: ["VIEW_DETAILS"],
+          reasonCodes: ["NO_ACTION_NEEDED"],
+          confidence: "EXACT",
+          evidenceSource: "ENGINE",
+          privacyMode: "PRIVACY_SAFE",
+          expiresAt: null,
+        },
+        needsYourYes: [],
+        needsYourYesState: "EMPTY",
+        runSummaries: [],
+        runSummariesState: "EMPTY",
+        valueMetrics: [],
+        valueMetricsState: "EMPTY",
+        generatedAt: "2026-04-25T04:00:00Z",
+      };
+
+      const client = new HeadsDownClient({
+        ...CLIENT_OPTS,
+        fetch: mockGraphQL({ agentControlOverview: overview }),
+      });
+
+      const result = await client.getAgentControlOverview();
+
+      expect(result.headsdownCall.knownKey).toBe("all_contained");
+      expect(result.headsdownCall.severity).toBe("neutral");
+      expect(result.currentCall.primaryActionIntent).toBe("none");
+      expect(result.needsYourYesState).toBe("empty");
+    });
+  });
+
   // === getActiveContract ===
 
   describe("getActiveContract", () => {
