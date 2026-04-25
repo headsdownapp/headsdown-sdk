@@ -32,6 +32,11 @@ export type {
   ExecutionDirectiveInput,
 } from "./execution-directive.js";
 
+// Agent-control helpers and constants
+export { resolveHeadsDownCallFallback } from "./agent-control.js";
+export type { HeadsDownCallFallback } from "./agent-control.js";
+export { HEADSDOWN_CALL_KEYS, HEADSDOWN_ACTION_KEYS } from "./types.js";
+
 // Types
 export type {
   // Enums
@@ -47,6 +52,19 @@ export type {
   TaskOutcomeResult,
   DelegationGrantScope,
   DelegationGrantPermission,
+  HeadsDownCallKey,
+  HeadsDownActionKey,
+  AgentControlUiIntent,
+  HeadsDownCallSeverity,
+  HeadsDownCallUrgency,
+  HeadsDownCallEvidenceSource,
+  HeadsDownCallPrivacyMode,
+  HeadsDownCallConfidence,
+  AgentControlDataState,
+  AgentRunState,
+  AgentRunActionState,
+  NeedsYourYesItemState,
+  ValueMetricKey,
   // Response types
   Contract,
   ScheduleResolution,
@@ -70,6 +88,12 @@ export type {
   UserProfile,
   DelegationGrant,
   RevokeDelegationGrantsResult,
+  CurrentCallView,
+  HeadsDownCall,
+  NeedsYourYesItem,
+  AgentRunSummary,
+  ValueMetricSummary,
+  AgentControlOverview,
   // Input types
   ProposalInput,
   ContractInput,
