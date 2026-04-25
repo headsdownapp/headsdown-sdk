@@ -98,6 +98,30 @@ export type AlertsPolicy =
   | "OFF"
   | "TAKE_A_NUMBER";
 
+export type ApplyHeadsdownActionInput = {
+  actionExpiresAt: InputMaybe<Scalars["DateTime"]["input"]>;
+  actionKey: Scalars["String"]["input"];
+  client: InputMaybe<Scalars["String"]["input"]>;
+  durationMinutes: InputMaybe<Scalars["Int"]["input"]>;
+  expiresAt: InputMaybe<Scalars["DateTime"]["input"]>;
+  idempotencyKey: InputMaybe<Scalars["String"]["input"]>;
+  mode: InputMaybe<Mode>;
+  overrideExpiresAt: InputMaybe<Scalars["DateTime"]["input"]>;
+  reason: InputMaybe<Scalars["String"]["input"]>;
+  runId: Scalars["ID"]["input"];
+  source: InputMaybe<Scalars["String"]["input"]>;
+  sourceState: InputMaybe<Scalars["String"]["input"]>;
+};
+
+export type ApplyHeadsdownActionPayload = {
+  currentCall: Maybe<CurrentCallView>;
+  error: Maybe<HeadsdownActionError>;
+  headsdownCall: Maybe<HeadsdownCall>;
+  ok: Scalars["Boolean"]["output"];
+  result: Maybe<HeadsdownActionResult>;
+  runSummary: Maybe<AgentRunSummary>;
+};
+
 export type AutoResponderSettings = {
   busyText: Scalars["String"]["output"];
   id: Scalars["ID"]["output"];
@@ -282,6 +306,8 @@ export type DelegationGrantPermission =
   | "AVAILABILITY_OVERRIDE_CANCEL"
   /** Create temporary availability overrides */
   | "AVAILABILITY_OVERRIDE_CREATE"
+  /** Apply canonical HeadsDown actions to agent runs */
+  | "HEADSDOWN_ACTION_APPLY"
   /** Apply an existing status preset */
   | "PRESET_APPLY";
 
@@ -307,6 +333,12 @@ export type DigestSummary = {
   sourceType: Scalars["String"]["output"];
 };
 
+export type HeadsdownActionError = {
+  code: Scalars["String"]["output"];
+  details: Scalars["JSON"]["output"];
+  message: Scalars["String"]["output"];
+};
+
 export type HeadsdownActionKey =
   | "ALLOW_FOR_DURATION"
   | "ALLOW_ONCE"
@@ -321,6 +353,33 @@ export type HeadsdownActionKey =
   | "QUEUE_FOR_MORNING"
   | "RESUME_RUN"
   | "STOP_RUN";
+
+export type HeadsdownActionResult = {
+  actionKey: HeadsdownActionKey;
+  availabilityOverrideId: Maybe<Scalars["ID"]["output"]>;
+  eventId: Scalars["ID"]["output"];
+  replayed: Scalars["Boolean"]["output"];
+  resultingState: HeadsdownActionState;
+  sourceState: HeadsdownActionState;
+};
+
+export type HeadsdownActionState =
+  | "ALL_CONTAINED"
+  | "GOOD_TO_RUN"
+  | "KEEP_IT_TIGHT"
+  | "NEEDS_AGENT_SCOPE"
+  | "NEEDS_USER"
+  | "NEEDS_YOUR_YES"
+  | "NOT_WORTH_STARTING_NOW"
+  | "OFF_THE_CLOCK"
+  | "PAUSED"
+  | "QUEUED"
+  | "RABBIT_HOLE_DETECTED"
+  | "READY_TO_RESUME"
+  | "RUNNING"
+  | "RUNNING_LIMITED"
+  | "STOPPED"
+  | "TEMPORARY_EXCEPTION";
 
 /**
  * Canonical HeadsDown call payload for client rendering.
@@ -568,6 +627,7 @@ export type RevokeDelegationGrantsResult = {
 };
 
 export type RootMutationType = {
+  applyHeadsdownAction: ApplyHeadsdownActionPayload;
   applyPreset: Maybe<Contract>;
   cancelAvailabilityOverride: Maybe<AvailabilityOverride>;
   createAvailabilityOverride: Maybe<AvailabilityOverride>;
@@ -597,6 +657,10 @@ export type RootMutationType = {
   updatePublicPageSettings: Maybe<User>;
   updateReachabilityWindow: Maybe<ReachabilityWindow>;
   updateVerdictSettings: Maybe<VerdictSettings>;
+};
+
+export type RootMutationTypeApplyHeadsdownActionArgs = {
+  input: ApplyHeadsdownActionInput;
 };
 
 export type RootMutationTypeApplyPresetArgs = {

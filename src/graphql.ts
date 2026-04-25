@@ -229,6 +229,10 @@ const ENUM_FIELDS = new Set([
   "selectedMode",
   "defaultWrapUpMode",
   "deliveryMode",
+  // Agent-control action mutation enum-backed fields.
+  "actionKey",
+  "sourceState",
+  "resultingState",
   // Agent-control enum-backed fields.
   "callKey",
   "knownKey",

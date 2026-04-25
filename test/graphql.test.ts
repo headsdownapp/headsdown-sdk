@@ -287,6 +287,35 @@ describe("GraphQLClient", () => {
       expect(overview.valueMetricsState).toBe("privacy_restricted");
     });
 
+    it("normalizes agent-control action mutation enum-backed fields", async () => {
+      const client = new GraphQLClient({
+        ...BASE_OPTIONS,
+        fetch: mockGraphQL({
+          applyHeadsdownAction: {
+            ok: true,
+            result: {
+              actionKey: "PAUSE_AND_SUMMARIZE",
+              sourceState: "PENDING",
+              resultingState: "APPLIED",
+            },
+            error: null,
+          },
+        }),
+      });
+
+      const data = await client.request<{
+        applyHeadsdownAction: {
+          result: { actionKey: string; sourceState: string; resultingState: string };
+        };
+      }>(
+        'mutation { applyHeadsdownAction(input: { runId: "run-1", actionKey: "pause_and_summarize" }) { result { actionKey sourceState resultingState } } }',
+      );
+
+      expect(data.applyHeadsdownAction.result.actionKey).toBe("pause_and_summarize");
+      expect(data.applyHeadsdownAction.result.sourceState).toBe("pending");
+      expect(data.applyHeadsdownAction.result.resultingState).toBe("applied");
+    });
+
     it("does not crash when headsdownCall.key is an unknown future value", async () => {
       const client = new GraphQLClient({
         ...BASE_OPTIONS,
