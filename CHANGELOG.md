@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.0
+
+- Added privacy-safe agent run event reporting helpers for canonical HeadsDown event taxonomy.
+- Added `reportAgentRunEvent()` and named helpers for run lifecycle, progress, scope drift, continuation, queue, resume, terminal, and steering outcome events.
+- Added structured `progressPayload` GraphQL serialization, metadata-only privacy validation, bucket helpers, and generated schema/types for the #906 backend event ingestion API.
+
 ## 0.2.15
 
 - Added SDK helpers for applying canonical HeadsDown actions, including queueing, pausing, resuming, narrowing, stopping, and temporary exception flows.
