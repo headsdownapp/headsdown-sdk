@@ -35,6 +35,7 @@ import {
   DIGEST_SUMMARIES_QUERY,
   DISMISS_DIGEST_ENTRY_MUTATION,
   EVALUATE_INTERRUPT_QUERY,
+  INTERVENTION_REPLAY_QUERY,
   LIST_DELEGATION_GRANTS_QUERY,
   LIST_PRESETS_QUERY,
   LIST_PROPOSALS_QUERY,
@@ -55,6 +56,7 @@ import {
 import type {
   ActorContext,
   AgentControlOverview,
+  InterventionReplay,
   AllowForDurationActionOptions,
   AutoResponderSettings,
   CreateTemporaryExceptionActionOptions,
@@ -104,6 +106,8 @@ import type {
 import type {
   ActiveContractQuery,
   AgentControlOverviewQuery,
+  InterventionReplayQuery,
+  InterventionReplayQueryVariables,
   ApplyHeadsdownActionMutation,
   ApplyHeadsdownActionMutationVariables,
   ApplyPresetMutation,
@@ -287,6 +291,23 @@ export class HeadsDownClient {
       AGENT_CONTROL_OVERVIEW_QUERY,
     );
     return data.agentControlOverview as AgentControlOverview;
+  }
+
+  /**
+   * Get a privacy-safe intervention replay by task proposal/action target id.
+   */
+  async getInterventionReplay(proposalId: string): Promise<InterventionReplay | null> {
+    if (!proposalId.trim()) {
+      throw new ValidationError("Proposal ID is required.", "proposalId");
+    }
+
+    const variables: InterventionReplayQueryVariables = { proposalId };
+    const data = await this.graphql.request<InterventionReplayQuery>(
+      INTERVENTION_REPLAY_QUERY,
+      variables,
+    );
+
+    return data.interventionReplay as InterventionReplay | null;
   }
 
   /**

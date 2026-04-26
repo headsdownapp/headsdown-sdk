@@ -116,6 +116,8 @@ export const AGENT_CONTROL_OVERVIEW_QUERY = `
       }
       needsYourYes {
         runId
+        proposalId
+        actionTargetId
         callKey
         title
         body
@@ -132,6 +134,8 @@ export const AGENT_CONTROL_OVERVIEW_QUERY = `
       needsYourYesState
       runSummaries {
         runId
+        proposalId
+        actionTargetId
         callKey
         runState
         actionState
@@ -164,6 +168,34 @@ export const AGENT_CONTROL_OVERVIEW_QUERY = `
       }
       valueMetricsState
       generatedAt
+    }
+  }
+`;
+
+/** Get a privacy-safe intervention replay by task proposal/action target id. */
+export const INTERVENTION_REPLAY_QUERY = `
+  query InterventionReplay($proposalId: ID!) {
+    interventionReplay(proposalId: $proposalId) {
+      runId
+      proposalId
+      actionTargetId
+      callKey
+      title
+      whatWasAboutToHappen
+      whatHeadsdownSaw {
+        key
+        label
+        value
+      }
+      headsdownCall
+      thePlay
+      result
+      nextTime
+      reasonCodes
+      recommendedActionKey
+      valueEvidence
+      dataState
+      updatedAt
     }
   }
 `;
@@ -271,6 +303,8 @@ export const APPLY_HEADSDOWN_ACTION_MUTATION = `
       }
       runSummary {
         runId
+        proposalId
+        actionTargetId
         callKey
         runState
         actionState

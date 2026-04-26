@@ -243,6 +243,48 @@ describe("HeadsDownClient", () => {
       expect(result.currentCall.primaryActionIntent).toBe("none");
       expect(result.needsYourYesState).toBe("empty");
     });
+
+    it("returns intervention replay by proposal id", async () => {
+      const replay = {
+        runId: "proposal-1",
+        proposalId: "proposal-1",
+        actionTargetId: "proposal-1",
+        callKey: "RABBIT_HOLE_DETECTED",
+        title: "Rabbit hole detected",
+        whatWasAboutToHappen: "The agent was about to keep exploring.",
+        whatHeadsdownSaw: [{ key: "elapsed", label: "Elapsed time", value: "26 min" }],
+        headsdownCall: "Pause the run.",
+        thePlay: "Pause + summarize",
+        result: "You got a concise handoff.",
+        nextTime: "HeadsDown will catch the same pattern.",
+        reasonCodes: ["SCOPE_GREW"],
+        recommendedActionKey: "PAUSE_AND_SUMMARIZE",
+        valueEvidence: "1 rabbit hole prevented",
+        dataState: "PARTIAL",
+        updatedAt: "2026-04-25T04:00:00Z",
+      };
+
+      const client = new HeadsDownClient({
+        ...CLIENT_OPTS,
+        fetch: mockGraphQL({ interventionReplay: replay }),
+      });
+
+      const result = await client.getInterventionReplay("proposal-1");
+
+      expect(result?.proposalId).toBe("proposal-1");
+      expect(result?.callKey).toBe("rabbit_hole_detected");
+      expect(result?.dataState).toBe("partial");
+      expect(result?.whatHeadsdownSaw[0]?.label).toBe("Elapsed time");
+    });
+
+    it("validates intervention replay proposal id", async () => {
+      const client = new HeadsDownClient({
+        ...CLIENT_OPTS,
+        fetch: mockGraphQL({ interventionReplay: null }),
+      });
+
+      await expect(client.getInterventionReplay(" ")).rejects.toThrow(ValidationError);
+    });
   });
 
   // === getActiveContract ===

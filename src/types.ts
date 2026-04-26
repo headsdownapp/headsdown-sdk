@@ -245,6 +245,7 @@ export type HeadsDownCallConfidence = "exact" | "estimated" | "unknown";
 /** Data completeness status for read-model sections. */
 export type AgentControlDataState =
   | "ready"
+  | "partial"
   | "empty"
   | "unknown"
   | "feature_disabled"
@@ -318,7 +319,10 @@ export interface HeadsDownCall {
 
 /** Action-needed item shown in `agentControlOverview.needsYourYes`. */
 export interface NeedsYourYesItem {
+  /** Deprecated compatibility alias for the task proposal/action target id. Prefer proposalId for new clients. */
   runId: string;
+  proposalId: string;
+  actionTargetId: string;
   callKey: HeadsDownCallKey;
   title: string;
   body: string;
@@ -335,7 +339,10 @@ export interface NeedsYourYesItem {
 
 /** Safe run summary for `agentControlOverview.runSummaries`. */
 export interface AgentRunSummary {
+  /** Deprecated compatibility alias for the task proposal/action target id. Prefer proposalId for new clients. */
   runId: string;
+  proposalId: string;
+  actionTargetId: string;
   callKey: HeadsDownCallKey;
   runState: AgentRunState;
   actionState: AgentRunActionState;
@@ -369,6 +376,33 @@ export interface ValueMetricSummary {
 }
 
 /** Aggregate read model for HeadsDown command-center and agent-control clients. */
+export interface InterventionReplayRow {
+  key: string;
+  label: string;
+  value: string;
+}
+
+/** Privacy-safe replay for an intervention or queued run. */
+export interface InterventionReplay {
+  /** Deprecated compatibility alias for the task proposal/action target id. Prefer proposalId for new clients. */
+  runId: string;
+  proposalId: string;
+  actionTargetId: string;
+  callKey: HeadsDownCallKey;
+  title: string;
+  whatWasAboutToHappen: string;
+  whatHeadsdownSaw: InterventionReplayRow[];
+  headsdownCall: string;
+  thePlay: string;
+  result: string;
+  nextTime: string;
+  reasonCodes: string[];
+  recommendedActionKey: HeadsDownActionKey | null;
+  valueEvidence: string | null;
+  dataState: AgentControlDataState;
+  updatedAt: string;
+}
+
 export interface AgentControlOverview {
   currentCall: CurrentCallView;
   headsdownCall: HeadsDownCall;

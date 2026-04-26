@@ -150,6 +150,8 @@ export type {
   NeedsYourYesItem,
   AgentRunSummary,
   ValueMetricSummary,
+  InterventionReplayRow,
+  InterventionReplay,
   AgentControlOverview,
   HeadsDownActionErrorPayload,
   HeadsDownActionMutationResult,

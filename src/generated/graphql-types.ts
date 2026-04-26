@@ -26,6 +26,7 @@ export type Scalars = {
 export type AgentControlDataState =
   | "EMPTY"
   | "FEATURE_DISABLED"
+  | "PARTIAL"
   | "PRIVACY_RESTRICTED"
   | "READY"
   | "UNKNOWN";
@@ -189,6 +190,7 @@ export type AgentRunState =
 
 export type AgentRunSummary = {
   actionState: AgentRunActionState;
+  actionTargetId: Scalars["ID"]["output"];
   allowedActionKeys: Array<HeadsdownActionKey>;
   budgetState: AgentControlDataState;
   callKey: HeadsdownCallKey;
@@ -205,9 +207,11 @@ export type AgentRunSummary = {
   nextActionLabel: Maybe<Scalars["String"]["output"]>;
   nextWorkWindowStartsAt: Maybe<Scalars["DateTime"]["output"]>;
   progressState: AgentControlDataState;
+  proposalId: Scalars["ID"]["output"];
   reasonCodes: Array<Scalars["String"]["output"]>;
   recommendedActionKey: Maybe<HeadsdownActionKey>;
   resumeEligibleAt: Maybe<Scalars["DateTime"]["output"]>;
+  /** Deprecated compatibility alias for the task proposal/action target id. Prefer proposalId for new clients. */
   runId: Scalars["ID"]["output"];
   runState: AgentRunState;
   safeTitle: Scalars["String"]["output"];
@@ -247,6 +251,7 @@ export type AlertsPolicy =
 export type ApplyHeadsdownActionInput = {
   actionExpiresAt: InputMaybe<Scalars["DateTime"]["input"]>;
   actionKey: Scalars["String"]["input"];
+  actionTargetId: InputMaybe<Scalars["ID"]["input"]>;
   client: InputMaybe<Scalars["String"]["input"]>;
   durationMinutes: InputMaybe<Scalars["Int"]["input"]>;
   expiresAt: InputMaybe<Scalars["DateTime"]["input"]>;
@@ -259,9 +264,11 @@ export type ApplyHeadsdownActionInput = {
   mode: InputMaybe<Mode>;
   nextWorkWindowStartsAt: InputMaybe<Scalars["DateTime"]["input"]>;
   overrideExpiresAt: InputMaybe<Scalars["DateTime"]["input"]>;
+  proposalId: InputMaybe<Scalars["ID"]["input"]>;
   reason: InputMaybe<Scalars["String"]["input"]>;
   resumeEligibleAt: InputMaybe<Scalars["DateTime"]["input"]>;
-  runId: Scalars["ID"]["input"];
+  /** Deprecated compatibility alias for the task proposal/action target id. Prefer proposalId for new clients. */
+  runId: InputMaybe<Scalars["ID"]["input"]>;
   source: InputMaybe<Scalars["String"]["input"]>;
   sourceState: InputMaybe<Scalars["String"]["input"]>;
 };
@@ -603,6 +610,32 @@ export type InterruptResult = {
   reason: Scalars["String"]["output"];
 };
 
+export type InterventionReplay = {
+  actionTargetId: Scalars["ID"]["output"];
+  callKey: HeadsdownCallKey;
+  dataState: AgentControlDataState;
+  headsdownCall: Scalars["String"]["output"];
+  nextTime: Scalars["String"]["output"];
+  proposalId: Scalars["ID"]["output"];
+  reasonCodes: Array<Scalars["String"]["output"]>;
+  recommendedActionKey: Maybe<HeadsdownActionKey>;
+  result: Scalars["String"]["output"];
+  /** Deprecated compatibility alias for the task proposal/action target id. Prefer proposalId for new clients. */
+  runId: Scalars["ID"]["output"];
+  thePlay: Scalars["String"]["output"];
+  title: Scalars["String"]["output"];
+  updatedAt: Scalars["DateTime"]["output"];
+  valueEvidence: Maybe<Scalars["String"]["output"]>;
+  whatHeadsdownSaw: Array<InterventionReplayRow>;
+  whatWasAboutToHappen: Scalars["String"]["output"];
+};
+
+export type InterventionReplayRow = {
+  key: Scalars["String"]["output"];
+  label: Scalars["String"]["output"];
+  value: Scalars["String"]["output"];
+};
+
 export type MobileClient = {
   /** iOS or Android */
   deviceType: DeviceTypes;
@@ -624,6 +657,7 @@ export type MobileClientInput = {
 export type Mode = "BUSY" | "LIMITED" | "OFFLINE" | "ONLINE";
 
 export type NeedsYourYesItem = {
+  actionTargetId: Scalars["ID"]["output"];
   allowedActionKeys: Array<HeadsdownActionKey>;
   body: Scalars["String"]["output"];
   callKey: HeadsdownCallKey;
@@ -632,8 +666,10 @@ export type NeedsYourYesItem = {
   itemState: NeedsYourYesItemState;
   primaryActionIntent: AgentControlUiIntent;
   primaryActionLabel: Maybe<Scalars["String"]["output"]>;
+  proposalId: Scalars["ID"]["output"];
   reasonCodes: Array<Scalars["String"]["output"]>;
   recommendedActionKey: Maybe<HeadsdownActionKey>;
+  /** Deprecated compatibility alias for the task proposal/action target id. Prefer proposalId for new clients. */
   runId: Scalars["ID"]["output"];
   title: Scalars["String"]["output"];
   updatedAt: Scalars["DateTime"]["output"];
@@ -968,6 +1004,7 @@ export type RootQueryType = {
   evaluateInterrupt: Maybe<InterruptResult>;
   /** Canonical HeadsDown call catalog for client rendering and unknown-key fallback. Clients should still render the current `agentControlOverview.headsdownCall` as the source of truth for the active call. */
   headsdownCallCatalog: Array<HeadsdownCall>;
+  interventionReplay: Maybe<InterventionReplay>;
   preset: Maybe<Preset>;
   presets: Maybe<Array<Preset>>;
   profile: Maybe<User>;
@@ -1010,6 +1047,12 @@ export type RootQueryTypeDigestSummariesArgs = {
 
 export type RootQueryTypeEvaluateInterruptArgs = {
   handle: Scalars["String"]["input"];
+};
+
+export type RootQueryTypeInterventionReplayArgs = {
+  actionTargetId: InputMaybe<Scalars["ID"]["input"]>;
+  proposalId: InputMaybe<Scalars["ID"]["input"]>;
+  runId: InputMaybe<Scalars["ID"]["input"]>;
 };
 
 export type RootQueryTypePresetArgs = {
@@ -1379,6 +1422,8 @@ export type AgentControlOverviewQuery = {
     };
     needsYourYes: Array<{
       runId: string;
+      proposalId: string;
+      actionTargetId: string;
       callKey: HeadsdownCallKey;
       title: string;
       body: string;
@@ -1394,6 +1439,8 @@ export type AgentControlOverviewQuery = {
     }>;
     runSummaries: Array<{
       runId: string;
+      proposalId: string;
+      actionTargetId: string;
       callKey: HeadsdownCallKey;
       runState: AgentRunState;
       actionState: AgentRunActionState;
@@ -1424,6 +1471,31 @@ export type AgentControlOverviewQuery = {
       dataState: AgentControlDataState;
     }>;
   };
+};
+
+export type InterventionReplayQueryVariables = Exact<{
+  proposalId: Scalars["ID"]["input"];
+}>;
+
+export type InterventionReplayQuery = {
+  interventionReplay: {
+    runId: string;
+    proposalId: string;
+    actionTargetId: string;
+    callKey: HeadsdownCallKey;
+    title: string;
+    whatWasAboutToHappen: string;
+    headsdownCall: string;
+    thePlay: string;
+    result: string;
+    nextTime: string;
+    reasonCodes: Array<string>;
+    recommendedActionKey: HeadsdownActionKey | null;
+    valueEvidence: string | null;
+    dataState: AgentControlDataState;
+    updatedAt: string;
+    whatHeadsdownSaw: Array<{ key: string; label: string; value: string }>;
+  } | null;
 };
 
 export type ReportAgentRunEventMutationVariables = Exact<{
@@ -1517,6 +1589,8 @@ export type ApplyHeadsdownActionMutation = {
     } | null;
     runSummary: {
       runId: string;
+      proposalId: string;
+      actionTargetId: string;
       callKey: HeadsdownCallKey;
       runState: AgentRunState;
       actionState: AgentRunActionState;
