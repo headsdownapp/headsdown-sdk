@@ -108,6 +108,8 @@ query AgentControlOverview {
       }
       needsYourYes {
         runId
+        proposalId
+        actionTargetId
         callKey
         title
         body
@@ -124,6 +126,8 @@ query AgentControlOverview {
       needsYourYesState
       runSummaries {
         runId
+        proposalId
+        actionTargetId
         callKey
         runState
         actionState
@@ -156,6 +160,31 @@ query AgentControlOverview {
       }
       valueMetricsState
       generatedAt
+    }
+  }
+
+query InterventionReplay($proposalId: ID!) {
+    interventionReplay(proposalId: $proposalId) {
+      runId
+      proposalId
+      actionTargetId
+      callKey
+      title
+      whatWasAboutToHappen
+      whatHeadsdownSaw {
+        key
+        label
+        value
+      }
+      headsdownCall
+      thePlay
+      result
+      nextTime
+      reasonCodes
+      recommendedActionKey
+      valueEvidence
+      dataState
+      updatedAt
     }
   }
 
@@ -257,6 +286,8 @@ mutation ApplyHeadsdownAction($input: ApplyHeadsdownActionInput!) {
       }
       runSummary {
         runId
+        proposalId
+        actionTargetId
         callKey
         runState
         actionState
