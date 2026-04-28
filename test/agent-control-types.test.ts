@@ -8,6 +8,7 @@ describe("agent-control type constants", () => {
       "keep_it_tight",
       "not_worth_starting_now",
       "off_the_clock",
+      "finish_line_friction",
       "rabbit_hole_detected",
       "ready_to_resume",
       "all_contained",

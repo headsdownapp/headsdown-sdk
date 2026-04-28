@@ -525,6 +525,7 @@ export type HeadsdownActionResult = {
 
 export type HeadsdownActionState =
   | "ALL_CONTAINED"
+  | "FINISH_LINE_FRICTION"
   | "GOOD_TO_RUN"
   | "KEEP_IT_TIGHT"
   | "NEEDS_AGENT_SCOPE"
@@ -584,6 +585,7 @@ export type HeadsdownCallEvidenceSource =
 
 export type HeadsdownCallKey =
   | "ALL_CONTAINED"
+  | "FINISH_LINE_FRICTION"
   | "GOOD_TO_RUN"
   | "KEEP_IT_TIGHT"
   | "NEEDS_YOUR_YES"

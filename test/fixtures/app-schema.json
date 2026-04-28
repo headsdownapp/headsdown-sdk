@@ -5981,6 +5981,12 @@
               "deprecationReason": null,
               "description": null,
               "isDeprecated": false,
+              "name": "FINISH_LINE_FRICTION"
+            },
+            {
+              "deprecationReason": null,
+              "description": null,
+              "isDeprecated": false,
               "name": "GOOD_TO_RUN"
             },
             {
@@ -6540,6 +6546,12 @@
               "description": null,
               "isDeprecated": false,
               "name": "ALL_CONTAINED"
+            },
+            {
+              "deprecationReason": null,
+              "description": null,
+              "isDeprecated": false,
+              "name": "FINISH_LINE_FRICTION"
             },
             {
               "deprecationReason": null,
