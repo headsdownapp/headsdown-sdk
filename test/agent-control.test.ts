@@ -68,6 +68,28 @@ describe("resolveHeadsDownCallFallback", () => {
     expect(fallback.primaryActionKey).toBe("queue_for_later");
   });
 
+  it("preserves known finish-line friction calls instead of applying unknown-key fallback", () => {
+    const fallback = resolveHeadsDownCallFallback(
+      makeCall({
+        key: "finish_line_friction",
+        knownKey: "finish_line_friction",
+        title: "Finish-line friction",
+        body: "Validation or delivery is stuck while scope appears stable.",
+        severity: "caution",
+        primaryActionKnownKey: "pause_and_summarize",
+        primaryActionIntent: "none",
+        recommendedActionKnownKey: "pause_and_summarize",
+        allowedActionKnownKeys: ["pause_and_summarize", "allow_for_duration"],
+        reasonCodes: ["validation_required", "low_progress_loop"],
+      }),
+    );
+
+    expect(fallback.effectiveKey).toBe("finish_line_friction");
+    expect(fallback.unknownKey).toBeNull();
+    expect(fallback.primaryActionKey).toBe("pause_and_summarize");
+    expect(fallback.reason).toBe("known_key");
+  });
+
   it("preserves known secondary action semantics", () => {
     const fallback = resolveHeadsDownCallFallback(
       makeCall({

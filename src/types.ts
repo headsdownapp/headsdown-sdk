@@ -70,6 +70,7 @@ export const HEADSDOWN_CALL_KEYS = [
   "keep_it_tight",
   "not_worth_starting_now",
   "off_the_clock",
+  "finish_line_friction",
   "rabbit_hole_detected",
   "ready_to_resume",
   "all_contained",
@@ -109,6 +110,7 @@ export type HeadsDownActionState =
   | "needs_your_yes"
   | "not_worth_starting_now"
   | "off_the_clock"
+  | "finish_line_friction"
   | "paused"
   | "queued"
   | "rabbit_hole_detected"
