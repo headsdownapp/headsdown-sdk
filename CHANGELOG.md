@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.1
+
+- Added SDK type support for the `finish_line_friction` HeadsDown call key.
+
 ## 0.3.0
 
 - Added privacy-safe agent run event reporting helpers for canonical HeadsDown event taxonomy.
