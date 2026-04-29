@@ -409,6 +409,10 @@ git push origin v0.1.0
 
 Before the first publish, configure npm trusted publishing for this repository and make sure the package version matches the tag.
 
+## Dependency update automation
+
+This repo uses Renovate to keep routine dependencies current, including grouped development dependency updates. Eligible routine updates can automerge after required CI checks pass. In normal maintenance flow, do not manually edit dependency versions unless you are intentionally overriding automation.
+
 ## License
 
 MIT

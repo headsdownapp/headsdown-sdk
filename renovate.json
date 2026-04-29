@@ -1,0 +1,21 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "labels": ["dependencies"],
+  "timezone": "Etc/UTC",
+  "schedule": ["before 5am every weekday"],
+  "packageRules": [
+    {
+      "description": "Group routine development dependency updates and allow CI-gated automerge.",
+      "matchManagers": ["npm"],
+      "matchDepTypes": ["devDependencies"],
+      "matchUpdateTypes": ["patch", "minor", "pin", "digest"],
+      "groupName": "development dependencies",
+      "groupSlug": "dev-dependencies",
+      "automerge": true,
+      "automergeType": "pr",
+      "platformAutomerge": true,
+      "rebaseWhen": "behind-base-branch"
+    }
+  ]
+}
