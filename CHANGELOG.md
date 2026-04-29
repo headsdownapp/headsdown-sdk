@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.4.0
+
+### Added
+
+- Added SDK type support for the `attention_window_closing` HeadsDown call key, covering the attended-mode window-closing rescue flow.
+
+### Changed
+
+- Refreshed generated schema types for `finish_line_friction`. The server now recommends `narrow_scope` for this call via the `recommended_action_key` field, replacing the previous `pause_and_summarize` recommendation. SDK consumers should read the server-provided value and avoid hardcoding the old default.
+
+### Note
+
+- `rabbit_hole_detected` remains in the type union and is still valid for compatibility. Do not introduce new uses of it. Clients implementing the new contract must not render it as a hard-stop; treat it like `keep_it_tight` if encountered.
+
 ## 0.3.1
 
 - Added SDK type support for the `finish_line_friction` HeadsDown call key.
