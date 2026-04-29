@@ -131,6 +131,50 @@ export type AgentRunHandoffMetadata = {
 
 export type AgentRunHandoffState = "MISSING" | "SAVED" | "UNKNOWN";
 
+export type AgentRunOutcome = {
+  actualDurationMinutes: Maybe<Scalars["Int"]["output"]>;
+  dataQualityScore: Maybe<Scalars["Float"]["output"]>;
+  distinctTaskCount: Maybe<Scalars["Int"]["output"]>;
+  errorCategory: Maybe<Scalars["String"]["output"]>;
+  filesModified: Maybe<Scalars["Int"]["output"]>;
+  id: Scalars["ID"]["output"];
+  insertedAt: Scalars["DateTime"]["output"];
+  linesChanged: Maybe<Scalars["Int"]["output"]>;
+  metadata: Maybe<Scalars["JSON"]["output"]>;
+  outcome: AgentRunOutcomeResult;
+  proposedAt: Scalars["DateTime"]["output"];
+  redirectCount: Maybe<Scalars["Int"]["output"]>;
+  retryCount: Maybe<Scalars["Int"]["output"]>;
+  scopeChanged: Maybe<Scalars["Boolean"]["output"]>;
+  testsPassed: Maybe<Scalars["Boolean"]["output"]>;
+  tokensUsed: Maybe<Scalars["Int"]["output"]>;
+  turnCount: Maybe<Scalars["Int"]["output"]>;
+};
+
+export type AgentRunOutcomeInput = {
+  actualDurationMinutes: InputMaybe<Scalars["Int"]["input"]>;
+  distinctTaskCount: InputMaybe<Scalars["Int"]["input"]>;
+  errorCategory: InputMaybe<Scalars["String"]["input"]>;
+  filesModified: InputMaybe<Scalars["Int"]["input"]>;
+  linesChanged: InputMaybe<Scalars["Int"]["input"]>;
+  metadata: InputMaybe<Scalars["JSON"]["input"]>;
+  outcome: AgentRunOutcomeResult;
+  proposalId: Scalars["ID"]["input"];
+  redirectCount: InputMaybe<Scalars["Int"]["input"]>;
+  retryCount: InputMaybe<Scalars["Int"]["input"]>;
+  scopeChanged: InputMaybe<Scalars["Boolean"]["input"]>;
+  testsPassed: InputMaybe<Scalars["Boolean"]["input"]>;
+  tokensUsed: InputMaybe<Scalars["Int"]["input"]>;
+  turnCount: InputMaybe<Scalars["Int"]["input"]>;
+};
+
+export type AgentRunOutcomeResult =
+  | "CANCELLED"
+  | "COMPLETED"
+  | "FAILED"
+  | "PARTIALLY_COMPLETED"
+  | "TIMED_OUT";
+
 export type AgentRunProgressPayloadInput = {
   blockedReasonCode: InputMaybe<Scalars["String"]["input"]>;
   confidenceBucket: InputMaybe<AgentRunConfidenceBucket>;
@@ -340,6 +384,8 @@ export type CalibrationProfile = {
   lastTaskAt: Maybe<Scalars["DateTime"]["output"]>;
   medianDurationMinutes: Maybe<Scalars["Float"]["output"]>;
   model: Scalars["String"]["output"];
+  /** Number of overrides counted toward override_rate within the recency window. */
+  overrideCount: Scalars["Int"]["output"];
   overrideRate: Maybe<Scalars["Float"]["output"]>;
   p25DurationMinutes: Maybe<Scalars["Float"]["output"]>;
   p75DurationMinutes: Maybe<Scalars["Float"]["output"]>;
@@ -525,6 +571,7 @@ export type HeadsdownActionResult = {
 
 export type HeadsdownActionState =
   | "ALL_CONTAINED"
+  | "ATTENTION_WINDOW_CLOSING"
   | "FINISH_LINE_FRICTION"
   | "GOOD_TO_RUN"
   | "KEEP_IT_TIGHT"
@@ -585,11 +632,13 @@ export type HeadsdownCallEvidenceSource =
 
 export type HeadsdownCallKey =
   | "ALL_CONTAINED"
+  | "ATTENTION_WINDOW_CLOSING"
   | "FINISH_LINE_FRICTION"
   | "GOOD_TO_RUN"
   | "KEEP_IT_TIGHT"
   | "NEEDS_YOUR_YES"
   | "NOT_WORTH_STARTING_NOW"
+  | "OFF_HOURS_PROTECTED"
   | "OFF_THE_CLOCK"
   | "RABBIT_HOLE_DETECTED"
   | "READY_TO_RESUME";
@@ -857,18 +906,19 @@ export type RootMutationType = {
   deleteReachabilityWindow: Maybe<ReachabilityWindow>;
   dismissDigestEntry: Maybe<DigestSummary>;
   overrideVerdict: Maybe<VerdictOverride>;
+  /** Synchronously recomputes the value evidence summary for the current user and window. Requires the value_evidence feature flag. */
+  recomputeValueEvidence: Maybe<ValueEvidenceSummary>;
   registerMobileClient: Maybe<MobileClient>;
   reportAgentRunEvent: ReportAgentRunEventPayload;
   /**
-   * Report an agent task outcome (insert or update).
-   *
-   * First call for a proposal creates the outcome. Subsequent calls
-   * update it in place. Clients should call this periodically during
-   * long sessions (checkpoint) and once on session exit (final report).
+   * Deprecated: use submitAgentRunOutcome.
+   * @deprecated Use submitAgentRunOutcome
    */
   reportOutcome: Maybe<TaskOutcome>;
   revokeDelegationGrant: Maybe<DelegationGrant>;
   revokeDelegationGrants: Maybe<RevokeDelegationGrantsResult>;
+  /** Submit an agent-run outcome. */
+  submitAgentRunOutcome: Maybe<AgentRunOutcome>;
   submitProposal: Maybe<Verdict>;
   updateAutoResponderSettings: Maybe<AutoResponderSettings>;
   updateMobileClient: Maybe<MobileClient>;
@@ -928,6 +978,10 @@ export type RootMutationTypeOverrideVerdictArgs = {
   input: OverrideInput;
 };
 
+export type RootMutationTypeRecomputeValueEvidenceArgs = {
+  window: ValueWindow;
+};
+
 export type RootMutationTypeRegisterMobileClientArgs = {
   input: InputMaybe<MobileClientInput>;
 };
@@ -946,6 +1000,10 @@ export type RootMutationTypeRevokeDelegationGrantArgs = {
 
 export type RootMutationTypeRevokeDelegationGrantsArgs = {
   filter: InputMaybe<DelegationGrantFilterInput>;
+};
+
+export type RootMutationTypeSubmitAgentRunOutcomeArgs = {
+  input: AgentRunOutcomeInput;
 };
 
 export type RootMutationTypeSubmitProposalArgs = {
@@ -1013,8 +1071,11 @@ export type RootQueryType = {
   proposals: Maybe<Array<TaskProposal>>;
   reachabilityWindow: Maybe<ReachabilityWindow>;
   reachabilityWindows: Maybe<Array<ReachabilityWindow>>;
+  /** Fetches the composed standing-rules snapshot for the signed-in user. */
+  standingRules: StandingRules;
   teamPresence: Maybe<Array<TeamPresence>>;
   teams: Maybe<Array<Team>>;
+  valueMetricSummary: Maybe<ValueEvidenceSummary>;
   verdictSettings: Maybe<VerdictSettings>;
 };
 
@@ -1062,6 +1123,7 @@ export type RootQueryTypePresetArgs = {
 };
 
 export type RootQueryTypeProposalsArgs = {
+  includeOverridden?: InputMaybe<Scalars["Boolean"]["input"]>;
   latest: InputMaybe<Scalars["Int"]["input"]>;
   verdict: InputMaybe<VerdictDecision>;
 };
@@ -1078,6 +1140,10 @@ export type RootQueryTypeTeamsArgs = {
   id: InputMaybe<Scalars["ID"]["input"]>;
 };
 
+export type RootQueryTypeValueMetricSummaryArgs = {
+  window: ValueWindow;
+};
+
 export type RootSubscriptionType = {
   contractChanged: Maybe<Contract>;
   digestChanged: Maybe<DigestSummary>;
@@ -1087,6 +1153,7 @@ export type RootSubscriptionType = {
   teamMembershipChanged: Maybe<TeamMember>;
   teamPresenceChanged: Maybe<Array<TeamPresence>>;
   userStatusChanged: Maybe<Contract>;
+  valueSummaryUpdated: Maybe<ValueEvidenceSummary>;
   verdictSubmitted: Maybe<Verdict>;
 };
 
@@ -1102,6 +1169,28 @@ export type RootSubscriptionTypeUserStatusChangedArgs = {
   userId: Scalars["ID"]["input"];
 };
 
+export type RootSubscriptionTypeValueSummaryUpdatedArgs = {
+  userId: Scalars["ID"]["input"];
+};
+
+/** Rule set snapshot currently represented by type and params. */
+export type RuleSetSnapshot = {
+  /** Rule set parameters. Known shapes: do_not_disturb => {}, collaborators => {"allowed": [user_id, ...]}, interruptable => {}, after_hours => {}. */
+  params: Scalars["JSON"]["output"];
+  /** Canonical rule set type key. */
+  type: Scalars["String"]["output"];
+};
+
+/** Composed standing-rules read model used by policy editor surfaces. */
+export type StandingRules = {
+  /** Rule set currently applied to the active contract when present. */
+  activeRuleSet: Maybe<RuleSetSnapshot>;
+  /** User reachability windows used by standing rules. */
+  reachabilityWindows: Array<ReachabilityWindow>;
+  /** Verdict thresholds currently applied per mode. */
+  verdictThresholds: VerdictModeThresholds;
+};
+
 export type TaskOutcome = {
   actualDurationMinutes: Maybe<Scalars["Int"]["output"]>;
   dataQualityScore: Maybe<Scalars["Float"]["output"]>;
@@ -1113,6 +1202,7 @@ export type TaskOutcome = {
   linesChanged: Maybe<Scalars["Int"]["output"]>;
   metadata: Maybe<Scalars["JSON"]["output"]>;
   outcome: TaskOutcomeResult;
+  proposedAt: Scalars["DateTime"]["output"];
   redirectCount: Maybe<Scalars["Int"]["output"]>;
   retryCount: Maybe<Scalars["Int"]["output"]>;
   scopeChanged: Maybe<Scalars["Boolean"]["output"]>;
@@ -1130,6 +1220,8 @@ export type TaskOutcomeResult =
 
 export type TaskProposal = {
   agentRef: Scalars["String"]["output"];
+  /** Calibration confidence at decision time, from 0.0 to 1.0. Null when the proposal was evaluated without calibration data. */
+  confidence: Maybe<Scalars["Float"]["output"]>;
   deliveryMode: WrapUpMode;
   description: Scalars["String"]["output"];
   estimatedFiles: Maybe<Scalars["Int"]["output"]>;
@@ -1188,6 +1280,27 @@ export type User = {
   visibilityLevel: VisibilityLevel;
 };
 
+export type ValueConfidence = "ESTIMATED" | "EXACT" | "UNKNOWN";
+
+export type ValueEvidenceMetric = {
+  calculationWindow: Scalars["String"]["output"];
+  confidence: ValueConfidence;
+  evidenceCount: Scalars["Int"]["output"];
+  evidenceSources: Array<Scalars["String"]["output"]>;
+  explanation: Maybe<Scalars["String"]["output"]>;
+  key: Scalars["String"]["output"];
+  label: Scalars["String"]["output"];
+  unit: Scalars["String"]["output"];
+  value: Maybe<Scalars["Float"]["output"]>;
+};
+
+export type ValueEvidenceSummary = {
+  generatedAt: Scalars["DateTime"]["output"];
+  metrics: Array<ValueEvidenceMetric>;
+  topIntervention: Maybe<InterventionReplay>;
+  window: ValueWindow;
+};
+
 export type ValueMetricConfidence = "ESTIMATED" | "EXACT" | "UNKNOWN";
 
 export type ValueMetricKey =
@@ -1207,7 +1320,11 @@ export type ValueMetricSummary = {
   value: Maybe<Scalars["Float"]["output"]>;
 };
 
+export type ValueWindow = "WEEK";
+
 export type Verdict = {
+  /** Confidence in the calibration profile that produced this verdict, from 0.0 to 1.0. Null when the verdict was made without calibration data (rules-based). */
+  confidence: Maybe<Scalars["Float"]["output"]>;
   decision: VerdictDecision;
   evaluatedAt: Scalars["DateTime"]["output"];
   /** Availability policy from the active reachability window */

@@ -68,6 +68,7 @@ export type DelegationGrantPermission =
 export const HEADSDOWN_CALL_KEYS = [
   "good_to_run",
   "keep_it_tight",
+  "attention_window_closing",
   "not_worth_starting_now",
   "off_the_clock",
   "finish_line_friction",
@@ -103,6 +104,7 @@ export type HeadsDownActionKey = (typeof HEADSDOWN_ACTION_KEYS)[number];
 /** Action lifecycle state returned by the action mutation result. */
 export type HeadsDownActionState =
   | "all_contained"
+  | "attention_window_closing"
   | "good_to_run"
   | "keep_it_tight"
   | "needs_agent_scope"

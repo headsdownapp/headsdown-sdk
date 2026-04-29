@@ -6,6 +6,7 @@ describe("agent-control type constants", () => {
     expect(HEADSDOWN_CALL_KEYS).toEqual([
       "good_to_run",
       "keep_it_tight",
+      "attention_window_closing",
       "not_worth_starting_now",
       "off_the_clock",
       "finish_line_friction",
