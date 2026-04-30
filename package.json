@@ -1,6 +1,6 @@
 {
   "name": "@headsdown/sdk",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "TypeScript client SDK for the HeadsDown availability API",
   "type": "module",
   "main": "./dist/index.js",
@@ -9,10 +9,12 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
-    }
+    },
+    "./schemas/local-session-summary.schema.json": "./schemas/local-session-summary.schema.json"
   },
   "files": [
     "dist",
+    "schemas",
     "README.md",
     "CHANGELOG.md",
     "LICENSE"
@@ -30,7 +32,8 @@
     "preversion": "git diff --exit-code CHANGELOG.md && (echo 'Error: Update CHANGELOG.md before bumping version' && exit 1) || exit 0",
     "version": "node scripts/update-changelog.mjs && git add CHANGELOG.md",
     "prepare": "npm run build",
-    "prepublishOnly": "npm run build",
+    "emit:local-session-summary-schema": "node scripts/emit-local-session-summary-schema.mjs",
+    "prepublishOnly": "npm run build && npm run emit:local-session-summary-schema",
     "clean": "rm -rf dist"
   },
   "keywords": [
@@ -59,6 +62,7 @@
     "@graphql-codegen/typescript-operations": "^5.0.9",
     "@types/node": "^20.17.0",
     "graphql": "^16.13.2",
+    "json-schema-to-ts": "^3.1.1",
     "prettier": "^3.4.0",
     "typescript": "^5.7.0",
     "vitest": "^3.1.0"

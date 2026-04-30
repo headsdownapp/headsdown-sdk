@@ -1,0 +1,72 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "LocalSessionSummary",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "sessionId",
+    "generatedAt",
+    "stale",
+    "toolCallCount",
+    "fileChangeCount",
+    "deferredDecisionCount",
+    "continuationArtifactAvailable",
+    "validationLocallyPassed",
+    "approvedProposalRef",
+    "outcomeCategory"
+  ],
+  "properties": {
+    "version": {
+      "type": "integer",
+      "const": 1
+    },
+    "sessionId": {
+      "type": "string",
+      "maxLength": 256,
+      "pattern": "^[A-Za-z0-9_.:-]{1,256}$"
+    },
+    "generatedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "stale": {
+      "type": "boolean"
+    },
+    "toolCallCount": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "fileChangeCount": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "deferredDecisionCount": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "continuationArtifactAvailable": {
+      "type": "boolean"
+    },
+    "validationLocallyPassed": {
+      "type": "boolean"
+    },
+    "approvedProposalRef": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 256,
+      "pattern": "^[A-Za-z0-9_.:-]{1,256}$"
+    },
+    "outcomeCategory": {
+      "type": "string",
+      "enum": [
+        "in_progress",
+        "completed",
+        "tabled",
+        "deferred_for_review"
+      ]
+    }
+  }
+}
