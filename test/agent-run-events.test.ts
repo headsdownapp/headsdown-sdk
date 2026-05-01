@@ -5,6 +5,8 @@ import {
   bucketFileCount,
   bucketScopeGrowth,
   buildAgentRunEventInput,
+  deferredDecisionResolvedEvent,
+  DeferredDecisionResolutionKind,
 } from "../src/index.js";
 
 const CLIENT_OPTS = { apiKey: "hd_test_key", baseUrl: "https://test.headsdown.app" };
@@ -161,6 +163,64 @@ describe("agent run event helpers", () => {
         },
       }),
     ).toThrow(ValidationError);
+  });
+
+  it("builds deferred decision resolved events with deterministic idempotency key", () => {
+    const event = deferredDecisionResolvedEvent(
+      { runId: "run_42" },
+      {
+        decision_id: "decision_abcdef1234567890",
+        resolution_kind: "approved",
+      },
+    );
+
+    expect(event.eventType).toBe("deferred_decision.resolved");
+    expect(event.idempotencyKey).toBe(
+      "run_42:deferred_decision.resolved:decision_abcdef1234567890",
+    );
+    expect(event.payload).toEqual({
+      decision_id: "decision_abcdef1234567890",
+      resolution_kind: "approved",
+    });
+  });
+
+  it("reports deferred decision resolved events through the client", async () => {
+    const { fetch, calls } = captureGraphQL({
+      reportAgentRunEvent: { ok: true, error: null, event: null },
+    });
+    const client = new HeadsDownClient({ ...CLIENT_OPTS, fetch });
+
+    await client.reportDeferredDecisionResolved(
+      { runId: "run_42" },
+      {
+        decision_id: "decision_abcdef1234567890",
+        resolution_kind: "refined",
+        refined_urgency_bucket: "elevated",
+        refined_decision_category: "validation",
+      },
+    );
+
+    const input = calls[0]!.variables!.input as Record<string, unknown>;
+    expect(input.eventType).toBe("deferred_decision.resolved");
+    expect(input.idempotencyKey).toBe(
+      "run_42:deferred_decision.resolved:decision_abcdef1234567890",
+    );
+    expect(input.payload).toEqual({
+      decision_id: "decision_abcdef1234567890",
+      resolution_kind: "refined",
+      refined_urgency_bucket: "elevated",
+      refined_decision_category: "validation",
+    });
+  });
+
+  it("keeps resolution kind narrowed at compile time", () => {
+    const allowed: DeferredDecisionResolutionKind[] = [
+      "approved",
+      "overridden",
+      "refined",
+      "dismissed",
+    ];
+    expect(allowed).toHaveLength(4);
   });
 
   it("buckets file counts and scope growth without exposing names", () => {

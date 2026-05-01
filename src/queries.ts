@@ -243,6 +243,57 @@ export const REPORT_AGENT_RUN_EVENT_MUTATION = `
   }
 `;
 
+/** List privacy-safe agent run events with optional filters. */
+export const LIST_AGENT_RUN_EVENTS_QUERY = `
+  query AgentRunEvents(
+    $runId: ID
+    $eventType: String
+    $resolutionKind: String
+    $flaggedForReview: Boolean
+    $insertedAfter: DateTime
+    $insertedBefore: DateTime
+    $limit: Int
+  ) {
+    agentRunEvents(
+      runId: $runId
+      eventType: $eventType
+      resolutionKind: $resolutionKind
+      flaggedForReview: $flaggedForReview
+      insertedAfter: $insertedAfter
+      insertedBefore: $insertedBefore
+      limit: $limit
+    ) {
+      id
+      eventId
+      eventType
+      schemaVersion
+      occurredAt
+      receivedAt
+      workspaceRef
+      client {
+        kind
+        name
+        version
+      }
+      actor {
+        kind
+        ref
+      }
+      runId
+      source
+      privacyMode
+      idempotencyKey
+      correlationId
+      causationEventId
+      sequence
+      emitterKey
+      proposalRef
+      payload
+      insertedAt
+    }
+  }
+`;
+
 /** Apply a canonical HeadsDown action to a run. */
 export const APPLY_HEADSDOWN_ACTION_MUTATION = `
   mutation ApplyHeadsdownAction($input: ApplyHeadsdownActionInput!) {

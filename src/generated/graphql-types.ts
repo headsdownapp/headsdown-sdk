@@ -1086,12 +1086,14 @@ export type RootQueryTypeAgentRunEventArgs = {
 export type RootQueryTypeAgentRunEventsArgs = {
   emitterKey: InputMaybe<Scalars["String"]["input"]>;
   eventType: InputMaybe<Scalars["String"]["input"]>;
+  flaggedForReview: InputMaybe<Scalars["Boolean"]["input"]>;
   insertedAfter: InputMaybe<Scalars["DateTime"]["input"]>;
   insertedBefore: InputMaybe<Scalars["DateTime"]["input"]>;
   limit: InputMaybe<Scalars["Int"]["input"]>;
   occurredAfter: InputMaybe<Scalars["DateTime"]["input"]>;
   occurredBefore: InputMaybe<Scalars["DateTime"]["input"]>;
   proposalRef: InputMaybe<Scalars["String"]["input"]>;
+  resolutionKind: InputMaybe<Scalars["String"]["input"]>;
   runId: InputMaybe<Scalars["ID"]["input"]>;
   taskProposalId: InputMaybe<Scalars["ID"]["input"]>;
 };
@@ -1648,6 +1650,41 @@ export type ReportAgentRunEventMutation = {
       actor: { kind: string; ref: string | null };
     } | null;
   };
+};
+
+export type AgentRunEventsQueryVariables = Exact<{
+  runId: InputMaybe<Scalars["ID"]["input"]>;
+  eventType: InputMaybe<Scalars["String"]["input"]>;
+  resolutionKind: InputMaybe<Scalars["String"]["input"]>;
+  flaggedForReview: InputMaybe<Scalars["Boolean"]["input"]>;
+  insertedAfter: InputMaybe<Scalars["DateTime"]["input"]>;
+  insertedBefore: InputMaybe<Scalars["DateTime"]["input"]>;
+  limit: InputMaybe<Scalars["Int"]["input"]>;
+}>;
+
+export type AgentRunEventsQuery = {
+  agentRunEvents: Array<{
+    id: string;
+    eventId: string;
+    eventType: string;
+    schemaVersion: number;
+    occurredAt: string;
+    receivedAt: string;
+    workspaceRef: string;
+    runId: string;
+    source: string;
+    privacyMode: AgentRunEventPrivacyMode;
+    idempotencyKey: string;
+    correlationId: string | null;
+    causationEventId: string | null;
+    sequence: number | null;
+    emitterKey: string;
+    proposalRef: string | null;
+    payload: Record<string, unknown>;
+    insertedAt: string;
+    client: { kind: string; name: string; version: string };
+    actor: { kind: string; ref: string | null };
+  }>;
 };
 
 export type ApplyHeadsdownActionMutationVariables = Exact<{

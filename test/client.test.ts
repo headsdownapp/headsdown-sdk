@@ -1138,6 +1138,70 @@ describe("HeadsDownClient", () => {
     });
   });
 
+  // === agent run events ===
+
+  describe("agent run events", () => {
+    it("lists agent run events with optional filters", async () => {
+      let capturedBody: string | undefined;
+      const fetchFn = ((_url: string, init: RequestInit) => {
+        capturedBody = init.body as string;
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () =>
+            Promise.resolve({
+              data: {
+                agentRunEvents: [
+                  {
+                    id: "evt-row-1",
+                    eventId: "018f3f3a-5555-7cc8-9a20-000000000005",
+                    eventType: "deferred_decision.resolved",
+                    schemaVersion: 1,
+                    occurredAt: "2026-04-24T17:29:00Z",
+                    receivedAt: "2026-04-24T17:29:01Z",
+                    workspaceRef: "wks_1",
+                    client: { kind: "pi", name: "Pi", version: "0.2.0" },
+                    actor: { kind: "agent", ref: "pi" },
+                    runId: "run_42",
+                    source: "pi_skill",
+                    privacyMode: "METADATA_ONLY",
+                    idempotencyKey: "run_42:deferred_decision.resolved:decision_abcdef1234567890",
+                    correlationId: null,
+                    causationEventId: null,
+                    sequence: null,
+                    emitterKey: "pi:agent",
+                    proposalRef: null,
+                    payload: {
+                      decision_id: "decision_abcdef1234567890",
+                      resolution_kind: "approved",
+                    },
+                    insertedAt: "2026-04-24T17:29:01Z",
+                  },
+                ],
+              },
+            }),
+        });
+      }) as unknown as typeof globalThis.fetch;
+
+      const client = new HeadsDownClient({ ...CLIENT_OPTS, fetch: fetchFn });
+      const events = await client.listAgentRunEvents({
+        runId: "run_42",
+        eventType: "deferred_decision.resolved",
+        resolutionKind: "approved",
+        limit: 10,
+      });
+
+      expect(events).toHaveLength(1);
+      expect(events[0]?.eventType).toBe("deferred_decision.resolved");
+
+      const body = JSON.parse(capturedBody!);
+      expect(body.variables.runId).toBe("run_42");
+      expect(body.variables.eventType).toBe("deferred_decision.resolved");
+      expect(body.variables.resolutionKind).toBe("approved");
+      expect(body.variables.limit).toBe(10);
+    });
+  });
+
   // === Auth integration ===
 
   describe("authenticate", () => {

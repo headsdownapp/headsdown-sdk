@@ -99,6 +99,7 @@ export {
   cancelledEvent,
   completedEvent,
   continuationSavedEvent,
+  deferredDecisionResolvedEvent,
   failedEvent,
   progressEvent,
   queuedForLaterEvent,
@@ -124,6 +125,9 @@ export type {
   AgentRunSpendEstimateBucket,
   AgentRunValidationLevel,
   AgentRunValidationStatus,
+  DeferredDecisionNotesBucket,
+  DeferredDecisionResolutionKind,
+  DeferredDecisionResolvedPayload,
   ReportAgentRunEventPayload,
   RequiredEnvelopeInput,
 } from "./agent-run-events.js";

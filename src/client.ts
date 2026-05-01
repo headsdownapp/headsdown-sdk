@@ -8,6 +8,7 @@ import {
   cancelledEvent,
   completedEvent,
   continuationSavedEvent,
+  deferredDecisionResolvedEvent,
   failedEvent,
   progressEvent,
   queuedForLaterEvent,
@@ -46,6 +47,7 @@ import {
   REVOKE_DELEGATION_GRANT_MUTATION,
   REVOKE_DELEGATION_GRANTS_MUTATION,
   SCHEDULE_QUERY,
+  LIST_AGENT_RUN_EVENTS_QUERY,
   SUBMIT_PROPOSAL_MUTATION,
   TEAM_PRESENCE_QUERY,
   TEAMS_QUERY,
@@ -98,14 +100,19 @@ import type {
   VerdictSettings,
 } from "./types.js";
 import type {
+  AgentRunEvent,
   AgentRunEventContext,
   AgentRunEventInput,
   AgentRunProgressMetadata,
+  DeferredDecisionResolvedPayload,
+  DeferredDecisionResolutionKind,
   ReportAgentRunEventPayload,
 } from "./agent-run-events.js";
 import type {
   ActiveContractQuery,
   AgentControlOverviewQuery,
+  AgentRunEventsQuery,
+  AgentRunEventsQueryVariables,
   InterventionReplayQuery,
   InterventionReplayQueryVariables,
   ApplyHeadsdownActionMutation,
@@ -973,11 +980,47 @@ export class HeadsDownClient {
     return this.reportAgentRunEvent(cancelledEvent(context, payload));
   }
 
+  async reportDeferredDecisionResolved(
+    context: AgentRunEventContext,
+    payload: DeferredDecisionResolvedPayload,
+  ): Promise<ReportAgentRunEventPayload> {
+    return this.reportAgentRunEvent(deferredDecisionResolvedEvent(context, payload));
+  }
+
   async reportSteeringOutcome(
     context: AgentRunEventContext,
     payload: Record<string, unknown>,
   ): Promise<ReportAgentRunEventPayload> {
     return this.reportAgentRunEvent(steeringOutcomeReportedEvent(context, payload));
+  }
+
+  async listAgentRunEvents(
+    args: {
+      runId?: string;
+      eventType?: string;
+      resolutionKind?: DeferredDecisionResolutionKind;
+      flaggedForReview?: boolean;
+      insertedAfter?: string;
+      insertedBefore?: string;
+      limit?: number;
+    } = {},
+  ): Promise<AgentRunEvent[]> {
+    const variables = stripUndefined({
+      runId: args.runId,
+      eventType: args.eventType,
+      resolutionKind: args.resolutionKind,
+      flaggedForReview: args.flaggedForReview,
+      insertedAfter: args.insertedAfter,
+      insertedBefore: args.insertedBefore,
+      limit: args.limit,
+    }) as AgentRunEventsQueryVariables;
+
+    const data = await this.graphql.request<AgentRunEventsQuery>(
+      LIST_AGENT_RUN_EVENTS_QUERY,
+      Object.keys(variables).length > 0 ? variables : undefined,
+    );
+
+    return (data.agentRunEvents ?? []) as AgentRunEvent[];
   }
 
   // === Calibration ===
