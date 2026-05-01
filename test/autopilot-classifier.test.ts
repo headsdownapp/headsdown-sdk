@@ -35,7 +35,9 @@ describe("autopilot classifier substrate", () => {
 
     expect(fragments.taxonomyFragment).toContain("Tier 1 (Trivial / trivial)");
     expect(fragments.taxonomyFragment).toContain("force-push origin main => critical");
-    expect(fragments.taxonomyFragment).toContain("ask_user{recovery, last=edit:failed} => permanent");
+    expect(fragments.taxonomyFragment).toContain(
+      "ask_user{recovery, last=edit:failed} => permanent",
+    );
     expect(fragments.taxonomyFragment).toContain(
       "ask_user{tooling_choice, last=bash:succeeded} => routine",
     );
@@ -148,7 +150,9 @@ describe("autopilot classifier substrate", () => {
 
     it("classifies fixture cases to expected severities", () => {
       expect(classifyFixtureAction("ask_user{recovery, last=edit:failed}")).toBe("permanent");
-      expect(classifyFixtureAction("ask_user{tooling_choice, last=bash:succeeded}")).toBe("routine");
+      expect(classifyFixtureAction("ask_user{tooling_choice, last=bash:succeeded}")).toBe(
+        "routine",
+      );
       expect(classifyFixtureAction("ask_user{scope_clarification, last=webfetch:succeeded}")).toBe(
         "notable",
       );
@@ -171,7 +175,11 @@ describe("autopilot classifier substrate", () => {
       const result = classifyActionShapeFallback({
         tool_kind: "interaction.ask_user",
         question_category: "recovery_decision",
-        recent_tool_context: { last_tool_kind: "edit", last_tool_outcome: "failed", turns_since: 0 },
+        recent_tool_context: {
+          last_tool_kind: "edit",
+          last_tool_outcome: "failed",
+          turns_since: 0,
+        },
       });
       expect(result.outcome).toBe("permanent");
       expect(result.reasonCode).toBe("ask_user_recovery_after_failure");
@@ -182,7 +190,11 @@ describe("autopilot classifier substrate", () => {
       const result = classifyActionShapeFallback({
         tool_kind: "interaction.ask_user",
         question_category: "tooling_choice",
-        recent_tool_context: { last_tool_kind: "bash", last_tool_outcome: "succeeded", turns_since: 2 },
+        recent_tool_context: {
+          last_tool_kind: "bash",
+          last_tool_outcome: "succeeded",
+          turns_since: 2,
+        },
       });
       expect(result.outcome).toBe("routine");
       expect(result.reasonCode).toBe("ask_user_tooling_choice");
@@ -196,15 +208,27 @@ describe("autopilot classifier substrate", () => {
       }> = [
         {
           question_category: "scope_clarification",
-          recent_tool_context: { last_tool_kind: "webfetch", last_tool_outcome: "succeeded", turns_since: 1 },
+          recent_tool_context: {
+            last_tool_kind: "webfetch",
+            last_tool_outcome: "succeeded",
+            turns_since: 1,
+          },
         },
         {
           question_category: "approval_request",
-          recent_tool_context: { last_tool_kind: "none", last_tool_outcome: "unavailable", turns_since: 0 },
+          recent_tool_context: {
+            last_tool_kind: "none",
+            last_tool_outcome: "unavailable",
+            turns_since: 0,
+          },
         },
         {
           question_category: "data_input",
-          recent_tool_context: { last_tool_kind: "bash", last_tool_outcome: "failed", turns_since: 3 },
+          recent_tool_context: {
+            last_tool_kind: "bash",
+            last_tool_outcome: "failed",
+            turns_since: 3,
+          },
         },
         {
           question_category: "other",
@@ -212,11 +236,19 @@ describe("autopilot classifier substrate", () => {
         },
         {
           question_category: "recovery_decision",
-          recent_tool_context: { last_tool_kind: "bash", last_tool_outcome: "succeeded", turns_since: 1 },
+          recent_tool_context: {
+            last_tool_kind: "bash",
+            last_tool_outcome: "succeeded",
+            turns_since: 1,
+          },
         },
         {
           question_category: "tooling_choice",
-          recent_tool_context: { last_tool_kind: "edit", last_tool_outcome: "failed", turns_since: 0 },
+          recent_tool_context: {
+            last_tool_kind: "edit",
+            last_tool_outcome: "failed",
+            turns_since: 0,
+          },
         },
       ];
 
