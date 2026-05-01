@@ -228,6 +228,54 @@ mutation ReportAgentRunEvent($input: ReportAgentRunEventInput!) {
     }
   }
 
+query AgentRunEvents(
+    $runId: ID
+    $eventType: String
+    $resolutionKind: String
+    $flaggedForReview: Boolean
+    $insertedAfter: DateTime
+    $insertedBefore: DateTime
+    $limit: Int
+  ) {
+    agentRunEvents(
+      runId: $runId
+      eventType: $eventType
+      resolutionKind: $resolutionKind
+      flaggedForReview: $flaggedForReview
+      insertedAfter: $insertedAfter
+      insertedBefore: $insertedBefore
+      limit: $limit
+    ) {
+      id
+      eventId
+      eventType
+      schemaVersion
+      occurredAt
+      receivedAt
+      workspaceRef
+      client {
+        kind
+        name
+        version
+      }
+      actor {
+        kind
+        ref
+      }
+      runId
+      source
+      privacyMode
+      idempotencyKey
+      correlationId
+      causationEventId
+      sequence
+      emitterKey
+      proposalRef
+      payload
+      insertedAt
+    }
+  }
+
 mutation ApplyHeadsdownAction($input: ApplyHeadsdownActionInput!) {
     applyHeadsdownAction(input: $input) {
       ok

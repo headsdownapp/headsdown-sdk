@@ -9712,6 +9712,26 @@
                 {
                   "defaultValue": null,
                   "description": null,
+                  "name": "flaggedForReview",
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "Boolean",
+                    "ofType": null
+                  }
+                },
+                {
+                  "defaultValue": null,
+                  "description": null,
+                  "name": "resolutionKind",
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "String",
+                    "ofType": null
+                  }
+                },
+                {
+                  "defaultValue": null,
+                  "description": null,
                   "name": "insertedAfter",
                   "type": {
                     "kind": "SCALAR",

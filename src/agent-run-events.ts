@@ -1,3 +1,4 @@
+import type { LocalSessionSummary } from "./local-session-summary.js";
 import { ValidationError } from "./errors.js";
 
 export const AGENT_RUN_EVENT_SCHEMA_VERSION = 1;
@@ -19,6 +20,7 @@ export type AgentRunEventType =
   | "agent_run.failed"
   | "agent_run.cancelled"
   | "steering_outcome.reported"
+  | "deferred_decision.resolved"
   | (string & {});
 
 export type AgentRunFileCountBucket = "0" | "1_to_2" | "3_to_5" | "6_to_10" | "over_10" | "unknown";
@@ -59,6 +61,23 @@ export type AgentRunSpendEstimateBucket =
   | "5_to_20"
   | "over_20"
   | "unknown";
+export type DeferredDecisionResolutionKind = "approved" | "overridden" | "refined" | "dismissed";
+export type DeferredDecisionNotesBucket =
+  | "needs_more_info"
+  | "wrong_framing"
+  | "split_into_two"
+  | "duplicate"
+  | "other";
+
+export interface DeferredDecisionResolvedPayload {
+  decision_id: string;
+  resolution_kind: DeferredDecisionResolutionKind;
+  resolved_action_key?: string;
+  refined_urgency_bucket?: string;
+  refined_decision_category?: string;
+  notes_bucket?: DeferredDecisionNotesBucket;
+  local_session_summary?: LocalSessionSummary;
+}
 
 export interface AgentRunProgressMetadata {
   elapsedSeconds: number;
@@ -325,6 +344,18 @@ export function steeringOutcomeReportedEvent(
   payload: Record<string, unknown>,
 ): AgentRunEventInput {
   return { ...context, eventType: "steering_outcome.reported", payload };
+}
+
+export function deferredDecisionResolvedEvent(
+  context: AgentRunEventContext,
+  payload: DeferredDecisionResolvedPayload,
+): AgentRunEventInput {
+  return {
+    ...context,
+    eventType: "deferred_decision.resolved",
+    idempotencyKey: `${context.runId}:deferred_decision.resolved:${payload.decision_id}`,
+    payload: payload as unknown as Record<string, unknown>,
+  };
 }
 
 export function buildAgentRunEventIdempotencyKey(

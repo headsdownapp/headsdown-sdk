@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.5.1
+
+### Added
+
+- Added `deferred_decision.resolved` agent-run SDK support:
+  - `DeferredDecisionResolutionKind`, `DeferredDecisionNotesBucket`, and `DeferredDecisionResolvedPayload` types.
+  - `deferredDecisionResolvedEvent(context, payload)` builder with deterministic idempotency key format `{run_id}:deferred_decision.resolved:{decision_id}`.
+  - `client.reportDeferredDecisionResolved(context, payload)` helper.
+- Added `client.listAgentRunEvents(args)` and `LIST_AGENT_RUN_EVENTS_QUERY` for reading event streams with optional `resolutionKind` filtering.
+- Added tests for resolved-event builder/client round-trip and `listAgentRunEvents` query variable wiring.
+
 ## 0.5.0
 
 ### Added
@@ -21,6 +32,7 @@
 ### LocalSessionSummary guidance
 
 Include only derived session facts:
+
 - Version and generated timestamp metadata.
 - Opaque session/proposal references.
 - Boolean state flags (stale, continuation artifact availability, local validation outcome).
@@ -28,6 +40,7 @@ Include only derived session facts:
 - Outcome category (`in_progress`, `completed`, `tabled`, `deferred_for_review`).
 
 Do not include raw context:
+
 - Prompts, model outputs, or transcripts.
 - File paths, repo names, branch names, or diffs.
 - Logs, stack traces, URLs, or secrets.
