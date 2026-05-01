@@ -127,6 +127,16 @@ export type {
   ReportAgentRunEventPayload,
   RequiredEnvelopeInput,
 } from "./agent-run-events.js";
+export {
+  LOCAL_SESSION_SUMMARY_JSON_SCHEMA,
+  LOCAL_SESSION_SUMMARY_OUTCOME_CATEGORIES,
+  LOCAL_SESSION_SUMMARY_VERSION,
+  assertLocalSessionSummary,
+} from "./local-session-summary.js";
+export type {
+  LocalSessionSummary,
+  LocalSessionSummaryOutcomeCategory,
+} from "./local-session-summary.js";
 
 // Types
 export type {

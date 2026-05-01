@@ -11,10 +11,44 @@
   - pure escalation decision logic with capability-aware sandbox handling
 - Added classifier version compatibility helpers for major/minor mismatch handling semantics.
 - Added classifier substrate tests for fixtures, escalation path properties, unknown variant fallback, capability-aware behavior, and version mismatch handling.
+- Added a shared `LocalSessionSummary` SDK contract with strict TypeScript typing, schema export constants, and `assertLocalSessionSummary()` validation.
+- Added a published JSON schema artifact at `schemas/local-session-summary.schema.json` for non-TypeScript consumers and validator pipelines.
 
 ### Changed
 
 - Expanded README with classifier substrate usage, extension expectations, read-fresh policy contract, and version-mismatch behavior.
+
+### LocalSessionSummary guidance
+
+Include only derived session facts:
+- Version and generated timestamp metadata.
+- Opaque session/proposal references.
+- Boolean state flags (stale, continuation artifact availability, local validation outcome).
+- Numeric counters (tool calls, file changes, deferred decisions).
+- Outcome category (`in_progress`, `completed`, `tabled`, `deferred_for_review`).
+
+Do not include raw context:
+- Prompts, model outputs, or transcripts.
+- File paths, repo names, branch names, or diffs.
+- Logs, stack traces, URLs, or secrets.
+
+Example:
+
+```ts
+const summary: LocalSessionSummary = {
+  version: 1,
+  sessionId: "session_123",
+  generatedAt: new Date().toISOString(),
+  stale: false,
+  toolCallCount: 8,
+  fileChangeCount: 3,
+  deferredDecisionCount: 1,
+  continuationArtifactAvailable: true,
+  validationLocallyPassed: true,
+  approvedProposalRef: "proposal_456",
+  outcomeCategory: "completed",
+};
+```
 
 ## 0.4.0
 
