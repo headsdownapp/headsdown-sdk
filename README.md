@@ -163,6 +163,71 @@ const directive = describeExecutionDirective({ contract, schedule, verdict });
 console.log(directive.primaryDirective);
 ```
 
+### Autopilot classifier substrate
+
+Use the shared classifier substrate when an integration needs to classify an imminent action and derive a conservative escalation path.
+
+```typescript
+import {
+  AUTOPILOT_CLASSIFIER_VERSION,
+  buildClassifierPromptFragments,
+  classifyActionShapeFallback,
+  computeEscalationPath,
+} from "@headsdown/sdk";
+
+const fragments = buildClassifierPromptFragments({
+  latitude: "balanced",
+  identityActionOverrides: ["identity_action:git_push"],
+  houseRules: ["prefer_dry_run", "defer_publishes"],
+});
+
+const classified = classifyActionShapeFallback({
+  tool_kind: "bash",
+  command: "git push origin main",
+  external_side_effect: true,
+  destructive: true,
+  public_facing: true,
+});
+
+const decision = computeEscalationPath({
+  classifiedAction: classified,
+  policy: {
+    classifierVersion: AUTOPILOT_CLASSIFIER_VERSION,
+    latitude: "balanced",
+    sandboxPreference: "preferred",
+  },
+  capabilities: {
+    classifierVersion: AUTOPILOT_CLASSIFIER_VERSION,
+    capturedAt: new Date().toISOString(),
+    sandbox: {
+      available: true,
+      modes: ["bash"],
+      fsIsolation: "ephemeral",
+      networkIsolation: "allowlist",
+      identityIsolation: "isolated",
+    },
+    toolKinds: ["bash", "edit", "webfetch", "mcp", "computer_use"],
+  },
+});
+```
+
+Classifier substrate contract:
+
+- Severity taxonomy: five tiers (`trivial`, `routine`, `notable`, `permanent`, `critical`) with criteria and fixtures.
+- Prompt fragments: taxonomy and policy-aware text blocks integrations can inject into their system prompts.
+- Action-shape schema: discriminated by `tool_kind` (`bash`, `edit`, `webfetch`, `mcp`, `computer_use`) and extensible with optional additive fields.
+- Escalation logic: pure function from `(classifiedAction, policy, capabilities)` to an ordered escalation path.
+
+Behavioral guarantees:
+
+- Read fresh policy every decision: pass a newly fetched policy object into each `computeEscalationPath()` call.
+- Additive schema changes on known variants do not require a classifier version bump.
+- Unknown action variants fail closed as `classification_failed` and defer for human review until SDK-reviewed handling exists.
+- Version mismatch behavior:
+  - major mismatch: error + lockdown fallback (`defer_for_human_review`)
+  - backend minor ahead: warning + proceed with known fields
+  - SDK minor ahead: error + lockdown fallback
+
 ### Actor Context (session/workspace-aware authorization)
 
 For endpoints protected by delegation grants, the backend can require actor context metadata. Set it once at client construction, or override it for one call with `withActor()`.

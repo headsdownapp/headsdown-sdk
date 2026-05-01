@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.5.0
+
+### Added
+
+- Added a shared autopilot classifier substrate export surface:
+  - severity taxonomy definitions and fixtures
+  - policy-aware classifier prompt fragments
+  - typed action-shape schema with conservative unknown-variant fallback
+  - pure escalation decision logic with capability-aware sandbox handling
+- Added classifier version compatibility helpers for major/minor mismatch handling semantics.
+- Added classifier substrate tests for fixtures, escalation path properties, unknown variant fallback, capability-aware behavior, and version mismatch handling.
+
+### Changed
+
+- Expanded README with classifier substrate usage, extension expectations, read-fresh policy contract, and version-mismatch behavior.
+
 ## 0.4.0
 
 ### Added
