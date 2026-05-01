@@ -4,8 +4,19 @@
 
 ### Added
 
+- Added a shared autopilot classifier substrate export surface:
+  - severity taxonomy definitions and fixtures
+  - policy-aware classifier prompt fragments
+  - typed action-shape schema with conservative unknown-variant fallback
+  - pure escalation decision logic with capability-aware sandbox handling
+- Added classifier version compatibility helpers for major/minor mismatch handling semantics.
+- Added classifier substrate tests for fixtures, escalation path properties, unknown variant fallback, capability-aware behavior, and version mismatch handling.
 - Added a shared `LocalSessionSummary` SDK contract with strict TypeScript typing, schema export constants, and `assertLocalSessionSummary()` validation.
 - Added a published JSON schema artifact at `schemas/local-session-summary.schema.json` for non-TypeScript consumers and validator pipelines.
+
+### Changed
+
+- Expanded README with classifier substrate usage, extension expectations, read-fresh policy contract, and version-mismatch behavior.
 
 ### LocalSessionSummary guidance
 

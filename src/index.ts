@@ -46,11 +46,46 @@ export type {
 // Agent-control helpers and constants
 export { resolveHeadsDownCallFallback } from "./agent-control.js";
 export {
+  AUTOPILOT_CLASSIFIER_VERSION,
+  CLASSIFIER_FIXTURES,
+  LATITUDE_MAX_SEVERITY,
+  SEVERITY_TAXONOMY,
+  buildClassifierPromptFragments,
+  classifyActionShapeFallback,
+  classifyFixtureAction,
+  computeEscalationPath,
+  evaluateClassifierVersionCompatibility,
+} from "./autopilot-classifier.js";
+export {
   buildActionIdempotencyKey,
   mapHeadsDownActionError,
   mapHeadsDownActionPayloadError,
 } from "./agent-control-actions.js";
 export type { HeadsDownCallFallback } from "./agent-control.js";
+export type {
+  ActionShape,
+  BaseActionShape,
+  BashActionShape,
+  ClassifiedAction,
+  ClassifierEscalationStep,
+  ClassifierLatitude,
+  ClassifierOutcome,
+  ClassifierPolicy,
+  ClassifierPromptFragments,
+  ClassifierPromptFragmentsInput,
+  ClassifierSeverity,
+  ClassifierVersionCompatibility,
+  ComputerUseActionShape,
+  EditActionShape,
+  EscalationDecision,
+  IntegrationCapabilities,
+  McpActionShape,
+  SeverityTierDefinition,
+  UnknownActionShape,
+  VersionMismatchDirection,
+  VersionMismatchLevel,
+  WebfetchActionShape,
+} from "./autopilot-classifier.js";
 export { HEADSDOWN_CALL_KEYS, HEADSDOWN_ACTION_KEYS } from "./types.js";
 export {
   AGENT_RUN_EVENT_PRIVACY_MODE,
