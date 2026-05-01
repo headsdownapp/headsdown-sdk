@@ -65,6 +65,37 @@ describe("autopilot classifier substrate", () => {
     expect(decision.reasonCode).toBe("sandbox_required_but_unavailable");
   });
 
+  it("returns sandbox required unavailable when tool kind is unsupported", () => {
+    const decision = computeEscalationPath({
+      classifiedAction: {
+        outcome: "routine",
+        reasonCode: "edit_local_write",
+        source: "deterministic",
+        toolKind: "bash",
+      },
+      policy: {
+        classifierVersion: AUTOPILOT_CLASSIFIER_VERSION,
+        latitude: "balanced",
+        sandboxPreference: "required",
+      },
+      capabilities: {
+        classifierVersion: AUTOPILOT_CLASSIFIER_VERSION,
+        capturedAt: "2026-04-29T00:00:00Z",
+        sandbox: {
+          available: true,
+          modes: ["edit_only"],
+          fsIsolation: "ephemeral",
+          networkIsolation: "allowlist",
+          identityIsolation: "isolated",
+        },
+        toolKinds: ["edit", "webfetch", "mcp", "computer_use"],
+      },
+    });
+
+    expect(decision.steps).toEqual(["defer_for_human_review"]);
+    expect(decision.reasonCode).toBe("sandbox_required_but_unavailable");
+  });
+
   it("classifies unknown action variants conservatively", () => {
     const unknown = classifyActionShapeFallback({
       tool_kind: "interaction.ask_user",
@@ -125,6 +156,32 @@ describe("autopilot classifier substrate", () => {
 
     expect(destructivePublic.outcome).toBe("critical");
     expect(destructivePublic.reasonCode).toBe("destructive_public");
+  });
+
+  it("classifies destructive public non-bash variants as critical", () => {
+    const edit = classifyActionShapeFallback({
+      tool_kind: "edit",
+      operation: "replace",
+      destructive: true,
+      public_facing: true,
+    });
+    const mcp = classifyActionShapeFallback({
+      tool_kind: "mcp",
+      server: "example",
+      tool: "mutate",
+      destructive: true,
+      public_facing: true,
+    });
+    const computerUse = classifyActionShapeFallback({
+      tool_kind: "computer_use",
+      action: "click",
+      destructive: true,
+      public_facing: true,
+    });
+
+    expect(edit.outcome).toBe("critical");
+    expect(mcp.outcome).toBe("critical");
+    expect(computerUse.outcome).toBe("critical");
   });
 
   it("evaluates version mismatch behavior for major and minor drift", () => {
@@ -194,6 +251,68 @@ describe("autopilot classifier substrate", () => {
     expect(first.steps[first.steps.length - 1]).toBe("defer_for_human_review");
   });
 
+  it("prefers try_in_sandbox first when sandboxPreference is preferred and sandbox is usable", () => {
+    const decision = computeEscalationPath({
+      classifiedAction: {
+        outcome: "routine",
+        reasonCode: "edit_local_write",
+        source: "deterministic",
+        toolKind: "edit",
+      },
+      policy: {
+        classifierVersion: AUTOPILOT_CLASSIFIER_VERSION,
+        latitude: "balanced",
+        sandboxPreference: "preferred",
+        escalationStrategy: ["try_alternative", "try_in_sandbox", "defer_for_human_review"],
+      },
+      capabilities: {
+        classifierVersion: AUTOPILOT_CLASSIFIER_VERSION,
+        capturedAt: "2026-04-29T00:00:00Z",
+        sandbox: {
+          available: true,
+          modes: ["edit_only"],
+          fsIsolation: "ephemeral",
+          networkIsolation: "allowlist",
+          identityIsolation: "isolated",
+        },
+        toolKinds: ["bash", "edit", "webfetch", "mcp", "computer_use"],
+      },
+    });
+
+    expect(decision.steps[0]).toBe("try_in_sandbox");
+  });
+
+  it("skips try_in_sandbox when sandboxPreference is avoid", () => {
+    const decision = computeEscalationPath({
+      classifiedAction: {
+        outcome: "routine",
+        reasonCode: "edit_local_write",
+        source: "deterministic",
+        toolKind: "edit",
+      },
+      policy: {
+        classifierVersion: AUTOPILOT_CLASSIFIER_VERSION,
+        latitude: "balanced",
+        sandboxPreference: "avoid",
+        escalationStrategy: ["try_in_sandbox", "try_alternative", "defer_for_human_review"],
+      },
+      capabilities: {
+        classifierVersion: AUTOPILOT_CLASSIFIER_VERSION,
+        capturedAt: "2026-04-29T00:00:00Z",
+        sandbox: {
+          available: true,
+          modes: ["edit_only"],
+          fsIsolation: "ephemeral",
+          networkIsolation: "allowlist",
+          identityIsolation: "isolated",
+        },
+        toolKinds: ["bash", "edit", "webfetch", "mcp", "computer_use"],
+      },
+    });
+
+    expect(decision.steps).toEqual(["try_alternative", "defer_for_human_review"]);
+  });
+
   it("skips try_in_sandbox when capabilities do not support the action tool kind", () => {
     const decision = computeEscalationPath({
       classifiedAction: {
@@ -222,6 +341,36 @@ describe("autopilot classifier substrate", () => {
     });
 
     expect(decision.steps).toEqual(["try_alternative", "defer_for_human_review"]);
+  });
+
+  it("returns lockdown reason code for lockdown latitude", () => {
+    const decision = computeEscalationPath({
+      classifiedAction: {
+        outcome: "routine",
+        reasonCode: "edit_local_write",
+        source: "deterministic",
+        toolKind: "edit",
+      },
+      policy: {
+        classifierVersion: AUTOPILOT_CLASSIFIER_VERSION,
+        latitude: "lockdown",
+      },
+      capabilities: {
+        classifierVersion: AUTOPILOT_CLASSIFIER_VERSION,
+        capturedAt: "2026-04-29T00:00:00Z",
+        sandbox: {
+          available: true,
+          modes: ["edit_only"],
+          fsIsolation: "ephemeral",
+          networkIsolation: "allowlist",
+          identityIsolation: "isolated",
+        },
+        toolKinds: ["bash", "edit", "webfetch", "mcp", "computer_use"],
+      },
+    });
+
+    expect(decision.steps).toEqual(["defer_for_human_review"]);
+    expect(decision.reasonCode).toBe("latitude_lockdown");
   });
 
   it("never returns an empty escalation path in pseudo property sweep", () => {

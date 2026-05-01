@@ -199,6 +199,7 @@ export const SEVERITY_TAXONOMY: Record<ClassifierSeverity, SeverityTierDefinitio
 };
 
 export const LATITUDE_MAX_SEVERITY: Record<ClassifierLatitude, ClassifierSeverity | "none"> = {
+  // Intentional: "hold" permits up to permanent actions because the user is assumed available for fast escalation handling.
   hold: "permanent",
   verify: "notable",
   balanced: "notable",
@@ -287,7 +288,7 @@ function isComputerUseActionShape(action: ActionShape): action is ComputerUseAct
   );
 }
 
-function isValidCapabilitySnapshot(capabilities: IntegrationCapabilities): boolean {
+function isValidSandboxSnapshot(capabilities: IntegrationCapabilities): boolean {
   if (capabilities.stale) return false;
   if (!capabilities.capturedAt.trim()) return false;
   if (capabilities.sandbox.available === false) return false;
@@ -317,19 +318,24 @@ function supportsSandboxForToolKind(
 
 function materialSteps(
   strategy: ClassifierEscalationStep[],
-  capabilities: IntegrationCapabilities,
-  actionToolKind: string,
+  sandboxUsable: boolean,
 ): ClassifierEscalationStep[] {
-  const sandboxUsable =
-    isValidCapabilitySnapshot(capabilities) &&
-    supportsSandboxForToolKind(capabilities, actionToolKind);
-
   const filtered = strategy.filter((step) => {
     if (step !== "try_in_sandbox") return true;
     return sandboxUsable;
   });
 
   return filtered.length > 0 ? filtered : ["defer_for_human_review"];
+}
+
+function prioritizeSandboxStep(
+  steps: ClassifierEscalationStep[],
+  sandboxUsable: boolean,
+): ClassifierEscalationStep[] {
+  if (!sandboxUsable) return steps;
+
+  const withoutSandbox = steps.filter((step) => step !== "try_in_sandbox");
+  return ["try_in_sandbox", ...withoutSandbox];
 }
 
 export function evaluateClassifierVersionCompatibility(params: {
@@ -505,7 +511,7 @@ export function classifyActionShapeFallback(action: ActionShape): ClassifiedActi
     }
 
     if (
-      normalizedCommand.includes("git push origin main") ||
+      /(^|\s)git\s+push\s+origin\s+main(\s|$)/.test(normalizedCommand) ||
       normalizedCommand.includes("rm -rf")
     ) {
       return {
@@ -742,11 +748,11 @@ export function computeEscalationPath(params: {
   }
 
   const requested = clampStepOrder(params.policy.escalationStrategy ?? DEFAULT_ESCALATION_STRATEGY);
+  const sandboxUsable =
+    isValidSandboxSnapshot(params.capabilities) &&
+    supportsSandboxForToolKind(params.capabilities, params.classifiedAction.toolKind);
 
-  if (
-    params.policy.sandboxPreference === "required" &&
-    !isValidCapabilitySnapshot(params.capabilities)
-  ) {
+  if (params.policy.sandboxPreference === "required" && !sandboxUsable) {
     return {
       steps: ["defer_for_human_review"],
       reasonCode: "sandbox_required_but_unavailable",
@@ -754,7 +760,11 @@ export function computeEscalationPath(params: {
     };
   }
 
-  let candidate = materialSteps(requested, params.capabilities, params.classifiedAction.toolKind);
+  let candidate = materialSteps(requested, sandboxUsable);
+
+  if (params.policy.sandboxPreference === "preferred") {
+    candidate = prioritizeSandboxStep(candidate, sandboxUsable);
+  }
 
   if (params.policy.sandboxPreference === "avoid") {
     candidate = candidate.filter((step) => step !== "try_in_sandbox");
@@ -764,6 +774,10 @@ export function computeEscalationPath(params: {
     candidate = candidate.filter(
       (step) => step === "try_in_sandbox" || step === "defer_for_human_review",
     );
+
+    if (!candidate.includes("try_in_sandbox")) {
+      candidate = ["try_in_sandbox", ...candidate];
+    }
   }
 
   if (candidate.length === 0) {

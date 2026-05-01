@@ -180,6 +180,7 @@ const fragments = buildClassifierPromptFragments({
   identityActionOverrides: ["identity_action:git_push"],
   houseRules: ["prefer_dry_run", "defer_publishes"],
 });
+// Pass trusted operator configuration only. Do not pass end-user free-form text.
 
 const classified = classifyActionShapeFallback({
   tool_kind: "bash",
@@ -221,8 +222,10 @@ Classifier substrate contract:
 Behavioral guarantees:
 
 - Read fresh policy every decision: pass a newly fetched policy object into each `computeEscalationPath()` call.
+- Capability snapshots can be cached and refreshed independently from policy reads.
 - Additive schema changes on known variants do not require a classifier version bump.
 - Unknown action variants fail closed as `classification_failed` and defer for human review until SDK-reviewed handling exists.
+- `sandboxPreference: "preferred"` prioritizes `try_in_sandbox` when sandbox support is usable for the action tool kind.
 - Version mismatch behavior:
   - major mismatch: error + lockdown fallback (`defer_for_human_review`)
   - backend minor ahead: warning + proceed with known fields
