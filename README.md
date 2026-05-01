@@ -221,7 +221,7 @@ Classifier substrate contract:
 
 #### interaction.ask_user variant
 
-Use `interaction.ask_user` when an LLM ends a turn without a tool call in order to ask the user something. This is a stall signal — the run is paused waiting for human input — so classifying it correctly keeps autopilot consumers from treating the pause as an unknown event.
+Use `interaction.ask_user` when an LLM ends a turn without a tool call in order to ask the user something. This is a would-be stall signal: the run is waiting on human input, and classifying it correctly keeps autopilot consumers from treating the question as an unknown event.
 
 ```typescript
 import type { InteractionAskUserActionShape } from "@headsdown/sdk";
@@ -247,13 +247,13 @@ Deterministic classification rules (no LLM round-trip required):
 | `tooling_choice` | `succeeded` | `routine` |
 | anything else | anything else | `notable` |
 
-`notable` is the safe baseline: stalling an automated run is an external side effect even if the question itself is low-stakes. `permanent` applies when the LLM is asking for human accountability after a failure. `routine` applies only for low-stakes preference questions mid-progress.
+`notable` is the safe baseline: stalling an automated run is an external side effect even if the question itself is low-stakes. `permanent` applies when the LLM is asking for human accountability after a failure. `routine` applies when the question category is `tooling_choice` and the most recent tool succeeded.
 
 When ending a turn to ask the user a question, construct an `interaction.ask_user` action shape rather than leaving the turn unclassified. An unclassified turn would fall through to `classification_failed` and force an immediate `defer_for_human_review` regardless of latitude.
 
 #### Action-schema extension guide
 
-Adding a new variant requires a classifier minor version bump (`AUTOPILOT_CLASSIFIER_VERSION`). Additive fields on an existing variant do not require a bump. Old SDKs pinned to a lower minor version degrade safely via the unknown-variant fallback (`classification_failed`). The safe release order is backend bump first, then SDK release — backend-ahead is a warning that proceeds; SDK-ahead is an error that locks down.
+Adding a new variant requires a classifier minor version bump (`AUTOPILOT_CLASSIFIER_VERSION`). Additive fields on an existing variant do not require a bump. Old SDKs pinned to a lower minor version degrade safely via the unknown-variant fallback (`classification_failed`). The safe release order is backend bump first, then SDK release. Backend-ahead is a warning that proceeds; SDK-ahead is an error that locks down.
 
 Behavioral guarantees:
 

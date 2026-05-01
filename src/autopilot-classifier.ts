@@ -93,11 +93,17 @@ export type QuestionCategory =
   | "recovery_decision"
   | "other";
 
-export interface RecentToolContext {
-  last_tool_kind: KnownToolKind | "none";
-  last_tool_outcome: "succeeded" | "failed" | "unavailable";
-  turns_since: number;
-}
+export type RecentToolContext =
+  | {
+      last_tool_kind: KnownToolKind;
+      last_tool_outcome: "succeeded" | "failed";
+      turns_since: number;
+    }
+  | {
+      last_tool_kind: "none";
+      last_tool_outcome: "unavailable";
+      turns_since: number;
+    };
 
 export interface InteractionAskUserActionShape extends BaseActionShape {
   tool_kind: "interaction.ask_user";
@@ -245,6 +251,15 @@ export const CLASSIFIER_FIXTURES: Array<{ action: string; expected: ClassifierSe
 
 const KNOWN_TOOL_KINDS: KnownToolKind[] = ["bash", "edit", "webfetch", "mcp", "computer_use"];
 
+const QUESTION_CATEGORIES: QuestionCategory[] = [
+  "scope_clarification",
+  "approval_request",
+  "tooling_choice",
+  "data_input",
+  "recovery_decision",
+  "other",
+];
+
 const SEVERITY_ORDER: ClassifierSeverity[] = [
   "trivial",
   "routine",
@@ -318,9 +333,29 @@ export function isInteractionAskUserActionShape(
 ): action is InteractionAskUserActionShape {
   return (
     action.tool_kind === "interaction.ask_user" &&
-    typeof (action as InteractionAskUserActionShape).question_category === "string" &&
-    typeof (action as InteractionAskUserActionShape).recent_tool_context === "object"
+    isQuestionCategory((action as InteractionAskUserActionShape).question_category) &&
+    isRecentToolContext((action as InteractionAskUserActionShape).recent_tool_context)
   );
+}
+
+function isQuestionCategory(value: unknown): value is QuestionCategory {
+  return typeof value === "string" && QUESTION_CATEGORIES.includes(value as QuestionCategory);
+}
+
+function isKnownToolKind(value: unknown): value is KnownToolKind {
+  return typeof value === "string" && KNOWN_TOOL_KINDS.includes(value as KnownToolKind);
+}
+
+function isRecentToolContext(value: unknown): value is RecentToolContext {
+  if (typeof value !== "object" || value === null) return false;
+
+  const context = value as Partial<RecentToolContext>;
+  const turnsSince = context.turns_since;
+  if (!Number.isInteger(turnsSince) || turnsSince === undefined || turnsSince < 0) return false;
+
+  if (context.last_tool_kind === "none") return context.last_tool_outcome === "unavailable";
+  if (!isKnownToolKind(context.last_tool_kind)) return false;
+  return context.last_tool_outcome === "succeeded" || context.last_tool_outcome === "failed";
 }
 
 function isValidSandboxSnapshot(capabilities: IntegrationCapabilities): boolean {
@@ -755,8 +790,15 @@ export function classifyFixtureAction(action: string): ClassifierSeverity {
 
   if (normalized.includes("force-push") || normalized.includes("drop database")) return "critical";
   if (normalized.includes("git push") || normalized.includes("rm -rf")) return "permanent";
-  if (normalized.startsWith("ask_user{recovery")) return "permanent";
-  if (normalized.startsWith("ask_user{tooling_choice")) return "routine";
+
+  const askUserFixture = normalized.match(/^ask_user\{([^,]+),\s*last=([^:}]+):([^}]+)\}$/);
+  if (askUserFixture) {
+    const [, category, , outcome] = askUserFixture;
+    if (category === "recovery" && outcome === "failed") return "permanent";
+    if (category === "tooling_choice" && outcome === "succeeded") return "routine";
+    return "notable";
+  }
+
   if (normalized.startsWith("ask_user{")) return "notable";
   if (normalized.includes("random-") || normalized.includes("idempotent api write"))
     return "notable";

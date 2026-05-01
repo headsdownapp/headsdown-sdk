@@ -11,7 +11,7 @@
 - Extended `buildClassifierPromptFragments` with ask_user fixture references in `taxonomyFragment` and ask_user guidance in `instructionsFragment`.
 - Added four representative `CLASSIFIER_FIXTURES` entries for the new variant.
 - Bumped `AUTOPILOT_CLASSIFIER_VERSION` from `1.0.0` to `1.1.0`. Old SDKs pinned to `1.0.0` degrade safely via the existing unknown-variant fallback.
-- Added tests: type-level discrimination, all four fixture cases, property coverage (no combination produces `trivial`/`critical`/`classification_failed`), and `1.0.0 ↔ 1.1.0` version-compatibility regression.
+- Added tests: type-level discrimination, all four fixture cases, malformed-shape fail-closed coverage, valid-combination property coverage (no valid combination produces `trivial`/`critical`/`classification_failed`), and `1.0.0 ↔ 1.1.0` version-compatibility regression.
 - Updated README with `interaction.ask_user` usage, deterministic rules table, and action-schema extension guide.
 
 ## 0.5.1

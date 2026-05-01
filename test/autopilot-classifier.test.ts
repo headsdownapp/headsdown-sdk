@@ -10,6 +10,7 @@ import {
 } from "../src/autopilot-classifier.js";
 import type {
   InteractionAskUserActionShape,
+  KnownToolKind,
   QuestionCategory,
   RecentToolContext,
 } from "../src/autopilot-classifier.js";
@@ -161,7 +162,7 @@ describe("autopilot classifier substrate", () => {
       );
     });
 
-    it("type guard discriminates correctly on tool_kind", () => {
+    it("type guard validates the complete ask_user shape", () => {
       const shape: InteractionAskUserActionShape = {
         tool_kind: "interaction.ask_user",
         question_category: "approval_request",
@@ -169,36 +170,69 @@ describe("autopilot classifier substrate", () => {
       };
       expect(isInteractionAskUserActionShape(shape)).toBe(true);
       expect(isInteractionAskUserActionShape({ tool_kind: "bash", command: "ls" })).toBe(false);
+      expect(
+        isInteractionAskUserActionShape({
+          tool_kind: "interaction.ask_user",
+          question_category: "not_a_category",
+          recent_tool_context: baseContext,
+        } as never),
+      ).toBe(false);
+      expect(
+        isInteractionAskUserActionShape({
+          tool_kind: "interaction.ask_user",
+          question_category: "approval_request",
+          recent_tool_context: null,
+        } as never),
+      ).toBe(false);
+      expect(
+        isInteractionAskUserActionShape({
+          tool_kind: "interaction.ask_user",
+          question_category: "approval_request",
+          recent_tool_context: {
+            last_tool_kind: "none",
+            last_tool_outcome: "failed",
+            turns_since: 0,
+          },
+        } as never),
+      ).toBe(false);
     });
 
-    it("classifies recovery_decision after failed tool as permanent", () => {
-      const result = classifyActionShapeFallback({
-        tool_kind: "interaction.ask_user",
-        question_category: "recovery_decision",
-        recent_tool_context: {
-          last_tool_kind: "edit",
-          last_tool_outcome: "failed",
-          turns_since: 0,
-        },
-      });
-      expect(result.outcome).toBe("permanent");
-      expect(result.reasonCode).toBe("ask_user_recovery_after_failure");
-      expect(result.source).toBe("deterministic");
+    it("classifies recovery_decision after failed tool as permanent for every tool kind", () => {
+      const toolKinds: KnownToolKind[] = ["bash", "edit", "webfetch", "mcp", "computer_use"];
+
+      for (const last_tool_kind of toolKinds) {
+        const result = classifyActionShapeFallback({
+          tool_kind: "interaction.ask_user",
+          question_category: "recovery_decision",
+          recent_tool_context: {
+            last_tool_kind,
+            last_tool_outcome: "failed",
+            turns_since: 0,
+          },
+        });
+        expect(result.outcome).toBe("permanent");
+        expect(result.reasonCode).toBe("ask_user_recovery_after_failure");
+        expect(result.source).toBe("deterministic");
+      }
     });
 
-    it("classifies tooling_choice after succeeded tool as routine", () => {
-      const result = classifyActionShapeFallback({
-        tool_kind: "interaction.ask_user",
-        question_category: "tooling_choice",
-        recent_tool_context: {
-          last_tool_kind: "bash",
-          last_tool_outcome: "succeeded",
-          turns_since: 2,
-        },
-      });
-      expect(result.outcome).toBe("routine");
-      expect(result.reasonCode).toBe("ask_user_tooling_choice");
-      expect(result.source).toBe("deterministic");
+    it("classifies tooling_choice after succeeded tool as routine for every tool kind", () => {
+      const toolKinds: KnownToolKind[] = ["bash", "edit", "webfetch", "mcp", "computer_use"];
+
+      for (const last_tool_kind of toolKinds) {
+        const result = classifyActionShapeFallback({
+          tool_kind: "interaction.ask_user",
+          question_category: "tooling_choice",
+          recent_tool_context: {
+            last_tool_kind,
+            last_tool_outcome: "succeeded",
+            turns_since: 2,
+          },
+        });
+        expect(result.outcome).toBe("routine");
+        expect(result.reasonCode).toBe("ask_user_tooling_choice");
+        expect(result.source).toBe("deterministic");
+      }
     });
 
     it("classifies all other combinations as notable", () => {
@@ -262,7 +296,7 @@ describe("autopilot classifier substrate", () => {
       }
     });
 
-    it("property: any question_category + recent_tool_context never produces trivial, critical, or classification_failed", () => {
+    it("property: any valid question_category + recent_tool_context never produces trivial, critical, or classification_failed", () => {
       const categories: QuestionCategory[] = [
         "scope_clarification",
         "approval_request",
@@ -271,41 +305,100 @@ describe("autopilot classifier substrate", () => {
         "recovery_decision",
         "other",
       ];
-      const outcomes: Array<RecentToolContext["last_tool_outcome"]> = [
-        "succeeded",
-        "failed",
-        "unavailable",
-      ];
-      const toolKinds: Array<RecentToolContext["last_tool_kind"]> = [
-        "bash",
-        "edit",
-        "webfetch",
-        "mcp",
-        "computer_use",
-        "none",
+      const contexts: RecentToolContext[] = [
+        { last_tool_kind: "bash", last_tool_outcome: "succeeded", turns_since: 1 },
+        { last_tool_kind: "bash", last_tool_outcome: "failed", turns_since: 1 },
+        { last_tool_kind: "edit", last_tool_outcome: "succeeded", turns_since: 1 },
+        { last_tool_kind: "edit", last_tool_outcome: "failed", turns_since: 1 },
+        { last_tool_kind: "webfetch", last_tool_outcome: "succeeded", turns_since: 1 },
+        { last_tool_kind: "webfetch", last_tool_outcome: "failed", turns_since: 1 },
+        { last_tool_kind: "mcp", last_tool_outcome: "succeeded", turns_since: 1 },
+        { last_tool_kind: "mcp", last_tool_outcome: "failed", turns_since: 1 },
+        { last_tool_kind: "computer_use", last_tool_outcome: "succeeded", turns_since: 1 },
+        { last_tool_kind: "computer_use", last_tool_outcome: "failed", turns_since: 1 },
+        { last_tool_kind: "none", last_tool_outcome: "unavailable", turns_since: 1 },
       ];
 
       for (const question_category of categories) {
-        for (const last_tool_outcome of outcomes) {
-          for (const last_tool_kind of toolKinds) {
-            const result = classifyActionShapeFallback({
-              tool_kind: "interaction.ask_user",
-              question_category,
-              recent_tool_context: { last_tool_kind, last_tool_outcome, turns_since: 1 },
-            });
-            expect(["routine", "notable", "permanent"]).toContain(result.outcome);
-            expect(result.outcome).not.toBe("trivial");
-            expect(result.outcome).not.toBe("critical");
-            expect(result.outcome).not.toBe("classification_failed");
-          }
+        for (const recent_tool_context of contexts) {
+          const result = classifyActionShapeFallback({
+            tool_kind: "interaction.ask_user",
+            question_category,
+            recent_tool_context,
+          });
+          expect(["routine", "notable", "permanent"]).toContain(result.outcome);
+          expect(result.outcome).not.toBe("trivial");
+          expect(result.outcome).not.toBe("critical");
+          expect(result.outcome).not.toBe("classification_failed");
         }
       }
     });
 
-    it("fails closed for malformed ask_user shape missing required fields", () => {
-      const malformed = classifyActionShapeFallback({ tool_kind: "interaction.ask_user" } as never);
-      expect(malformed.outcome).toBe("classification_failed");
-      expect(malformed.reasonCode).toBe("malformed_ask_user_action_shape");
+    it("fails closed for malformed ask_user shapes", () => {
+      const malformedShapes = [
+        { tool_kind: "interaction.ask_user" },
+        {
+          tool_kind: "interaction.ask_user",
+          question_category: "not_a_category",
+          recent_tool_context: baseContext,
+        },
+        {
+          tool_kind: "interaction.ask_user",
+          question_category: "approval_request",
+          recent_tool_context: null,
+        },
+        {
+          tool_kind: "interaction.ask_user",
+          question_category: "approval_request",
+          recent_tool_context: {
+            last_tool_kind: "bash",
+            last_tool_outcome: "unavailable",
+            turns_since: 1,
+          },
+        },
+        {
+          tool_kind: "interaction.ask_user",
+          question_category: "approval_request",
+          recent_tool_context: {
+            last_tool_kind: "none",
+            last_tool_outcome: "failed",
+            turns_since: 1,
+          },
+        },
+        {
+          tool_kind: "interaction.ask_user",
+          question_category: "approval_request",
+          recent_tool_context: {
+            last_tool_kind: "not_a_tool",
+            last_tool_outcome: "failed",
+            turns_since: 1,
+          },
+        },
+        {
+          tool_kind: "interaction.ask_user",
+          question_category: "approval_request",
+          recent_tool_context: {
+            last_tool_kind: "bash",
+            last_tool_outcome: "failed",
+            turns_since: -1,
+          },
+        },
+        {
+          tool_kind: "interaction.ask_user",
+          question_category: "approval_request",
+          recent_tool_context: {
+            last_tool_kind: "bash",
+            last_tool_outcome: "failed",
+            turns_since: 1.5,
+          },
+        },
+      ];
+
+      for (const malformedShape of malformedShapes) {
+        const malformed = classifyActionShapeFallback(malformedShape as never);
+        expect(malformed.outcome).toBe("classification_failed");
+        expect(malformed.reasonCode).toBe("malformed_ask_user_action_shape");
+      }
     });
   });
 
