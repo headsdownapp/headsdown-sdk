@@ -55,6 +55,7 @@ export {
   classifyFixtureAction,
   computeEscalationPath,
   evaluateClassifierVersionCompatibility,
+  isInteractionAskUserActionShape,
 } from "./autopilot-classifier.js";
 export {
   buildActionIdempotencyKey,
@@ -79,7 +80,10 @@ export type {
   EditActionShape,
   EscalationDecision,
   IntegrationCapabilities,
+  InteractionAskUserActionShape,
   McpActionShape,
+  QuestionCategory,
+  RecentToolContext,
   SeverityTierDefinition,
   UnknownActionShape,
   VersionMismatchDirection,
