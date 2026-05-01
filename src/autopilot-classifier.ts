@@ -1,4 +1,4 @@
-export const AUTOPILOT_CLASSIFIER_VERSION = "1.0.0";
+export const AUTOPILOT_CLASSIFIER_VERSION = "1.1.0";
 
 export type ClassifierSeverity = "trivial" | "routine" | "notable" | "permanent" | "critical";
 
@@ -85,6 +85,26 @@ export interface EscalationDecision {
 
 export type KnownToolKind = "bash" | "edit" | "webfetch" | "mcp" | "computer_use";
 
+export type QuestionCategory =
+  | "scope_clarification"
+  | "approval_request"
+  | "tooling_choice"
+  | "data_input"
+  | "recovery_decision"
+  | "other";
+
+export interface RecentToolContext {
+  last_tool_kind: KnownToolKind | "none";
+  last_tool_outcome: "succeeded" | "failed" | "unavailable";
+  turns_since: number;
+}
+
+export interface InteractionAskUserActionShape extends BaseActionShape {
+  tool_kind: "interaction.ask_user";
+  question_category: QuestionCategory;
+  recent_tool_context: RecentToolContext;
+}
+
 export interface BaseActionShape {
   tool_kind: string;
   external_side_effect?: boolean;
@@ -133,6 +153,7 @@ export type ActionShape =
   | WebfetchActionShape
   | McpActionShape
   | ComputerUseActionShape
+  | InteractionAskUserActionShape
   | UnknownActionShape;
 
 export const SEVERITY_TAXONOMY: Record<ClassifierSeverity, SeverityTierDefinition> = {
@@ -216,6 +237,10 @@ export const CLASSIFIER_FIXTURES: Array<{ action: string; expected: ClassifierSe
   { action: "git push origin main", expected: "permanent" },
   { action: "force-push origin main", expected: "critical" },
   { action: "drop database", expected: "critical" },
+  { action: "ask_user{recovery, last=edit:failed}", expected: "permanent" },
+  { action: "ask_user{tooling_choice, last=bash:succeeded}", expected: "routine" },
+  { action: "ask_user{scope_clarification, last=webfetch:succeeded}", expected: "notable" },
+  { action: "ask_user{approval_request, last=none:unavailable}", expected: "notable" },
 ];
 
 const KNOWN_TOOL_KINDS: KnownToolKind[] = ["bash", "edit", "webfetch", "mcp", "computer_use"];
@@ -285,6 +310,16 @@ function isComputerUseActionShape(action: ActionShape): action is ComputerUseAct
   return (
     action.tool_kind === "computer_use" &&
     typeof (action as ComputerUseActionShape).action === "string"
+  );
+}
+
+export function isInteractionAskUserActionShape(
+  action: ActionShape,
+): action is InteractionAskUserActionShape {
+  return (
+    action.tool_kind === "interaction.ask_user" &&
+    typeof (action as InteractionAskUserActionShape).question_category === "string" &&
+    typeof (action as InteractionAskUserActionShape).recent_tool_context === "object"
   );
 }
 
@@ -437,6 +472,7 @@ export function buildClassifierPromptFragments(
     "If the variant is unknown and side effects are plausible, return classification_failed.",
     "classification_failed bypasses latitude and must defer for human review.",
     "Return one of the allowed classification values only.",
+    "When ending a turn to ask the user a question, construct an interaction.ask_user action shape rather than leaving the turn unclassified.",
   ].join("\n");
 
   const fullSystemAddendum = [
@@ -460,6 +496,50 @@ export function buildClassifierPromptFragments(
 }
 
 export function classifyActionShapeFallback(action: ActionShape): ClassifiedAction {
+  if (action.tool_kind === "interaction.ask_user") {
+    if (!isInteractionAskUserActionShape(action)) {
+      return {
+        outcome: "classification_failed",
+        reasonCode: "malformed_ask_user_action_shape",
+        source: "deterministic",
+        toolKind: action.tool_kind,
+      };
+    }
+
+    const { question_category, recent_tool_context } = action;
+
+    if (
+      recent_tool_context.last_tool_outcome === "failed" &&
+      question_category === "recovery_decision"
+    ) {
+      return {
+        outcome: "permanent",
+        reasonCode: "ask_user_recovery_after_failure",
+        source: "deterministic",
+        toolKind: action.tool_kind,
+      };
+    }
+
+    if (
+      question_category === "tooling_choice" &&
+      recent_tool_context.last_tool_outcome === "succeeded"
+    ) {
+      return {
+        outcome: "routine",
+        reasonCode: "ask_user_tooling_choice",
+        source: "deterministic",
+        toolKind: action.tool_kind,
+      };
+    }
+
+    return {
+      outcome: "notable",
+      reasonCode: "ask_user_baseline",
+      source: "deterministic",
+      toolKind: action.tool_kind,
+    };
+  }
+
   if (!KNOWN_TOOL_KINDS.includes(action.tool_kind as KnownToolKind)) {
     const risk = (action as UnknownActionShape).side_effect_risk ?? "possible";
     return {
@@ -675,6 +755,9 @@ export function classifyFixtureAction(action: string): ClassifierSeverity {
 
   if (normalized.includes("force-push") || normalized.includes("drop database")) return "critical";
   if (normalized.includes("git push") || normalized.includes("rm -rf")) return "permanent";
+  if (normalized.startsWith("ask_user{recovery")) return "permanent";
+  if (normalized.startsWith("ask_user{tooling_choice")) return "routine";
+  if (normalized.startsWith("ask_user{")) return "notable";
   if (normalized.includes("random-") || normalized.includes("idempotent api write"))
     return "notable";
   if (
