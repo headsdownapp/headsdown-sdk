@@ -1,7 +1,4 @@
 export {
-  AGENT_ACTION_LABELS,
-  AGENT_CALL_FALLBACK_COPY,
-  AGENT_UNKNOWN_CALL_SAFE_ACTIONS,
   isHeadsDownActionKey,
   isHeadsDownCallKey,
   isSafeAgentRenderCopy,

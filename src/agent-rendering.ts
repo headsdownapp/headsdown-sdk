@@ -55,14 +55,14 @@ export interface AgentHeadsDownCallRender {
   readonly fallbackReason: HeadsDownCallFallback["reason"];
 }
 
-export const AGENT_UNKNOWN_CALL_SAFE_ACTIONS: readonly HeadsDownActionKey[] = [
+const AGENT_UNKNOWN_CALL_SAFE_ACTIONS: readonly HeadsDownActionKey[] = [
   "keep_queued",
   "pause_and_summarize",
   "queue_for_later",
   "stop_run",
 ];
 
-export const AGENT_ACTION_LABELS: Record<HeadsDownActionKey, string> = {
+const AGENT_ACTION_LABELS: Record<HeadsDownActionKey, string> = {
   continue: "Continue",
   continue_with_limit: "Continue with limit",
   narrow_scope: "Narrow scope",
@@ -78,7 +78,7 @@ export const AGENT_ACTION_LABELS: Record<HeadsDownActionKey, string> = {
   keep_queued: "Keep queued",
 };
 
-export const AGENT_CALL_FALLBACK_COPY: Record<HeadsDownCallKey, { title: string; body: string }> = {
+const AGENT_CALL_FALLBACK_COPY: Record<HeadsDownCallKey, { title: string; body: string }> = {
   good_to_run: {
     title: "Good to run",
     body: "HeadsDown says this run can proceed inside the current boundary.",
@@ -214,7 +214,9 @@ function knownAllowedActions(
   call: HeadsDownCall,
   fallbackReason: HeadsDownCallFallback["reason"],
 ): HeadsDownActionKey[] {
-  const knownActions = call.allowedActionKnownKeys.filter(isHeadsDownActionKey);
+  const knownActions = Array.from(
+    new Set(call.allowedActionKnownKeys.filter(isHeadsDownActionKey)),
+  );
   if (fallbackReason === "known_key") return knownActions;
 
   return knownActions.filter((actionKey) => AGENT_UNKNOWN_CALL_SAFE_ACTIONS.includes(actionKey));

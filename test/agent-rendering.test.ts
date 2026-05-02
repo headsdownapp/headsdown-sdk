@@ -47,6 +47,9 @@ describe("agent subpath", () => {
 
     expect(agent.renderHeadsDownCallForAgent).toBe(renderHeadsDownCallForAgent);
     expect(agent.buildAgentRunEventInput).toBe(buildAgentRunEventInput);
+    expect("AGENT_ACTION_LABELS" in agent).toBe(false);
+    expect("AGENT_CALL_FALLBACK_COPY" in agent).toBe(false);
+    expect("AGENT_UNKNOWN_CALL_SAFE_ACTIONS" in agent).toBe(false);
     expect(packageJson.exports["./agent"]).toEqual({
       types: "./dist/agent.d.ts",
       import: "./dist/agent.js",
@@ -67,7 +70,7 @@ describe("agent subpath", () => {
         secondaryActionKnownKey: "keep_queued",
         secondaryActionIntent: "none",
         recommendedActionKnownKey: "resume_run",
-        allowedActionKnownKeys: ["resume_run", "keep_queued"],
+        allowedActionKnownKeys: ["resume_run", "resume_run", "keep_queued"],
       }),
     );
 
