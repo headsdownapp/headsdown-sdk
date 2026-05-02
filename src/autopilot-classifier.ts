@@ -59,6 +59,8 @@ export interface ClassifierPolicy {
   latitude: ClassifierLatitude;
   escalationStrategy?: ClassifierEscalationStep[];
   sandboxPreference?: "preferred" | "required" | "avoid";
+  identityActionOverrides?: string[];
+  houseRules?: string[];
 }
 
 export interface IntegrationCapabilities {

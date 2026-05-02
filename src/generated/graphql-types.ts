@@ -1,14 +1,11 @@
-export type Maybe<T> = T | null;
-export type InputMaybe<T> = T | null;
-export type Exact<T extends { [key: string]: unknown }> = { [K in keyof T]: T[K] };
-export type MakeOptional<T, K extends keyof T> = Omit<T, K> & { [SubKey in K]?: Maybe<T[SubKey]> };
-export type MakeMaybe<T, K extends keyof T> = Omit<T, K> & { [SubKey in K]: Maybe<T[SubKey]> };
-export type MakeEmpty<T extends { [key: string]: unknown }, K extends keyof T> = {
-  [_ in K]?: never;
-};
+/** Internal type. DO NOT USE DIRECTLY. */
+type Exact<T extends { [key: string]: unknown }> = { [K in keyof T]: T[K] };
+/** Internal type. DO NOT USE DIRECTLY. */
 export type Incremental<T> =
   | T
   | { [P in keyof T]?: P extends " $fragmentName" | "__typename" ? T[P] : never };
+export type Maybe<T> = T | null;
+export type InputMaybe<T> = T | null;
 /** All built-in and custom scalars, mapped to their actual values */
 export type Scalars = {
   ID: { input: string; output: string };
@@ -22,6 +19,8 @@ export type Scalars = {
   Time: { input: string; output: string };
   UUID4: { input: string; output: string };
 };
+
+export type ActionSeverity = "CRITICAL" | "NOTABLE" | "PERMANENT" | "ROUTINE" | "TRIVIAL";
 
 export type AgentControlDataState =
   | "EMPTY"
@@ -335,6 +334,31 @@ export type AutoResponderSettings = {
   updatedAt: Scalars["DateTime"]["output"];
 };
 
+export type AutopilotDomainOverrides = {
+  additions: Array<Scalars["String"]["output"]>;
+  blocked: Array<Scalars["String"]["output"]>;
+};
+
+export type AutopilotIdentityActionEntry = {
+  actionKey: Scalars["String"]["output"];
+  strategy: IdentityActionStrategy;
+};
+
+export type AutopilotLatitude = "BALANCED" | "CAUTIOUS" | "HOLD" | "LOCKDOWN" | "VERIFY";
+
+export type AutopilotPolicy = {
+  classifierVersion: Scalars["String"]["output"];
+  criticalActions: Array<Scalars["String"]["output"]>;
+  domainOverrides: AutopilotDomainOverrides;
+  escalationStrategy: Array<EscalationStep>;
+  houseRules: Maybe<Scalars["String"]["output"]>;
+  identityActionOverrides: Array<AutopilotIdentityActionEntry>;
+  latitude: AutopilotLatitude;
+  latitudeSeverityMapping: Array<LatitudeSeverityMapping>;
+  sandboxPreference: SandboxPreference;
+  wellKnownGoodDomains: Array<Scalars["String"]["output"]>;
+};
+
 export type AvailabilityOverride = {
   cancelledAt: Maybe<Scalars["DateTime"]["output"]>;
   cancelledById: Maybe<Scalars["ID"]["output"]>;
@@ -455,19 +479,28 @@ export type ContractInput = {
 };
 
 export type CurrentCallView = {
+  actionTargetId: Maybe<Scalars["ID"]["output"]>;
   allowedActionKeys: Array<HeadsdownActionKey>;
   body: Scalars["String"]["output"];
   callKey: HeadsdownCallKey;
+  continueHint: Maybe<Scalars["String"]["output"]>;
   dataState: AgentControlDataState;
   evaluatedAt: Maybe<Scalars["DateTime"]["output"]>;
+  expiresAt: Maybe<Scalars["DateTime"]["output"]>;
   primaryActionIntent: AgentControlUiIntent;
   primaryActionLabel: Maybe<Scalars["String"]["output"]>;
   reasonCodes: Array<Scalars["String"]["output"]>;
   recommendedActionKey: Maybe<HeadsdownActionKey>;
+  remainingMinutes: Maybe<Scalars["Int"]["output"]>;
+  runContextLabel: Maybe<Scalars["String"]["output"]>;
   secondaryActionIntent: AgentControlUiIntent;
   secondaryActionLabel: Maybe<Scalars["String"]["output"]>;
   title: Scalars["String"]["output"];
+  wrapUpHint: Maybe<Scalars["String"]["output"]>;
+  wrapUpHints: Maybe<Array<Scalars["String"]["output"]>>;
 };
+
+export type DeferredDecisionResolutionKind = "APPROVED" | "DISMISSED" | "OVERRIDDEN" | "REFINED";
 
 export type DelegationGrant = {
   agentId: Maybe<Scalars["String"]["output"]>;
@@ -539,6 +572,12 @@ export type DigestSummary = {
   sourceType: Scalars["String"]["output"];
 };
 
+export type EscalationStep =
+  | "DEFER_FOR_HUMAN_REVIEW"
+  | "DEFER_TO_END_OF_RUN"
+  | "TRY_ALTERNATIVE"
+  | "TRY_IN_SANDBOX";
+
 export type HeadsdownActionError = {
   code: Scalars["String"]["output"];
   details: Scalars["JSON"]["output"];
@@ -579,6 +618,7 @@ export type HeadsdownActionState =
   | "NEEDS_USER"
   | "NEEDS_YOUR_YES"
   | "NOT_WORTH_STARTING_NOW"
+  | "OFF_HOURS_PROTECTED"
   | "OFF_THE_CLOCK"
   | "PAUSED"
   | "QUEUED"
@@ -612,6 +652,7 @@ export type HeadsdownCall = {
   reasonCodes: Array<Scalars["String"]["output"]>;
   recommendedActionKey: Maybe<Scalars["String"]["output"]>;
   recommendedActionKnownKey: Maybe<HeadsdownActionKey>;
+  remainingMinutes: Maybe<Scalars["Int"]["output"]>;
   secondaryActionIntent: AgentControlUiIntent;
   secondaryActionKey: Maybe<Scalars["String"]["output"]>;
   secondaryActionKnownKey: Maybe<HeadsdownActionKey>;
@@ -655,6 +696,13 @@ export type HeadsdownCallSeverity =
 
 export type HeadsdownCallUrgency = "ELEVATED" | "HIGH" | "LOW" | "NORMAL";
 
+export type IdentityActionStrategy =
+  | "DEFER_FOR_HUMAN_REVIEW"
+  | "DEFER_TO_END_OF_RUN"
+  | "PROCEED"
+  | "TRY_ALTERNATIVE"
+  | "TRY_IN_SANDBOX";
+
 export type InterruptResult = {
   allowed: Scalars["Boolean"]["output"];
   autoResponse: Maybe<Scalars["String"]["output"]>;
@@ -685,6 +733,12 @@ export type InterventionReplayRow = {
   key: Scalars["String"]["output"];
   label: Scalars["String"]["output"];
   value: Scalars["String"]["output"];
+};
+
+export type LatitudeSeverityMapping = {
+  alwaysDefer: Scalars["Boolean"]["output"];
+  latitude: AutopilotLatitude;
+  maxSeverity: Maybe<ActionSeverity>;
 };
 
 export type MobileClient = {
@@ -889,6 +943,16 @@ export type ReportAgentRunEventPayload = {
   ok: Scalars["Boolean"]["output"];
 };
 
+export type ResolveDeferredDecisionInput = {
+  decisionId: Scalars["ID"]["input"];
+  notesBucket: InputMaybe<Scalars["String"]["input"]>;
+  refinedDecisionCategory: InputMaybe<Scalars["String"]["input"]>;
+  refinedUrgencyBucket: InputMaybe<Scalars["String"]["input"]>;
+  resolutionKind: DeferredDecisionResolutionKind;
+  resolvedActionKey: InputMaybe<Scalars["String"]["input"]>;
+  runId: InputMaybe<Scalars["ID"]["input"]>;
+};
+
 export type RevokeDelegationGrantsResult = {
   revokedCount: Scalars["Int"]["output"];
 };
@@ -915,6 +979,7 @@ export type RootMutationType = {
    * @deprecated Use submitAgentRunOutcome
    */
   reportOutcome: Maybe<TaskOutcome>;
+  resolveDeferredDecision: ReportAgentRunEventPayload;
   revokeDelegationGrant: Maybe<DelegationGrant>;
   revokeDelegationGrants: Maybe<RevokeDelegationGrantsResult>;
   /** Submit an agent-run outcome. */
@@ -994,6 +1059,10 @@ export type RootMutationTypeReportOutcomeArgs = {
   input: OutcomeInput;
 };
 
+export type RootMutationTypeResolveDeferredDecisionArgs = {
+  input: ResolveDeferredDecisionInput;
+};
+
 export type RootMutationTypeRevokeDelegationGrantArgs = {
   id: Scalars["ID"]["input"];
 };
@@ -1036,6 +1105,8 @@ export type RootMutationTypeUpdateReachabilityWindowArgs = {
 };
 
 export type RootMutationTypeUpdateVerdictSettingsArgs = {
+  attendedWarningExtensionMinutes: InputMaybe<Scalars["Int"]["input"]>;
+  attendedWarningThresholdMinutes: InputMaybe<Array<Scalars["Int"]["input"]>>;
   defaultWrapUpMode: InputMaybe<WrapUpMode>;
   thresholds: InputMaybe<VerdictModeThresholdsInput>;
   wrapUpThresholdMinutes: InputMaybe<Scalars["Int"]["input"]>;
@@ -1049,6 +1120,7 @@ export type RootQueryType = {
   agentRunEvent: Maybe<AgentRunEvent>;
   agentRunEvents: Array<AgentRunEvent>;
   autoResponderSettings: Maybe<AutoResponderSettings>;
+  autopilotPolicy: AutopilotPolicy;
   availability: Maybe<AvailabilityResolution>;
   /**
    * List calibration profiles for the current user.
@@ -1093,9 +1165,13 @@ export type RootQueryTypeAgentRunEventsArgs = {
   occurredAfter: InputMaybe<Scalars["DateTime"]["input"]>;
   occurredBefore: InputMaybe<Scalars["DateTime"]["input"]>;
   proposalRef: InputMaybe<Scalars["String"]["input"]>;
-  resolutionKind: InputMaybe<Scalars["String"]["input"]>;
+  resolutionKind: InputMaybe<DeferredDecisionResolutionKind>;
   runId: InputMaybe<Scalars["ID"]["input"]>;
   taskProposalId: InputMaybe<Scalars["ID"]["input"]>;
+};
+
+export type RootQueryTypeAutopilotPolicyArgs = {
+  mode: InputMaybe<Mode>;
 };
 
 export type RootQueryTypeAvailabilityArgs = {
@@ -1182,6 +1258,8 @@ export type RuleSetSnapshot = {
   /** Canonical rule set type key. */
   type: Scalars["String"]["output"];
 };
+
+export type SandboxPreference = "DISABLED" | "OPTIONAL" | "PREFERRED" | "REQUIRED";
 
 /** Composed standing-rules read model used by policy editor surfaces. */
 export type StandingRules = {
@@ -1374,6 +1452,8 @@ export type VerdictOverride = {
 };
 
 export type VerdictSettings = {
+  attendedWarningExtensionMinutes: Scalars["Int"]["output"];
+  attendedWarningThresholdMinutes: Array<Scalars["Int"]["output"]>;
   defaultWrapUpMode: WrapUpMode;
   id: Scalars["ID"]["output"];
   insertedAt: Scalars["DateTime"]["output"];
@@ -1441,7 +1521,7 @@ export type ActiveContractQuery = {
 };
 
 export type ScheduleQueryVariables = Exact<{
-  at: InputMaybe<Scalars["DateTime"]["input"]>;
+  at: string | null | undefined;
 }>;
 
 export type ScheduleQuery = {
@@ -1595,7 +1675,7 @@ export type AgentControlOverviewQuery = {
 };
 
 export type InterventionReplayQueryVariables = Exact<{
-  proposalId: Scalars["ID"]["input"];
+  proposalId: string | number;
 }>;
 
 export type InterventionReplayQuery = {
@@ -1653,13 +1733,13 @@ export type ReportAgentRunEventMutation = {
 };
 
 export type AgentRunEventsQueryVariables = Exact<{
-  runId: InputMaybe<Scalars["ID"]["input"]>;
-  eventType: InputMaybe<Scalars["String"]["input"]>;
-  resolutionKind: InputMaybe<Scalars["String"]["input"]>;
-  flaggedForReview: InputMaybe<Scalars["Boolean"]["input"]>;
-  insertedAfter: InputMaybe<Scalars["DateTime"]["input"]>;
-  insertedBefore: InputMaybe<Scalars["DateTime"]["input"]>;
-  limit: InputMaybe<Scalars["Int"]["input"]>;
+  runId: string | number | null | undefined;
+  eventType: string | null | undefined;
+  resolutionKind: DeferredDecisionResolutionKind | null | undefined;
+  flaggedForReview: boolean | null | undefined;
+  insertedAfter: string | null | undefined;
+  insertedBefore: string | null | undefined;
+  limit: number | null | undefined;
 }>;
 
 export type AgentRunEventsQuery = {
@@ -1770,7 +1850,7 @@ export type ApplyHeadsdownActionMutation = {
 };
 
 export type AvailabilityQueryVariables = Exact<{
-  at: InputMaybe<Scalars["DateTime"]["input"]>;
+  at: string | null | undefined;
 }>;
 
 export type AvailabilityQuery = {
@@ -1861,8 +1941,8 @@ export type SubmitProposalMutation = {
 };
 
 export type ProposalsQueryVariables = Exact<{
-  verdict: InputMaybe<VerdictDecision>;
-  latest: InputMaybe<Scalars["Int"]["input"]>;
+  verdict: VerdictDecision | null | undefined;
+  latest: number | null | undefined;
 }>;
 
 export type ProposalsQuery = {
@@ -1910,7 +1990,7 @@ export type PresetsQuery = {
 };
 
 export type ApplyPresetMutationVariables = Exact<{
-  id: Scalars["ID"]["input"];
+  id: string | number;
 }>;
 
 export type ApplyPresetMutation = {
@@ -2009,7 +2089,7 @@ export type CreateDelegationGrantMutation = {
 };
 
 export type DelegationGrantsQueryVariables = Exact<{
-  filter: InputMaybe<DelegationGrantFilterInput>;
+  filter: DelegationGrantFilterInput | null | undefined;
 }>;
 
 export type DelegationGrantsQuery = {
@@ -2053,7 +2133,7 @@ export type ActiveDelegationGrantsQuery = {
 };
 
 export type RevokeDelegationGrantMutationVariables = Exact<{
-  id: Scalars["ID"]["input"];
+  id: string | number;
 }>;
 
 export type RevokeDelegationGrantMutation = {
@@ -2076,7 +2156,7 @@ export type RevokeDelegationGrantMutation = {
 };
 
 export type RevokeDelegationGrantsMutationVariables = Exact<{
-  filter: InputMaybe<DelegationGrantFilterInput>;
+  filter: DelegationGrantFilterInput | null | undefined;
 }>;
 
 export type RevokeDelegationGrantsMutation = {
@@ -2084,7 +2164,7 @@ export type RevokeDelegationGrantsMutation = {
 };
 
 export type EvaluateInterruptQueryVariables = Exact<{
-  handle: Scalars["String"]["input"];
+  handle: string;
 }>;
 
 export type EvaluateInterruptQuery = {
@@ -2136,9 +2216,9 @@ export type VerdictSettingsQuery = {
 };
 
 export type UpdateVerdictSettingsMutationVariables = Exact<{
-  thresholds: InputMaybe<VerdictModeThresholdsInput>;
-  defaultWrapUpMode: InputMaybe<WrapUpMode>;
-  wrapUpThresholdMinutes: InputMaybe<Scalars["Int"]["input"]>;
+  thresholds: VerdictModeThresholdsInput | null | undefined;
+  defaultWrapUpMode: WrapUpMode | null | undefined;
+  wrapUpThresholdMinutes: number | null | undefined;
 }>;
 
 export type UpdateVerdictSettingsMutation = {
@@ -2158,7 +2238,7 @@ export type UpdateVerdictSettingsMutation = {
 };
 
 export type DigestSummariesQueryVariables = Exact<{
-  latest: InputMaybe<Scalars["Int"]["input"]>;
+  latest: number | null | undefined;
 }>;
 
 export type DigestSummariesQuery = {
@@ -2177,7 +2257,7 @@ export type DigestSummariesQuery = {
 };
 
 export type DismissDigestEntryMutationVariables = Exact<{
-  id: Scalars["ID"]["input"];
+  id: string | number;
 }>;
 
 export type DismissDigestEntryMutation = {
@@ -2209,9 +2289,9 @@ export type AutoResponderSettingsQuery = {
 };
 
 export type UpdateAutoResponderSettingsMutationVariables = Exact<{
-  busyText: InputMaybe<Scalars["String"]["input"]>;
-  limitedText: InputMaybe<Scalars["String"]["input"]>;
-  offlineText: InputMaybe<Scalars["String"]["input"]>;
+  busyText: string | null | undefined;
+  limitedText: string | null | undefined;
+  offlineText: string | null | undefined;
 }>;
 
 export type UpdateAutoResponderSettingsMutation = {
@@ -2226,7 +2306,7 @@ export type UpdateAutoResponderSettingsMutation = {
 };
 
 export type TeamsQueryVariables = Exact<{
-  id: InputMaybe<Scalars["ID"]["input"]>;
+  id: string | number | null | undefined;
 }>;
 
 export type TeamsQuery = {
@@ -2261,7 +2341,7 @@ export type CompanyQuery = {
 };
 
 export type TeamPresenceQueryVariables = Exact<{
-  teamId: Scalars["ID"]["input"];
+  teamId: string | number;
 }>;
 
 export type TeamPresenceQuery = {
@@ -2290,4 +2370,19 @@ export type ReportOutcomeMutation = {
     dataQualityScore: number | null;
     insertedAt: string;
   } | null;
+};
+
+export type AutopilotPolicyQueryVariables = Exact<{
+  mode: Mode;
+}>;
+
+export type AutopilotPolicyQuery = {
+  autopilotPolicy: {
+    classifierVersion: string;
+    latitude: AutopilotLatitude;
+    escalationStrategy: Array<EscalationStep>;
+    sandboxPreference: SandboxPreference;
+    houseRules: string | null;
+    identityActionOverrides: Array<{ actionKey: string; strategy: IdentityActionStrategy }>;
+  };
 };
