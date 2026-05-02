@@ -58,6 +58,12 @@ export {
   isInteractionAskUserActionShape,
 } from "./autopilot-classifier.js";
 export {
+  AUTOPILOT_POLICY_QUERY,
+  assertAutopilotPolicy,
+  fetchAutopilotPolicy,
+} from "./autopilot-policy.js";
+export type { AutopilotPolicyResponse } from "./autopilot-policy.js";
+export {
   buildActionIdempotencyKey,
   mapHeadsDownActionError,
   mapHeadsDownActionPayloadError,

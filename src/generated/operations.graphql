@@ -1,251 +1,202 @@
 query ActiveContract {
-    activeContract {
+  activeContract {
+    id
+    mode
+    status
+    statusEmoji
+    statusText
+    autoRespond
+    lock
+    duration
+    ruleSetType
+    ruleSetParams
+    expiresAt
+    insertedAt
+  }
+}
+
+query Schedule($at: DateTime) {
+  schedule: availability(at: $at) {
+    inReachableHours
+    nextTransitionAt
+    attentionDeadlineAt
+    wrapUpGuidance {
+      active
+      deadlineAt
+      remainingMinutes
+      profile
+      source
+      reason
+      hints
+      thresholdMinutes
+      selectedMode
+    }
+    activeWindow {
       id
+      label
+      priority
+      startTime
+      endTime
+      days
       mode
+      alertsPolicy
+      snooze
       status
       statusEmoji
       statusText
-      autoRespond
-      lock
-      duration
-      ruleSetType
-      ruleSetParams
-      expiresAt
-      insertedAt
+      autoActivate
+    }
+    nextWindow {
+      id
+      label
+      priority
+      startTime
+      endTime
+      days
+      mode
+      alertsPolicy
+      snooze
+      status
+      statusEmoji
+      statusText
+      autoActivate
     }
   }
-
-query Schedule($at: DateTime) {
-    schedule: availability(at: $at) {
-      inReachableHours
-      nextTransitionAt
-      attentionDeadlineAt
-      wrapUpGuidance {
-        active
-        deadlineAt
-        remainingMinutes
-        profile
-        source
-        reason
-        hints
-        thresholdMinutes
-        selectedMode
-      }
-      activeWindow {
-        id
-        label
-        priority
-        startTime
-        endTime
-        days
-        mode
-        alertsPolicy
-        snooze
-        status
-        statusEmoji
-        statusText
-        autoActivate
-      }
-      nextWindow {
-        id
-        label
-        priority
-        startTime
-        endTime
-        days
-        mode
-        alertsPolicy
-        snooze
-        status
-        statusEmoji
-        statusText
-        autoActivate
-      }
-    }
-  }
+}
 
 query AgentControlOverview {
-    agentControlOverview {
-      currentCall {
-        callKey
-        title
-        body
-        primaryActionLabel
-        primaryActionIntent
-        secondaryActionLabel
-        secondaryActionIntent
-        recommendedActionKey
-        allowedActionKeys
-        reasonCodes
-        dataState
-        evaluatedAt
-      }
-      headsdownCall {
-        key
-        knownKey
-        title
-        body
-        severity
-        urgency
-        primaryActionLabel
-        primaryActionKey
-        primaryActionKnownKey
-        primaryActionIntent
-        secondaryActionLabel
-        secondaryActionKey
-        secondaryActionKnownKey
-        secondaryActionIntent
-        recommendedActionKey
-        recommendedActionKnownKey
-        allowedActionKeys
-        allowedActionKnownKeys
-        allowedUiIntents
-        reasonCodes
-        confidence
-        evidenceSource
-        privacyMode
-        expiresAt
-      }
-      needsYourYes {
-        runId
-        proposalId
-        actionTargetId
-        callKey
-        title
-        body
-        itemState
-        primaryActionLabel
-        primaryActionIntent
-        recommendedActionKey
-        allowedActionKeys
-        reasonCodes
-        dataState
-        createdAt
-        updatedAt
-      }
-      needsYourYesState
-      runSummaries {
-        runId
-        proposalId
-        actionTargetId
-        callKey
-        runState
-        actionState
-        clientLabel
-        safeTitle
-        recommendedActionKey
-        allowedActionKeys
-        reasonCodes
-        elapsedSeconds
-        deadlineState
-        budgetState
-        nextActionLabel
-        nextActionIntent
-        dataState
-        detailsState
-        progressState
-        insertedAt
-        updatedAt
-      }
-      runSummariesState
-      valueMetrics {
-        metricKey
-        label
-        value
-        unit
-        confidence
-        evidenceCount
-        explanation
-        dataState
-      }
-      valueMetricsState
-      generatedAt
+  agentControlOverview {
+    currentCall {
+      callKey
+      title
+      body
+      primaryActionLabel
+      primaryActionIntent
+      secondaryActionLabel
+      secondaryActionIntent
+      recommendedActionKey
+      allowedActionKeys
+      reasonCodes
+      dataState
+      evaluatedAt
     }
-  }
-
-query InterventionReplay($proposalId: ID!) {
-    interventionReplay(proposalId: $proposalId) {
+    headsdownCall {
+      key
+      knownKey
+      title
+      body
+      severity
+      urgency
+      primaryActionLabel
+      primaryActionKey
+      primaryActionKnownKey
+      primaryActionIntent
+      secondaryActionLabel
+      secondaryActionKey
+      secondaryActionKnownKey
+      secondaryActionIntent
+      recommendedActionKey
+      recommendedActionKnownKey
+      allowedActionKeys
+      allowedActionKnownKeys
+      allowedUiIntents
+      reasonCodes
+      confidence
+      evidenceSource
+      privacyMode
+      expiresAt
+    }
+    needsYourYes {
       runId
       proposalId
       actionTargetId
       callKey
       title
-      whatWasAboutToHappen
-      whatHeadsdownSaw {
-        key
-        label
-        value
-      }
-      headsdownCall
-      thePlay
-      result
-      nextTime
-      reasonCodes
+      body
+      itemState
+      primaryActionLabel
+      primaryActionIntent
       recommendedActionKey
-      valueEvidence
+      allowedActionKeys
+      reasonCodes
       dataState
+      createdAt
       updatedAt
     }
+    needsYourYesState
+    runSummaries {
+      runId
+      proposalId
+      actionTargetId
+      callKey
+      runState
+      actionState
+      clientLabel
+      safeTitle
+      recommendedActionKey
+      allowedActionKeys
+      reasonCodes
+      elapsedSeconds
+      deadlineState
+      budgetState
+      nextActionLabel
+      nextActionIntent
+      dataState
+      detailsState
+      progressState
+      insertedAt
+      updatedAt
+    }
+    runSummariesState
+    valueMetrics {
+      metricKey
+      label
+      value
+      unit
+      confidence
+      evidenceCount
+      explanation
+      dataState
+    }
+    valueMetricsState
+    generatedAt
   }
+}
+
+query InterventionReplay($proposalId: ID!) {
+  interventionReplay(proposalId: $proposalId) {
+    runId
+    proposalId
+    actionTargetId
+    callKey
+    title
+    whatWasAboutToHappen
+    whatHeadsdownSaw {
+      key
+      label
+      value
+    }
+    headsdownCall
+    thePlay
+    result
+    nextTime
+    reasonCodes
+    recommendedActionKey
+    valueEvidence
+    dataState
+    updatedAt
+  }
+}
 
 mutation ReportAgentRunEvent($input: ReportAgentRunEventInput!) {
-    reportAgentRunEvent(input: $input) {
-      ok
-      error {
-        code
-        message
-        details
-      }
-      event {
-        id
-        eventId
-        eventType
-        schemaVersion
-        occurredAt
-        receivedAt
-        workspaceRef
-        client {
-          kind
-          name
-          version
-        }
-        actor {
-          kind
-          ref
-        }
-        runId
-        source
-        privacyMode
-        idempotencyKey
-        correlationId
-        causationEventId
-        sequence
-        emitterKey
-        proposalRef
-        payload
-        insertedAt
-      }
+  reportAgentRunEvent(input: $input) {
+    ok
+    error {
+      code
+      message
+      details
     }
-  }
-
-query AgentRunEvents(
-    $runId: ID
-    $eventType: String
-    $resolutionKind: String
-    $flaggedForReview: Boolean
-    $insertedAfter: DateTime
-    $insertedBefore: DateTime
-    $limit: Int
-  ) {
-    agentRunEvents(
-      runId: $runId
-      eventType: $eventType
-      resolutionKind: $resolutionKind
-      flaggedForReview: $flaggedForReview
-      insertedAfter: $insertedAfter
-      insertedBefore: $insertedBefore
-      limit: $limit
-    ) {
+    event {
       id
       eventId
       eventType
@@ -275,557 +226,636 @@ query AgentRunEvents(
       insertedAt
     }
   }
+}
+
+query AgentRunEvents(
+  $runId: ID
+  $eventType: String
+  $resolutionKind: DeferredDecisionResolutionKind
+  $flaggedForReview: Boolean
+  $insertedAfter: DateTime
+  $insertedBefore: DateTime
+  $limit: Int
+) {
+  agentRunEvents(
+    runId: $runId
+    eventType: $eventType
+    resolutionKind: $resolutionKind
+    flaggedForReview: $flaggedForReview
+    insertedAfter: $insertedAfter
+    insertedBefore: $insertedBefore
+    limit: $limit
+  ) {
+    id
+    eventId
+    eventType
+    schemaVersion
+    occurredAt
+    receivedAt
+    workspaceRef
+    client {
+      kind
+      name
+      version
+    }
+    actor {
+      kind
+      ref
+    }
+    runId
+    source
+    privacyMode
+    idempotencyKey
+    correlationId
+    causationEventId
+    sequence
+    emitterKey
+    proposalRef
+    payload
+    insertedAt
+  }
+}
 
 mutation ApplyHeadsdownAction($input: ApplyHeadsdownActionInput!) {
-    applyHeadsdownAction(input: $input) {
-      ok
-      error {
-        code
-        message
-        details
-      }
-      result {
-        actionKey
-        replayed
-        sourceState
-        resultingState
-        eventId
-        availabilityOverrideId
-      }
-      currentCall {
-        callKey
-        title
-        body
-        primaryActionLabel
-        primaryActionIntent
-        secondaryActionLabel
-        secondaryActionIntent
-        recommendedActionKey
-        allowedActionKeys
-        reasonCodes
-        dataState
-        evaluatedAt
-      }
-      headsdownCall {
-        key
-        knownKey
-        title
-        body
-        severity
-        urgency
-        primaryActionLabel
-        primaryActionKey
-        primaryActionKnownKey
-        primaryActionIntent
-        secondaryActionLabel
-        secondaryActionKey
-        secondaryActionKnownKey
-        secondaryActionIntent
-        recommendedActionKey
-        recommendedActionKnownKey
-        allowedActionKeys
-        allowedActionKnownKeys
-        allowedUiIntents
-        reasonCodes
-        confidence
-        evidenceSource
-        privacyMode
-        expiresAt
-      }
-      runSummary {
-        runId
-        proposalId
-        actionTargetId
-        callKey
-        runState
-        actionState
-        clientLabel
-        safeTitle
-        recommendedActionKey
-        allowedActionKeys
-        reasonCodes
-        elapsedSeconds
-        deadlineState
-        budgetState
-        nextActionLabel
-        nextActionIntent
-        dataState
-        detailsState
-        progressState
-        insertedAt
-        updatedAt
-      }
+  applyHeadsdownAction(input: $input) {
+    ok
+    error {
+      code
+      message
+      details
+    }
+    result {
+      actionKey
+      replayed
+      sourceState
+      resultingState
+      eventId
+      availabilityOverrideId
+    }
+    currentCall {
+      callKey
+      title
+      body
+      primaryActionLabel
+      primaryActionIntent
+      secondaryActionLabel
+      secondaryActionIntent
+      recommendedActionKey
+      allowedActionKeys
+      reasonCodes
+      dataState
+      evaluatedAt
+    }
+    headsdownCall {
+      key
+      knownKey
+      title
+      body
+      severity
+      urgency
+      primaryActionLabel
+      primaryActionKey
+      primaryActionKnownKey
+      primaryActionIntent
+      secondaryActionLabel
+      secondaryActionKey
+      secondaryActionKnownKey
+      secondaryActionIntent
+      recommendedActionKey
+      recommendedActionKnownKey
+      allowedActionKeys
+      allowedActionKnownKeys
+      allowedUiIntents
+      reasonCodes
+      confidence
+      evidenceSource
+      privacyMode
+      expiresAt
+    }
+    runSummary {
+      runId
+      proposalId
+      actionTargetId
+      callKey
+      runState
+      actionState
+      clientLabel
+      safeTitle
+      recommendedActionKey
+      allowedActionKeys
+      reasonCodes
+      elapsedSeconds
+      deadlineState
+      budgetState
+      nextActionLabel
+      nextActionIntent
+      dataState
+      detailsState
+      progressState
+      insertedAt
+      updatedAt
     }
   }
+}
 
 query Availability($at: DateTime) {
-    activeContract {
+  activeContract {
+    id
+    mode
+    status
+    statusEmoji
+    statusText
+    autoRespond
+    lock
+    duration
+    ruleSetType
+    ruleSetParams
+    expiresAt
+    insertedAt
+  }
+  schedule: availability(at: $at) {
+    inReachableHours
+    nextTransitionAt
+    attentionDeadlineAt
+    wrapUpGuidance {
+      active
+      deadlineAt
+      remainingMinutes
+      profile
+      source
+      reason
+      hints
+      thresholdMinutes
+      selectedMode
+    }
+    activeWindow {
       id
+      label
+      priority
+      startTime
+      endTime
+      days
       mode
+      alertsPolicy
+      snooze
       status
       statusEmoji
       statusText
-      autoRespond
-      lock
-      duration
-      ruleSetType
-      ruleSetParams
-      expiresAt
-      insertedAt
+      autoActivate
     }
-    schedule: availability(at: $at) {
-      inReachableHours
-      nextTransitionAt
-      attentionDeadlineAt
-      wrapUpGuidance {
-        active
-        deadlineAt
-        remainingMinutes
-        profile
-        source
-        reason
-        hints
-        thresholdMinutes
-        selectedMode
-      }
-      activeWindow {
-        id
-        label
-        priority
-        startTime
-        endTime
-        days
-        mode
-        alertsPolicy
-        snooze
-        status
-        statusEmoji
-        statusText
-        autoActivate
-      }
-      nextWindow {
-        id
-        label
-        priority
-        startTime
-        endTime
-        days
-        mode
-        alertsPolicy
-        snooze
-        status
-        statusEmoji
-        statusText
-        autoActivate
-      }
+    nextWindow {
+      id
+      label
+      priority
+      startTime
+      endTime
+      days
+      mode
+      alertsPolicy
+      snooze
+      status
+      statusEmoji
+      statusText
+      autoActivate
     }
   }
+}
 
 mutation SubmitProposal($input: ProposalInput!) {
-    submitProposal(input: $input) {
-      decision
+  submitProposal(input: $input) {
+    decision
+    reason
+    proposalId
+    evaluatedAt
+    wrapUpGuidance {
+      active
+      deadlineAt
+      remainingMinutes
+      profile
+      source
       reason
-      proposalId
-      evaluatedAt
-      wrapUpGuidance {
-        active
-        deadlineAt
-        remainingMinutes
-        profile
-        source
-        reason
-        hints
-        thresholdMinutes
-        selectedMode
-      }
+      hints
+      thresholdMinutes
+      selectedMode
     }
   }
+}
 
 query Proposals($verdict: VerdictDecision, $latest: Int) {
-    proposals(verdict: $verdict, latest: $latest) {
-      id
-      agentRef
-      model
-      framework
-      description
-      estimatedFiles
-      estimatedMinutes
-      scopeSummary
-      sourceRef
-      deliveryMode
-      verdict
-      verdictReason
-      wrapUpGuidance {
-        active
-        deadlineAt
-        remainingMinutes
-        profile
-        source
-        reason
-        hints
-        thresholdMinutes
-        selectedMode
-      }
-      insertedAt
+  proposals(verdict: $verdict, latest: $latest) {
+    id
+    agentRef
+    model
+    framework
+    description
+    estimatedFiles
+    estimatedMinutes
+    scopeSummary
+    sourceRef
+    deliveryMode
+    verdict
+    verdictReason
+    wrapUpGuidance {
+      active
+      deadlineAt
+      remainingMinutes
+      profile
+      source
+      reason
+      hints
+      thresholdMinutes
+      selectedMode
     }
+    insertedAt
   }
+}
 
 query Presets {
-    presets {
-      id
-      name
-      status
-      statusEmoji
-      statusText
-      duration
-      insertedAt
-      updatedAt
-    }
+  presets {
+    id
+    name
+    status
+    statusEmoji
+    statusText
+    duration
+    insertedAt
+    updatedAt
   }
+}
 
 mutation ApplyPreset($id: ID!) {
-    applyPreset(id: $id) {
-      id
-      mode
-      status
-      statusEmoji
-      statusText
-      autoRespond
-      lock
-      duration
-      ruleSetType
-      ruleSetParams
-      expiresAt
-      insertedAt
-    }
+  applyPreset(id: $id) {
+    id
+    mode
+    status
+    statusEmoji
+    statusText
+    autoRespond
+    lock
+    duration
+    ruleSetType
+    ruleSetParams
+    expiresAt
+    insertedAt
   }
+}
 
 mutation CreateContract($input: ContractInput!) {
-    createContract(input: $input) {
-      id
-      mode
-      status
-      statusEmoji
-      statusText
-      autoRespond
-      lock
-      duration
-      ruleSetType
-      ruleSetParams
-      expiresAt
-      insertedAt
-    }
+  createContract(input: $input) {
+    id
+    mode
+    status
+    statusEmoji
+    statusText
+    autoRespond
+    lock
+    duration
+    ruleSetType
+    ruleSetParams
+    expiresAt
+    insertedAt
   }
+}
 
 query Profile {
-    profile {
-      id
-      name
-      handle
-      email
-      avatar
-      timezone
-      visibilityLevel
-      showStatusMessage
-      confirmedAt
-      location
-      insertedAt
-      updatedAt
-    }
+  profile {
+    id
+    name
+    handle
+    email
+    avatar
+    timezone
+    visibilityLevel
+    showStatusMessage
+    confirmedAt
+    location
+    insertedAt
+    updatedAt
   }
+}
 
 mutation OverrideVerdict($input: OverrideInput!) {
-    overrideVerdict(input: $input) {
-      id
-      originalVerdict
-      overrideVerdict
-      reason
-      proposalId
-      insertedAt
-    }
+  overrideVerdict(input: $input) {
+    id
+    originalVerdict
+    overrideVerdict
+    reason
+    proposalId
+    insertedAt
   }
+}
 
 mutation CreateDelegationGrant($input: DelegationGrantInput!) {
-    createDelegationGrant(input: $input) {
-      id
-      scope
-      sessionId
-      workspaceRef
-      agentId
-      permissions
-      source
-      expiresAt
-      revokedAt
-      expiredAt
-      createdById
-      revokedById
-      insertedAt
-      updatedAt
-    }
+  createDelegationGrant(input: $input) {
+    id
+    scope
+    sessionId
+    workspaceRef
+    agentId
+    permissions
+    source
+    expiresAt
+    revokedAt
+    expiredAt
+    createdById
+    revokedById
+    insertedAt
+    updatedAt
   }
+}
 
 query DelegationGrants($filter: DelegationGrantFilterInput) {
-    delegationGrants(filter: $filter) {
-      id
-      scope
-      sessionId
-      workspaceRef
-      agentId
-      permissions
-      source
-      expiresAt
-      revokedAt
-      expiredAt
-      createdById
-      revokedById
-      insertedAt
-      updatedAt
-    }
+  delegationGrants(filter: $filter) {
+    id
+    scope
+    sessionId
+    workspaceRef
+    agentId
+    permissions
+    source
+    expiresAt
+    revokedAt
+    expiredAt
+    createdById
+    revokedById
+    insertedAt
+    updatedAt
   }
+}
 
 query ActiveDelegationGrants {
-    activeDelegationGrants {
-      id
-      scope
-      sessionId
-      workspaceRef
-      agentId
-      permissions
-      source
-      expiresAt
-      revokedAt
-      expiredAt
-      createdById
-      revokedById
-      insertedAt
-      updatedAt
-    }
+  activeDelegationGrants {
+    id
+    scope
+    sessionId
+    workspaceRef
+    agentId
+    permissions
+    source
+    expiresAt
+    revokedAt
+    expiredAt
+    createdById
+    revokedById
+    insertedAt
+    updatedAt
   }
+}
 
 mutation RevokeDelegationGrant($id: ID!) {
-    revokeDelegationGrant(id: $id) {
-      id
-      scope
-      sessionId
-      workspaceRef
-      agentId
-      permissions
-      source
-      expiresAt
-      revokedAt
-      expiredAt
-      createdById
-      revokedById
-      insertedAt
-      updatedAt
-    }
+  revokeDelegationGrant(id: $id) {
+    id
+    scope
+    sessionId
+    workspaceRef
+    agentId
+    permissions
+    source
+    expiresAt
+    revokedAt
+    expiredAt
+    createdById
+    revokedById
+    insertedAt
+    updatedAt
   }
+}
 
 mutation RevokeDelegationGrants($filter: DelegationGrantFilterInput) {
-    revokeDelegationGrants(filter: $filter) {
-      revokedCount
-    }
+  revokeDelegationGrants(filter: $filter) {
+    revokedCount
   }
+}
 
 query EvaluateInterrupt($handle: String!) {
-    evaluateInterrupt(handle: $handle) {
-      allowed
-      reason
-      autoResponse
-    }
+  evaluateInterrupt(handle: $handle) {
+    allowed
+    reason
+    autoResponse
   }
+}
 
 query CalibrationProfiles {
-    calibrationProfiles {
-      id
-      model
-      framework
-      sampleSize
-      medianDurationMinutes
-      successRate
-      overrideRate
-      p25DurationMinutes
-      p75DurationMinutes
-      durationCiLower
-      durationCiUpper
-      successRateCiLower
-      successRateCiUpper
-      confidenceLevel
-      tier
-      status
-      tasksToHighConfidence
-      insertedAt
-      updatedAt
-    }
+  calibrationProfiles {
+    id
+    model
+    framework
+    sampleSize
+    medianDurationMinutes
+    successRate
+    overrideRate
+    p25DurationMinutes
+    p75DurationMinutes
+    durationCiLower
+    durationCiUpper
+    successRateCiLower
+    successRateCiUpper
+    confidenceLevel
+    tier
+    status
+    tasksToHighConfidence
+    insertedAt
+    updatedAt
   }
+}
 
 query VerdictSettings {
-    verdictSettings {
-      id
-      thresholds {
-        online {
-          maxFiles
-          maxEstimatedMinutes
-        }
-        busy {
-          maxFiles
-          maxEstimatedMinutes
-        }
-        limited {
-          maxFiles
-          maxEstimatedMinutes
-        }
-        offline {
-          maxFiles
-          maxEstimatedMinutes
-        }
+  verdictSettings {
+    id
+    thresholds {
+      online {
+        maxFiles
+        maxEstimatedMinutes
       }
-      defaultWrapUpMode
-      wrapUpThresholdMinutes
-      insertedAt
-      updatedAt
+      busy {
+        maxFiles
+        maxEstimatedMinutes
+      }
+      limited {
+        maxFiles
+        maxEstimatedMinutes
+      }
+      offline {
+        maxFiles
+        maxEstimatedMinutes
+      }
     }
+    defaultWrapUpMode
+    wrapUpThresholdMinutes
+    insertedAt
+    updatedAt
   }
+}
 
-mutation UpdateVerdictSettings($thresholds: VerdictModeThresholdsInput, $defaultWrapUpMode: WrapUpMode, $wrapUpThresholdMinutes: Int) {
-    updateVerdictSettings(thresholds: $thresholds, defaultWrapUpMode: $defaultWrapUpMode, wrapUpThresholdMinutes: $wrapUpThresholdMinutes) {
-      id
-      thresholds {
-        online {
-          maxFiles
-          maxEstimatedMinutes
-        }
-        busy {
-          maxFiles
-          maxEstimatedMinutes
-        }
-        limited {
-          maxFiles
-          maxEstimatedMinutes
-        }
-        offline {
-          maxFiles
-          maxEstimatedMinutes
-        }
+mutation UpdateVerdictSettings(
+  $thresholds: VerdictModeThresholdsInput
+  $defaultWrapUpMode: WrapUpMode
+  $wrapUpThresholdMinutes: Int
+) {
+  updateVerdictSettings(
+    thresholds: $thresholds
+    defaultWrapUpMode: $defaultWrapUpMode
+    wrapUpThresholdMinutes: $wrapUpThresholdMinutes
+  ) {
+    id
+    thresholds {
+      online {
+        maxFiles
+        maxEstimatedMinutes
       }
-      defaultWrapUpMode
-      wrapUpThresholdMinutes
-      insertedAt
-      updatedAt
+      busy {
+        maxFiles
+        maxEstimatedMinutes
+      }
+      limited {
+        maxFiles
+        maxEstimatedMinutes
+      }
+      offline {
+        maxFiles
+        maxEstimatedMinutes
+      }
     }
+    defaultWrapUpMode
+    wrapUpThresholdMinutes
+    insertedAt
+    updatedAt
   }
+}
 
 query DigestSummaries($latest: Int) {
-    digestSummaries(latest: $latest) {
-      id
-      actorRef
-      actorLabel
-      sourceType
-      action
-      channelRef
-      events {
-        description
-        insertedAt
-      }
-      entryCount
-      firstEventAt
-      lastEventAt
+  digestSummaries(latest: $latest) {
+    id
+    actorRef
+    actorLabel
+    sourceType
+    action
+    channelRef
+    events {
+      description
+      insertedAt
     }
+    entryCount
+    firstEventAt
+    lastEventAt
   }
+}
 
 mutation DismissDigestEntry($id: ID!) {
-    dismissDigestEntry(id: $id) {
-      id
-      actorRef
-      actorLabel
-      sourceType
-      action
-      channelRef
-      events {
-        description
-        insertedAt
-      }
-      entryCount
-      firstEventAt
-      lastEventAt
+  dismissDigestEntry(id: $id) {
+    id
+    actorRef
+    actorLabel
+    sourceType
+    action
+    channelRef
+    events {
+      description
+      insertedAt
     }
+    entryCount
+    firstEventAt
+    lastEventAt
   }
+}
 
 query AutoResponderSettings {
-    autoResponderSettings {
-      id
-      busyText
-      limitedText
-      offlineText
-      insertedAt
-      updatedAt
-    }
+  autoResponderSettings {
+    id
+    busyText
+    limitedText
+    offlineText
+    insertedAt
+    updatedAt
   }
+}
 
-mutation UpdateAutoResponderSettings($busyText: String, $limitedText: String, $offlineText: String) {
-    updateAutoResponderSettings(busyText: $busyText, limitedText: $limitedText, offlineText: $offlineText) {
-      id
-      busyText
-      limitedText
-      offlineText
-      insertedAt
-      updatedAt
-    }
+mutation UpdateAutoResponderSettings(
+  $busyText: String
+  $limitedText: String
+  $offlineText: String
+) {
+  updateAutoResponderSettings(
+    busyText: $busyText
+    limitedText: $limitedText
+    offlineText: $offlineText
+  ) {
+    id
+    busyText
+    limitedText
+    offlineText
+    insertedAt
+    updatedAt
   }
+}
 
 query Teams($id: ID) {
-    teams(id: $id) {
+  teams(id: $id) {
+    id
+    name
+    icon
+    description
+    members {
+      id
+      email
+      name
+      location
+      avatar
+    }
+  }
+}
+
+query Company {
+  company {
+    id
+    name
+    teams {
       id
       name
       icon
       description
-      members {
-        id
-        email
-        name
-        location
-        avatar
-      }
     }
   }
-
-query Company {
-    company {
-      id
-      name
-      teams {
-        id
-        name
-        icon
-        description
-      }
-    }
-  }
+}
 
 query TeamPresence($teamId: ID!) {
-    teamPresence(teamId: $teamId) {
-      userId
-      onlineAt
-      connectionType
-    }
+  teamPresence(teamId: $teamId) {
+    userId
+    onlineAt
+    connectionType
   }
+}
 
 mutation ReportOutcome($input: OutcomeInput!) {
-    reportOutcome(input: $input) {
-      id
-      outcome
-      actualDurationMinutes
-      filesModified
-      linesChanged
-      errorCategory
-      testsPassed
-      tokensUsed
-      retryCount
-      turnCount
-      scopeChanged
-      redirectCount
-      distinctTaskCount
-      dataQualityScore
-      insertedAt
-    }
+  reportOutcome(input: $input) {
+    id
+    outcome
+    actualDurationMinutes
+    filesModified
+    linesChanged
+    errorCategory
+    testsPassed
+    tokensUsed
+    retryCount
+    turnCount
+    scopeChanged
+    redirectCount
+    distinctTaskCount
+    dataQualityScore
+    insertedAt
   }
+}
+
+query AutopilotPolicy($mode: Mode!) {
+  autopilotPolicy(mode: $mode) {
+    classifierVersion
+    latitude
+    escalationStrategy
+    sandboxPreference
+    identityActionOverrides {
+      actionKey
+      strategy
+    }
+    houseRules
+  }
+}

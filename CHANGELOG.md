@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.0
+
+### Added
+
+- Added `fetchAutopilotPolicy`, `AUTOPILOT_POLICY_QUERY`, `assertAutopilotPolicy`, and `AutopilotPolicyResponse` for typed per-mode autopilot policy reads.
+
 ## 0.6.0
 
 ### Added

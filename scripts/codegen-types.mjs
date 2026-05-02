@@ -61,6 +61,26 @@ async function main() {
     true,
   );
 
+  const generatedSource = readFileSync(typesPath, "utf8");
+  const firstOperationIndex = generatedSource.indexOf("export type ActiveContractQueryVariables");
+  const firstSchemaTypeIndex = generatedSource.indexOf("export type AgentControlDataState =");
+  const duplicateSchemaTypeIndex = generatedSource.indexOf(
+    "export type AgentControlDataState =",
+    firstSchemaTypeIndex + 1,
+  );
+  if (
+    firstOperationIndex > -1 &&
+    duplicateSchemaTypeIndex > -1 &&
+    duplicateSchemaTypeIndex < firstOperationIndex
+  ) {
+    writeFileSync(
+      typesPath,
+      generatedSource.slice(0, duplicateSchemaTypeIndex) +
+        generatedSource.slice(firstOperationIndex),
+      "utf8",
+    );
+  }
+
   process.stdout.write(`Generated ${typesPath} from ${queriesPath} and ${schemaPath}\n`);
 }
 

@@ -248,7 +248,7 @@ export const LIST_AGENT_RUN_EVENTS_QUERY = `
   query AgentRunEvents(
     $runId: ID
     $eventType: String
-    $resolutionKind: String
+    $resolutionKind: DeferredDecisionResolutionKind
     $flaggedForReview: Boolean
     $insertedAfter: DateTime
     $insertedBefore: DateTime
@@ -922,6 +922,23 @@ export const REPORT_OUTCOME_MUTATION = `
       distinctTaskCount
       dataQualityScore
       insertedAt
+    }
+  }
+`;
+
+/** Fetch the per-mode autopilot classifier policy. */
+export const AUTOPILOT_POLICY_QUERY = `
+  query AutopilotPolicy($mode: Mode!) {
+    autopilotPolicy(mode: $mode) {
+      classifierVersion
+      latitude
+      escalationStrategy
+      sandboxPreference
+      identityActionOverrides {
+        actionKey
+        strategy
+      }
+      houseRules
     }
   }
 `;
