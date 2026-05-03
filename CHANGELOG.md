@@ -6,6 +6,10 @@
 
 - Added an additive classifier telemetry manifest with SDK-owned vocabularies, a conversion helper for existing classifier results, and documentation for consumers that can keep using the SDK 0.6.0 minimal classifier subset until they adopt the richer manifest.
 
+### Fixed
+
+- Updated the ask-user classifier fixture to use the canonical `recovery_decision` category.
+
 ## 0.8.0
 
 ### Added

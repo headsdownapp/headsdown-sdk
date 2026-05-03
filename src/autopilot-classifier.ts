@@ -245,7 +245,7 @@ export const CLASSIFIER_FIXTURES: Array<{ action: string; expected: ClassifierSe
   { action: "git push origin main", expected: "permanent" },
   { action: "force-push origin main", expected: "critical" },
   { action: "drop database", expected: "critical" },
-  { action: "ask_user{recovery, last=edit:failed}", expected: "permanent" },
+  { action: "ask_user{recovery_decision, last=edit:failed}", expected: "permanent" },
   { action: "ask_user{tooling_choice, last=bash:succeeded}", expected: "routine" },
   { action: "ask_user{scope_clarification, last=webfetch:succeeded}", expected: "notable" },
   { action: "ask_user{approval_request, last=none:unavailable}", expected: "notable" },
@@ -796,7 +796,7 @@ export function classifyFixtureAction(action: string): ClassifierSeverity {
   const askUserFixture = normalized.match(/^ask_user\{([^,]+),\s*last=([^:}]+):([^}]+)\}$/);
   if (askUserFixture) {
     const [, category, , outcome] = askUserFixture;
-    if (category === "recovery" && outcome === "failed") return "permanent";
+    if (category === "recovery_decision" && outcome === "failed") return "permanent";
     if (category === "tooling_choice" && outcome === "succeeded") return "routine";
     return "notable";
   }

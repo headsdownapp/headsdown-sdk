@@ -362,14 +362,22 @@ export function buildClassifierTelemetryManifest(
 }
 
 function normalizeVersion(value: unknown, field: string): string {
-  if (typeof value !== "string" || !/^\d+\.\d+(?:\.\d+)?$/.test(value)) {
+  if (typeof value !== "string") {
     throw new ValidationError(
       "Classifier telemetry versions must use major.minor or major.minor.patch format.",
       field,
     );
   }
 
-  return value;
+  const normalized = value.trim();
+  if (!/^\d+\.\d+(?:\.\d+)?$/.test(normalized)) {
+    throw new ValidationError(
+      "Classifier telemetry versions must use major.minor or major.minor.patch format.",
+      field,
+    );
+  }
+
+  return normalized;
 }
 
 function normalizeToolKind(value: unknown): string {
@@ -400,14 +408,22 @@ function validateActionShapeToolKind(actionShape: ActionShape | undefined, toolK
 }
 
 function normalizeDecisionKey(reasonCode: unknown): ClassifierTelemetryDecisionKey {
-  if (typeof reasonCode !== "string" || reasonCode.length === 0) {
+  if (typeof reasonCode !== "string") {
     throw new ValidationError(
       "classifiedAction.reasonCode must be a non-empty string.",
       "classifiedAction.reasonCode",
     );
   }
 
-  if (isKnownValue(reasonCode, CLASSIFIER_TELEMETRY_DECISION_KEYS)) return reasonCode;
+  const normalized = reasonCode.trim();
+  if (normalized.length === 0) {
+    throw new ValidationError(
+      "classifiedAction.reasonCode must be a non-empty string.",
+      "classifiedAction.reasonCode",
+    );
+  }
+
+  if (isKnownValue(normalized, CLASSIFIER_TELEMETRY_DECISION_KEYS)) return normalized;
   return "unclassified_unknown";
 }
 

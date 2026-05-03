@@ -190,8 +190,8 @@ describe("classifier telemetry manifest", () => {
   it("accepts classifier versions that match existing classifier compatibility parsing", () => {
     expect(
       buildClassifierTelemetryManifest({
-        classifierVersion: "1.1",
-        actionShapeVersion: "1.1",
+        classifierVersion: " 1.1 ",
+        actionShapeVersion: " 1.1 ",
         classifiedAction: {
           outcome: "routine",
           reasonCode: "edit_local_write",
