@@ -83,7 +83,6 @@ export type {
   ClassifierTelemetryClassifierLayer,
   ClassifierTelemetryConfidenceBucket,
   ClassifierTelemetryDecisionKey,
-  ClassifierTelemetryDerivationMetadata,
   ClassifierTelemetryEscalationReasonCode,
   ClassifierTelemetryFailureReasonCode,
   ClassifierTelemetryManifest,

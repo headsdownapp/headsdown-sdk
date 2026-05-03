@@ -155,17 +155,13 @@ export interface ClassifierTelemetryManifest {
   escalationSteps?: ClassifierEscalationStep[];
 }
 
-export interface ClassifierTelemetryDerivationMetadata {
-  catalogMatchKey?: ClassifierTelemetryCatalogMatchKey;
-}
-
 export interface BuildClassifierTelemetryManifestInput {
   classifiedAction: ClassifiedAction;
   actionShape?: ActionShape;
   escalationDecision?: EscalationDecision;
   classifierVersion?: string;
   actionShapeVersion?: string;
-  metadata?: ClassifierTelemetryDerivationMetadata;
+  catalogMatchKey?: ClassifierTelemetryCatalogMatchKey;
 }
 
 const INPUT_FIELDS = new Set([
@@ -174,12 +170,10 @@ const INPUT_FIELDS = new Set([
   "escalationDecision",
   "classifierVersion",
   "actionShapeVersion",
-  "metadata",
+  "catalogMatchKey",
 ]);
 
 const CLASSIFIED_ACTION_FIELDS = new Set(["outcome", "reasonCode", "source", "toolKind"]);
-
-const METADATA_FIELDS = new Set(["catalogMatchKey"]);
 
 const RAW_CONTENT_KEY_PARTS = [
   "arg",
@@ -275,11 +269,6 @@ export function buildClassifierTelemetryManifest(
   assertExpectedObject(input, INPUT_FIELDS, "classifierTelemetry");
   assertExpectedObject(input.classifiedAction, CLASSIFIED_ACTION_FIELDS, "classifiedAction");
 
-  const metadata = input.metadata;
-  if (metadata !== undefined) {
-    assertExpectedObject(metadata, METADATA_FIELDS, "classifierTelemetry.metadata");
-  }
-
   const classifierVersion = normalizeVersion(
     input.classifierVersion ?? AUTOPILOT_CLASSIFIER_VERSION,
     "classifierTelemetry.classifierVersion",
@@ -302,7 +291,11 @@ export function buildClassifierTelemetryManifest(
     "classifiedAction.source",
   );
   const classifierDecisionKey = normalizeDecisionKey(input.classifiedAction.reasonCode);
-  const confidenceBucket = deriveConfidenceBucket(classifierOutcome, classifierLayer);
+  const confidenceBucket = deriveConfidenceBucket(
+    classifierOutcome,
+    classifierLayer,
+    classifierDecisionKey,
+  );
   const actionFamily = deriveActionFamily(
     input.actionShape,
     input.classifiedAction,
@@ -341,11 +334,11 @@ export function buildClassifierTelemetryManifest(
     );
   }
 
-  if (metadata?.catalogMatchKey !== undefined) {
+  if (input.catalogMatchKey !== undefined) {
     manifest.catalogMatchKey = assertKnownValue(
-      metadata.catalogMatchKey,
+      input.catalogMatchKey,
       CLASSIFIER_TELEMETRY_CATALOG_MATCH_KEYS,
-      "classifierTelemetry.metadata.catalogMatchKey",
+      "classifierTelemetry.catalogMatchKey",
     );
   }
 
@@ -430,8 +423,10 @@ function normalizeDecisionKey(reasonCode: unknown): ClassifierTelemetryDecisionK
 function deriveConfidenceBucket(
   outcome: ClassifierOutcome,
   classifierLayer: ClassifierTelemetryClassifierLayer,
+  decisionKey: ClassifierTelemetryDecisionKey,
 ): ClassifierTelemetryConfidenceBucket {
   if (outcome === "classification_failed") return "low";
+  if (decisionKey === "unclassified_unknown") return "low";
   if (classifierLayer === "llm_fallback") return "medium";
   if (classifierLayer === "unknown_variant_fallback") return "low";
   return "high";
@@ -449,14 +444,14 @@ function deriveActionFamily(
     return "human_input";
   }
 
-  if (decisionKey === "critical_command_pattern" || actionShape?.public_facing === true) {
+  if (actionShape?.public_facing === true || decisionKey === "destructive_public") {
     return "public_publish";
   }
 
   if (
     actionShape?.destructive === true ||
+    decisionKey === "critical_command_pattern" ||
     decisionKey === "destructive_local" ||
-    decisionKey === "destructive_public" ||
     decisionKey === "edit_delete" ||
     decisionKey === "permanent_command_pattern"
   ) {

@@ -168,7 +168,7 @@ describe("classifier telemetry manifest", () => {
           public_facing: true,
         },
         escalationDecision,
-        metadata: { catalogMatchKey: "fixture_local_delete" },
+        catalogMatchKey: "fixture_local_delete",
       }),
     ).toEqual({
       classifierVersion: AUTOPILOT_CLASSIFIER_VERSION,
@@ -253,6 +253,43 @@ describe("classifier telemetry manifest", () => {
     });
   });
 
+  it("reports critical command patterns as destructive when no public-facing signal is available", () => {
+    expect(
+      buildClassifierTelemetryManifest({
+        classifiedAction: {
+          outcome: "critical",
+          reasonCode: "critical_command_pattern",
+          source: "deterministic",
+          toolKind: "bash",
+        },
+      }),
+    ).toMatchObject({
+      classifierDecisionKey: "critical_command_pattern",
+      actionFamily: "destructive",
+      confidenceBucket: "high",
+      severity: "critical",
+      matcherKey: "bash_critical_command_pattern",
+    });
+  });
+
+  it("lowers confidence for classifier results without an SDK-owned decision key", () => {
+    expect(
+      buildClassifierTelemetryManifest({
+        classifiedAction: {
+          outcome: "routine",
+          reasonCode: "integration_defined_reason",
+          source: "deterministic",
+          toolKind: "edit",
+        },
+      }),
+    ).toMatchObject({
+      classifierDecisionKey: "unclassified_unknown",
+      actionFamily: "unknown",
+      confidenceBucket: "low",
+      severity: "routine",
+    });
+  });
+
   it("uses failure reason codes instead of severity for classification failures", () => {
     const manifest = buildClassifierTelemetryManifest({
       classifiedAction: {
@@ -333,29 +370,29 @@ describe("classifier telemetry manifest", () => {
     expect(() =>
       buildClassifierTelemetryManifest({
         classifiedAction,
-        metadata: { promptText: "SHOULD_NOT_APPEAR_PROMPT" } as never,
-      }),
+        promptText: "SHOULD_NOT_APPEAR_PROMPT",
+      } as never),
     ).toThrow(ValidationError);
 
     expect(() =>
       buildClassifierTelemetryManifest({
         classifiedAction,
-        metadata: { catalogMatchKey: "integration_defined_catalog" } as never,
-      }),
+        catalogMatchKey: "integration_defined_catalog",
+      } as never),
     ).toThrow(ValidationError);
 
     expect(() =>
       buildClassifierTelemetryManifest({
         classifiedAction,
-        metadata: { matcherKey: "edit_operation" } as never,
-      }),
+        matcherKey: "edit_operation",
+      } as never),
     ).toThrow(ValidationError);
 
     expect(() =>
       buildClassifierTelemetryManifest({
         classifiedAction,
-        metadata: { actionFamily: "public_publish" } as never,
-      }),
+        actionFamily: "public_publish",
+      } as never),
     ).toThrow(ValidationError);
   });
 
