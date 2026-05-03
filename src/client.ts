@@ -8,6 +8,7 @@ import {
   cancelledEvent,
   completedEvent,
   continuationSavedEvent,
+  deferredDecisionReAttemptedEvent,
   deferredDecisionResolvedEvent,
   failedEvent,
   progressEvent,
@@ -109,6 +110,7 @@ import type {
   AgentRunEventContext,
   AgentRunEventInput,
   AgentRunProgressMetadata,
+  DeferredDecisionReAttemptedPayload,
   DeferredDecisionResolvedPayload,
   DeferredDecisionResolutionKind,
   ReportAgentRunEventPayload,
@@ -1065,6 +1067,13 @@ export class HeadsDownClient {
     payload: DeferredDecisionResolvedPayload,
   ): Promise<ReportAgentRunEventPayload> {
     return this.reportAgentRunEvent(deferredDecisionResolvedEvent(context, payload));
+  }
+
+  async reportDeferredDecisionReAttempted(
+    context: AgentRunEventContext,
+    payload: DeferredDecisionReAttemptedPayload,
+  ): Promise<ReportAgentRunEventPayload> {
+    return this.reportAgentRunEvent(deferredDecisionReAttemptedEvent(context, payload));
   }
 
   async reportSteeringOutcome(

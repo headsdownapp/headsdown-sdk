@@ -2,9 +2,12 @@
 
 ## Unreleased
 
+## 0.9.0
+
 ### Added
 
 - Added an additive classifier telemetry manifest with SDK-owned vocabularies, a conversion helper for existing classifier results, and documentation for consumers that can keep using the SDK 0.6.0 minimal classifier subset until they adopt the richer manifest.
+- Added shared deferred-decision re-attempt outcome helpers: `DeferredDecisionReAttemptOutcome`, `DeferredDecisionReAttemptedPayload`, `deferredDecisionReAttemptedEvent`, and `client.reportDeferredDecisionReAttempted()`.
 
 ### Fixed
 
