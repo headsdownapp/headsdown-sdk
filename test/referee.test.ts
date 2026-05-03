@@ -373,6 +373,25 @@ describe("Local Referee receipts", () => {
         ],
       }),
     ).toThrow("verdict does not match failed checks");
+    expect(() =>
+      renderLocalRefereeReceipt({
+        ...receiptFixture(),
+        evidence: { ...receiptFixture().evidence, gitCommitPresent: true },
+      }),
+    ).toThrow("gitCommitPresent evidence must match checks");
+    expect(() =>
+      renderLocalRefereeReceipt({
+        ...receiptFixture(),
+        checks: [
+          {
+            id: "check_1",
+            type: "git_commit_present",
+            status: "passed",
+            reasonCode: "git_commit_requirement_matched",
+          },
+        ],
+      }),
+    ).toThrow("gitCommitPresent evidence must match checks");
   });
 
   it("rejects receipt builds when the evaluation came from a different contract", () => {

@@ -6,12 +6,7 @@ export {
 } from "./contract.js";
 export type { LocalRefereeCheck, LocalRefereeCheckType, LocalRefereeContract } from "./contract.js";
 
-export {
-  bucketCount,
-  bucketMinutes,
-  normalizeLocalRefereeEvidence,
-  normalizeNonNegativeInteger,
-} from "./evidence.js";
+export { bucketCount, bucketMinutes, normalizeLocalRefereeEvidence } from "./evidence.js";
 export type {
   LocalRefereeEvidence,
   LocalRefereeOutcome,

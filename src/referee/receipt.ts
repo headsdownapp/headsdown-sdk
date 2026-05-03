@@ -186,6 +186,7 @@ export function assertLocalRefereeReceipt(value: unknown): asserts value is Loca
     throw new Error("Local Referee receipt requires at least one check.");
 
   let failedCheckCount = 0;
+  let hasGitCommitCheck = false;
   for (const [index, value] of receipt.checks.entries()) {
     const check = asRecord(value);
     if (!check) throw new Error(`Local Referee receipt check ${index + 1} must be an object.`);
@@ -195,12 +196,17 @@ export function assertLocalRefereeReceipt(value: unknown): asserts value is Loca
     assertEnum(check.status, RECEIPT_STATUSES, `receipt.checks[${index}].status`);
     assertSafeToken(check.reasonCode, `receipt.checks[${index}].reasonCode`);
     if (check.status === "failed") failedCheckCount += 1;
+    if (check.type === "git_commit_present") hasGitCommitCheck = true;
   }
 
   if (receipt.verdict === "passed" && failedCheckCount > 0)
     throw new Error("Local Referee receipt verdict does not match failed checks.");
   if (receipt.verdict === "needs_review" && failedCheckCount === 0)
     throw new Error("Local Referee receipt verdict does not match passed checks.");
+  if (hasGitCommitCheck && evidence.gitCommitPresent === undefined)
+    throw new Error("Local Referee receipt gitCommitPresent evidence must match checks.");
+  if (!hasGitCommitCheck && evidence.gitCommitPresent !== undefined)
+    throw new Error("Local Referee receipt gitCommitPresent evidence must match checks.");
 }
 
 function assertEvaluationMatchesContract(

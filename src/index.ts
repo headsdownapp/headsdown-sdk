@@ -61,7 +61,6 @@ export {
   evaluateLocalRefereeContract,
   labelLocalRefereeCheckType,
   normalizeLocalRefereeEvidence,
-  normalizeNonNegativeInteger,
   parseLocalRefereeContract,
   parseLocalRefereeContractJson,
   renderLocalRefereeOutcomeSharePreview,

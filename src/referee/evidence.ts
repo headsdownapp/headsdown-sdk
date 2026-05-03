@@ -30,15 +30,6 @@ export interface LocalRefereeEvidence {
   outcome: LocalRefereeOutcome;
 }
 
-export function normalizeNonNegativeInteger(value: unknown, fallback = 0): number {
-  if (typeof value === "number" && Number.isFinite(value)) return Math.max(0, Math.floor(value));
-  if (typeof value === "string" && value.trim().length > 0) {
-    const parsed = Number(value);
-    if (Number.isFinite(parsed)) return Math.max(0, Math.floor(parsed));
-  }
-  return fallback;
-}
-
 function normalizeOptionalNonNegativeInteger(value: unknown): number | null {
   if (value === undefined || value === null || value === "") return null;
   if (typeof value === "number" && Number.isFinite(value)) return Math.max(0, Math.floor(value));
