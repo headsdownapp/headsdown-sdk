@@ -64,6 +64,54 @@ query Schedule($at: DateTime) {
   }
 }
 
+query ActiveAvailabilityOverride {
+  activeAvailabilityOverride {
+    id
+    mode
+    reason
+    source
+    expiresAt
+    cancelledAt
+    expiredAt
+    createdById
+    cancelledById
+    insertedAt
+    updatedAt
+  }
+}
+
+mutation CreateAvailabilityOverride($input: AvailabilityOverrideInput!) {
+  createAvailabilityOverride(input: $input) {
+    id
+    mode
+    reason
+    source
+    expiresAt
+    cancelledAt
+    expiredAt
+    createdById
+    cancelledById
+    insertedAt
+    updatedAt
+  }
+}
+
+mutation CancelAvailabilityOverride($id: ID!, $reason: String, $source: String) {
+  cancelAvailabilityOverride(id: $id, reason: $reason, source: $source) {
+    id
+    mode
+    reason
+    source
+    expiresAt
+    cancelledAt
+    expiredAt
+    createdById
+    cancelledById
+    insertedAt
+    updatedAt
+  }
+}
+
 query AgentControlOverview {
   agentControlOverview {
     currentCall {
@@ -687,16 +735,8 @@ query VerdictSettings {
   }
 }
 
-mutation UpdateVerdictSettings(
-  $thresholds: VerdictModeThresholdsInput
-  $defaultWrapUpMode: WrapUpMode
-  $wrapUpThresholdMinutes: Int
-) {
-  updateVerdictSettings(
-    thresholds: $thresholds
-    defaultWrapUpMode: $defaultWrapUpMode
-    wrapUpThresholdMinutes: $wrapUpThresholdMinutes
-  ) {
+mutation UpdateVerdictSettings($thresholds: VerdictModeThresholdsInput, $defaultWrapUpMode: WrapUpMode, $wrapUpThresholdMinutes: Int) {
+  updateVerdictSettings(thresholds: $thresholds, defaultWrapUpMode: $defaultWrapUpMode, wrapUpThresholdMinutes: $wrapUpThresholdMinutes) {
     id
     thresholds {
       online {
@@ -770,16 +810,8 @@ query AutoResponderSettings {
   }
 }
 
-mutation UpdateAutoResponderSettings(
-  $busyText: String
-  $limitedText: String
-  $offlineText: String
-) {
-  updateAutoResponderSettings(
-    busyText: $busyText
-    limitedText: $limitedText
-    offlineText: $offlineText
-  ) {
+mutation UpdateAutoResponderSettings($busyText: String, $limitedText: String, $offlineText: String) {
+  updateAutoResponderSettings(busyText: $busyText, limitedText: $limitedText, offlineText: $offlineText) {
     id
     busyText
     limitedText

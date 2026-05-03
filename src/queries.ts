@@ -70,6 +70,63 @@ export const SCHEDULE_QUERY = `
   }
 `;
 
+/** Get the active temporary availability override, if one exists. */
+export const ACTIVE_AVAILABILITY_OVERRIDE_QUERY = `
+  query ActiveAvailabilityOverride {
+    activeAvailabilityOverride {
+      id
+      mode
+      reason
+      source
+      expiresAt
+      cancelledAt
+      expiredAt
+      createdById
+      cancelledById
+      insertedAt
+      updatedAt
+    }
+  }
+`;
+
+/** Create a temporary availability override. */
+export const CREATE_AVAILABILITY_OVERRIDE_MUTATION = `
+  mutation CreateAvailabilityOverride($input: AvailabilityOverrideInput!) {
+    createAvailabilityOverride(input: $input) {
+      id
+      mode
+      reason
+      source
+      expiresAt
+      cancelledAt
+      expiredAt
+      createdById
+      cancelledById
+      insertedAt
+      updatedAt
+    }
+  }
+`;
+
+/** Cancel a temporary availability override. */
+export const CANCEL_AVAILABILITY_OVERRIDE_MUTATION = `
+  mutation CancelAvailabilityOverride($id: ID!, $reason: String, $source: String) {
+    cancelAvailabilityOverride(id: $id, reason: $reason, source: $source) {
+      id
+      mode
+      reason
+      source
+      expiresAt
+      cancelledAt
+      expiredAt
+      createdById
+      cancelledById
+      insertedAt
+      updatedAt
+    }
+  }
+`;
+
 /** Get the agent-control overview read model for HeadsDown call rendering. */
 export const AGENT_CONTROL_OVERVIEW_QUERY = `
   query AgentControlOverview {

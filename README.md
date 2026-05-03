@@ -373,6 +373,28 @@ const contract = await client.createContract({
 // Wrap-Up fields are rejected here and should be set via updateVerdictSettings or deliveryMode.
 ```
 
+### Temporary Availability Overrides
+
+Use temporary overrides for short-lived manual mode changes without replacing the user's standing schedule or contract. Create/cancel calls require the backend to authorize the actor context or delegated permission for the integration.
+
+```typescript
+const actorClient = client.withActor({
+  source: "my-integration",
+  sessionId: "session-123",
+});
+
+const active = await actorClient.getActiveAvailabilityOverride();
+
+const override = await actorClient.createAvailabilityOverride({
+  mode: "busy",
+  durationMinutes: 30,
+  reason: "Heads-down coding",
+  source: "my-integration",
+});
+
+await actorClient.cancelAvailabilityOverride(override.id, "Done", "my-integration");
+```
+
 ### Delegation Grants
 
 Delegation grant management mutations now require a session-token auth path in the backend. Because this SDK authenticates with API keys, create/revoke grant calls will raise an auth error with actionable guidance.

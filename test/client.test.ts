@@ -382,6 +382,214 @@ describe("HeadsDownClient", () => {
     });
   });
 
+  // === availability overrides ===
+
+  describe("availability overrides", () => {
+    it("gets the active availability override with normalized mode and preserved source", async () => {
+      const client = new HeadsDownClient({
+        ...CLIENT_OPTS,
+        fetch: mockGraphQL({
+          activeAvailabilityOverride: {
+            id: "ovr_1",
+            mode: "BUSY",
+            reason: "Heads-down coding",
+            source: "SdkTest",
+            expiresAt: "2026-05-03T02:00:00Z",
+            cancelledAt: null,
+            expiredAt: null,
+            createdById: "user_1",
+            cancelledById: null,
+            insertedAt: "2026-05-03T01:00:00Z",
+            updatedAt: "2026-05-03T01:00:00Z",
+          },
+        }),
+      });
+
+      const override = await client.getActiveAvailabilityOverride();
+
+      expect(override?.mode).toBe("busy");
+      expect(override?.source).toBe("SdkTest");
+    });
+
+    it("returns null when no availability override is active", async () => {
+      const client = new HeadsDownClient({
+        ...CLIENT_OPTS,
+        fetch: mockGraphQL({ activeAvailabilityOverride: null }),
+      });
+
+      await expect(client.getActiveAvailabilityOverride()).resolves.toBeNull();
+    });
+
+    it("creates a temporary availability override with GraphQL enum mode", async () => {
+      let capturedBody = "";
+      const fetchFn = ((_url: string, init: RequestInit) => {
+        capturedBody = String(init.body);
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () =>
+            Promise.resolve({
+              data: {
+                createAvailabilityOverride: {
+                  id: "ovr_2",
+                  mode: "LIMITED",
+                  reason: "One focused slice",
+                  source: "claude-code",
+                  expiresAt: "2026-05-03T02:00:00Z",
+                  cancelledAt: null,
+                  expiredAt: null,
+                  createdById: "user_1",
+                  cancelledById: null,
+                  insertedAt: "2026-05-03T01:00:00Z",
+                  updatedAt: "2026-05-03T01:00:00Z",
+                },
+              },
+            }),
+          text: () => Promise.resolve(""),
+          headers: new Headers(),
+        });
+      }) as unknown as typeof globalThis.fetch;
+      const client = new HeadsDownClient({ ...CLIENT_OPTS, fetch: fetchFn });
+
+      const override = await client.createAvailabilityOverride({
+        mode: "limited",
+        durationMinutes: 20,
+        reason: "One focused slice",
+        source: "claude-code",
+      });
+
+      const body = JSON.parse(capturedBody);
+      expect(body.variables.input).toEqual({
+        mode: "LIMITED",
+        durationMinutes: 20,
+        reason: "One focused slice",
+        source: "claude-code",
+      });
+      expect(override.mode).toBe("limited");
+      expect(override.source).toBe("claude-code");
+    });
+
+    it("creates an expires-at override with default source", async () => {
+      let capturedBody = "";
+      const fetchFn = ((_url: string, init: RequestInit) => {
+        capturedBody = String(init.body);
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () =>
+            Promise.resolve({
+              data: {
+                createAvailabilityOverride: {
+                  id: "ovr_3",
+                  mode: "BUSY",
+                  reason: null,
+                  source: "sdk",
+                  expiresAt: "2026-05-03T02:00:00Z",
+                  cancelledAt: null,
+                  expiredAt: null,
+                  createdById: "user_1",
+                  cancelledById: null,
+                  insertedAt: "2026-05-03T01:00:00Z",
+                  updatedAt: "2026-05-03T01:00:00Z",
+                },
+              },
+            }),
+          text: () => Promise.resolve(""),
+          headers: new Headers(),
+        });
+      }) as unknown as typeof globalThis.fetch;
+      const client = new HeadsDownClient({ ...CLIENT_OPTS, fetch: fetchFn });
+
+      await client.createAvailabilityOverride({
+        mode: "busy",
+        expiresAt: "2026-05-03T02:00:00Z",
+      });
+
+      const body = JSON.parse(capturedBody);
+      expect(body.variables.input).toEqual({
+        mode: "BUSY",
+        expiresAt: "2026-05-03T02:00:00Z",
+        source: "sdk",
+      });
+    });
+
+    it("cancels a temporary availability override", async () => {
+      let capturedBody = "";
+      const fetchFn = ((_url: string, init: RequestInit) => {
+        capturedBody = String(init.body);
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () =>
+            Promise.resolve({
+              data: {
+                cancelAvailabilityOverride: {
+                  id: "ovr_2",
+                  mode: "LIMITED",
+                  reason: "Done",
+                  source: "sdk",
+                  expiresAt: "2026-05-03T02:00:00Z",
+                  cancelledAt: "2026-05-03T01:30:00Z",
+                  expiredAt: null,
+                  createdById: "user_1",
+                  cancelledById: "user_1",
+                  insertedAt: "2026-05-03T01:00:00Z",
+                  updatedAt: "2026-05-03T01:30:00Z",
+                },
+              },
+            }),
+          text: () => Promise.resolve(""),
+          headers: new Headers(),
+        });
+      }) as unknown as typeof globalThis.fetch;
+      const client = new HeadsDownClient({ ...CLIENT_OPTS, fetch: fetchFn });
+
+      const override = await client.cancelAvailabilityOverride("ovr_2", "Done", "sdk-test");
+
+      const body = JSON.parse(capturedBody);
+      expect(body.variables).toEqual({ id: "ovr_2", reason: "Done", source: "sdk-test" });
+      expect(override.mode).toBe("limited");
+      expect(override.cancelledAt).toBe("2026-05-03T01:30:00Z");
+    });
+
+    it("validates availability override inputs", async () => {
+      const client = new HeadsDownClient({ ...CLIENT_OPTS, fetch: mockGraphQL({}) });
+
+      await expect(client.createAvailabilityOverride(undefined as never)).rejects.toThrow(
+        ValidationError,
+      );
+      await expect(
+        client.createAvailabilityOverride({ mode: "limited", durationMinutes: 0 }),
+      ).rejects.toThrow(ValidationError);
+      await expect(client.createAvailabilityOverride({ mode: "limited" } as never)).rejects.toThrow(
+        ValidationError,
+      );
+      await expect(
+        client.createAvailabilityOverride({
+          mode: "limited",
+          durationMinutes: 15,
+          expiresAt: "2026-05-03T02:00:00Z",
+        } as never),
+      ).rejects.toThrow(ValidationError);
+      await expect(
+        client.createAvailabilityOverride({ mode: "limited", expiresAt: "not a timestamp" }),
+      ).rejects.toThrow(ValidationError);
+      await expect(client.cancelAvailabilityOverride(" ")).rejects.toThrow(ValidationError);
+    });
+
+    it("maps missing actor context for override writes to an auth error", async () => {
+      const client = new HeadsDownClient({
+        ...CLIENT_OPTS,
+        fetch: mockGraphQLError([{ message: "Missing actor context" }]),
+      });
+
+      await expect(
+        client.createAvailabilityOverride({ mode: "busy", durationMinutes: 30 }),
+      ).rejects.toBeInstanceOf(AuthError);
+      await expect(client.cancelAvailabilityOverride("ovr_1")).rejects.toBeInstanceOf(AuthError);
+    });
+  });
+
   // === submitProposal ===
 
   describe("submitProposal", () => {

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Added
+
+- Added first-class SDK helpers for temporary availability overrides: `getActiveAvailabilityOverride`, `createAvailabilityOverride`, and `cancelAvailabilityOverride`.
+
 ## 0.7.0
 
 ### Added

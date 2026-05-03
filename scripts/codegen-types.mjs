@@ -16,7 +16,7 @@ function extractOperationDocuments(source) {
   let match;
 
   while ((match = pattern.exec(source)) !== null) {
-    docs.push(match[1].trim());
+    docs.push(normalizeOperationDocument(match[1]));
   }
 
   if (docs.length === 0) {
@@ -24,6 +24,22 @@ function extractOperationDocuments(source) {
   }
 
   return docs.join("\n\n");
+}
+
+function normalizeOperationDocument(source) {
+  const lines = source.trim().split("\n");
+  const rest = lines.slice(1);
+  const indents = rest
+    .filter((line) => line.trim().length > 0)
+    .map((line) => line.match(/^ */)[0].length);
+  const sharedIndent = indents.length > 0 ? Math.min(...indents) : 0;
+
+  return [
+    lines[0].trimStart(),
+    ...rest.map((line) =>
+      line.startsWith(" ".repeat(sharedIndent)) ? line.slice(sharedIndent) : line,
+    ),
+  ].join("\n");
 }
 
 async function main() {
