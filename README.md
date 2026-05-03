@@ -191,6 +191,7 @@ Use the shared classifier substrate when an integration needs to classify an imm
 import {
   AUTOPILOT_CLASSIFIER_VERSION,
   buildClassifierPromptFragments,
+  buildClassifierTelemetryManifest,
   classifyActionShapeFallback,
   computeEscalationPath,
 } from "@headsdown/sdk";
@@ -229,6 +230,16 @@ const decision = computeEscalationPath({
     },
     toolKinds: ["bash", "edit", "webfetch", "mcp", "computer_use"],
   },
+});
+
+const telemetry = buildClassifierTelemetryManifest({
+  classifiedAction: {
+    outcome: "routine",
+    reasonCode: "edit_local_write",
+    source: "deterministic",
+    toolKind: "edit",
+  },
+  actionShape: { tool_kind: "edit", operation: "replace" },
 });
 ```
 
@@ -286,6 +297,14 @@ Behavioral guarantees:
   - major mismatch: error + lockdown fallback (`defer_for_human_review`)
   - backend minor ahead: warning + proceed with known fields
   - SDK minor ahead: error + lockdown fallback
+
+#### Classifier telemetry manifest
+
+Use `buildClassifierTelemetryManifest()` when an integration has already classified an action and needs to report richer classifier facts using the SDK-owned vocabulary. The manifest is additive to `ClassifiedAction`: it carries classifier and action-shape versions, tool kind, classifier layer, classifier decision key, action family, network target class, severity or failure reason, confidence bucket, and optional SDK-owned matcher, catalog, and escalation keys.
+
+The helper emits only fields the SDK can derive safely. It does not include raw commands, URLs, domains, local paths, repository or branch names, tool arguments, terminal output, source code, prompts, model reasoning, or hashes of those values. When a derived fact is unavailable, optional fields are omitted instead of serialized as `undefined`.
+
+Use the richer manifest for telemetry pipelines that understand the SDK-owned classifier vocabulary. Fall back to the minimal SDK 0.6.0-compatible `ClassifiedAction` subset (`outcome`, `reasonCode`, `source`, `toolKind`) when a consumer has not adopted the manifest yet, or when the integration only has the basic classifier result available.
 
 ### Actor Context (session/workspace-aware authorization)
 
