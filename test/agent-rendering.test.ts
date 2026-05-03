@@ -155,6 +155,26 @@ describe("agent subpath", () => {
     ]);
   });
 
+  it("maps future UI intents to a safe inspection hint", () => {
+    const render = renderHeadsDownCallForAgent(
+      makeCall({
+        key: "ready_to_resume",
+        knownKey: "ready_to_resume",
+        primaryActionLabel: "Resume",
+        primaryActionKnownKey: "resume_run",
+        primaryActionIntent: "future_backend_intent" as never,
+        allowedActionKnownKeys: ["resume_run"],
+      }),
+    );
+
+    expect(render.primaryAction).toEqual({
+      key: "resume_run",
+      label: "Resume",
+      renderHint: "inspect",
+      source: "primary",
+    });
+  });
+
   it("does not surface unknown raw action keys as executable actions", () => {
     const render = renderHeadsDownCallForAgent(
       makeCall({

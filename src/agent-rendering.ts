@@ -225,7 +225,7 @@ function knownAllowedActions(
 function renderAction(
   call: HeadsDownCall,
   actionKey: HeadsDownActionKey,
-  intent: AgentControlUiIntent,
+  intent: AgentControlUiIntent | string,
   requestedSource: AgentRenderedActionSource,
   useServerActionMetadata: boolean,
 ): AgentRenderedAction {
@@ -282,7 +282,7 @@ function intentForAllowedAction(
   return "none";
 }
 
-function renderHintForIntent(intent: AgentControlUiIntent): AgentActionRenderHint {
+function renderHintForIntent(intent: AgentControlUiIntent | string): AgentActionRenderHint {
   switch (intent) {
     case "review_request":
       return "review";
@@ -299,5 +299,7 @@ function renderHintForIntent(intent: AgentControlUiIntent): AgentActionRenderHin
       return "inspect";
     case "none":
       return "none";
+    default:
+      return "inspect";
   }
 }
