@@ -394,6 +394,22 @@ describe("Local Referee receipts", () => {
         now: new Date("2026-01-01T00:00:00Z"),
       }),
     ).toThrow("evaluation does not match contract checks");
+
+    const strictContract = contractWith([{ type: "max_files_touched", max: 1 }]);
+    const scopeEvidence = normalizeLocalRefereeEvidence({ filesTouched: 2 });
+    const lenientEvaluation = evaluateLocalRefereeContract(
+      contractWith([{ type: "max_files_touched", max: 5 }]),
+      scopeEvidence,
+    );
+
+    expect(() =>
+      buildLocalRefereeReceipt({
+        contract: strictContract,
+        evidence: scopeEvidence,
+        evaluation: lenientEvaluation,
+        now: new Date("2026-01-01T00:00:00Z"),
+      }),
+    ).toThrow("evaluation does not match contract checks");
   });
 
   it("builds receipts and contract refs from normalized contract fields only", () => {
@@ -428,11 +444,11 @@ describe("Local Referee receipts", () => {
 
   it("renders the canonical concise markdown receipt", () => {
     const contract = contractWith([
-      { type: "outcome", required: "completed" },
-      { type: "validation_status", required: "passed" },
-      { type: "git_commit_present", required: true },
       { type: "max_files_touched", max: 5 },
+      { type: "validation_status", required: "passed" },
+      { type: "outcome", required: "completed" },
       { type: "max_tool_calls", max: 10 },
+      { type: "git_commit_present", required: true },
     ]);
     const evidence = normalizeLocalRefereeEvidence({
       filesTouched: 4,
@@ -652,10 +668,9 @@ describe("Local Referee outcome payloads and sharing", () => {
       }),
     ).toBe(true);
     expect(
-      shouldShareLocalRefereeOutcomeSummary({
-        choice: "keep_local " as "keep_local",
-        config: { preference: "always_share" },
-      }),
+      shouldShareLocalRefereeOutcomeSummary(
+        JSON.parse('{"choice":"keep_local ","config":{"preference":"always_share"}}'),
+      ),
     ).toBe(false);
   });
 });
@@ -737,7 +752,7 @@ describe("Local Referee outcome submission", () => {
     await expect(
       submitLocalRefereeOutcomeSummary(payload, {
         apiKey: "hd_test_key",
-        source: "src/index.ts" as "local",
+        source: JSON.parse('"src/index.ts"'),
         fetch,
       }),
     ).rejects.toThrow("source must be local or hosted");

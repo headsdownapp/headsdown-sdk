@@ -1,6 +1,10 @@
 import { createHash } from "node:crypto";
 import { parseLocalRefereeContract, type LocalRefereeContract } from "./contract.js";
-import type { LocalRefereeEvaluation, LocalRefereeCheckStatus } from "./evaluate.js";
+import {
+  evaluateLocalRefereeContract,
+  type LocalRefereeEvaluation,
+  type LocalRefereeCheckStatus,
+} from "./evaluate.js";
 import type { LocalRefereeEvidence } from "./evidence.js";
 import { LOCAL_REFEREE_CHECK_LABELS, labelLocalRefereeCheckType } from "./labels.js";
 
@@ -202,13 +206,26 @@ export function assertLocalRefereeReceipt(value: unknown): asserts value is Loca
 function assertEvaluationMatchesContract(
   evaluation: LocalRefereeEvaluation,
   contract: LocalRefereeContract,
+  evidence: LocalRefereeEvidence,
 ): void {
-  if (evaluation.checks.length !== contract.checks.length) {
+  const expected = evaluateLocalRefereeContract(contract, evidence);
+
+  if (
+    evaluation.verdict !== expected.verdict ||
+    evaluation.checks.length !== expected.checks.length
+  ) {
     throw new Error("Local Referee evaluation does not match contract checks.");
   }
 
   for (const [index, check] of evaluation.checks.entries()) {
-    if (check.type !== contract.checks[index]?.type) {
+    const expectedCheck = expected.checks[index];
+    if (
+      !expectedCheck ||
+      check.id !== expectedCheck.id ||
+      check.type !== expectedCheck.type ||
+      check.status !== expectedCheck.status ||
+      check.reasonCode !== expectedCheck.reasonCode
+    ) {
       throw new Error("Local Referee evaluation does not match contract checks.");
     }
   }
@@ -221,7 +238,7 @@ export function buildLocalRefereeReceipt(input: {
   now?: Date;
 }): LocalRefereeReceipt {
   const contract = parseLocalRefereeContract(input.contract);
-  assertEvaluationMatchesContract(input.evaluation, contract);
+  assertEvaluationMatchesContract(input.evaluation, contract, input.evidence);
   const hasGitCommitCheck = contract.checks.some((check) => check.type === "git_commit_present");
   const manualReviewRoundTripsAvoided = input.evidence.manualReviewRoundTripsAvoided;
 
@@ -273,9 +290,20 @@ export function renderLocalRefereeReceipt(receipt: LocalRefereeReceipt): string 
   ].join("\n");
 }
 
+const MARKDOWN_CHECK_ORDER = new Map<string, number>([
+  ["outcome", 0],
+  ["validation_status", 1],
+  ["require_tests", 1],
+  ["git_commit_present", 2],
+  ["max_files_touched", 3],
+  ["max_tool_calls", 3],
+  ["network_required", 4],
+]);
+
 interface MarkdownCheckLine {
   label: string;
   status: LocalRefereeCheckStatus;
+  order: number;
 }
 
 function markdownCheckLines(receipt: LocalRefereeReceipt): MarkdownCheckLine[] {
@@ -283,15 +311,17 @@ function markdownCheckLines(receipt: LocalRefereeReceipt): MarkdownCheckLine[] {
 
   for (const check of receipt.checks) {
     const label = labelLocalRefereeCheckType(check.type);
+    const order = MARKDOWN_CHECK_ORDER.get(check.type) ?? Number.MAX_SAFE_INTEGER;
     const existing = lines.find((line) => line.label === label);
     if (!existing) {
-      lines.push({ label, status: check.status });
+      lines.push({ label, status: check.status, order });
       continue;
     }
+    existing.order = Math.min(existing.order, order);
     if (check.status === "failed") existing.status = "failed";
   }
 
-  return lines;
+  return lines.sort((left, right) => left.order - right.order);
 }
 
 export function renderLocalRefereeReceiptMarkdown(receipt: LocalRefereeReceipt): string {
