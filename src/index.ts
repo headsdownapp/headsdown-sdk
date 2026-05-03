@@ -43,6 +43,53 @@ export type {
   ExecutionDirectiveInput,
 } from "./execution-directive.js";
 
+// Local Referee helpers
+export {
+  LOCAL_REFEREE_CHECK_LABELS,
+  LOCAL_REFEREE_CONTRACT_PATH,
+  LocalRefereeContractError,
+  assertLocalRefereeOutcomeSummaryPayload,
+  assertLocalRefereeOutcomeSummaryPayloadIsSafe,
+  assertLocalRefereeReceipt,
+  bucketCount,
+  bucketMinutes,
+  buildLocalRefereeContractRef,
+  buildLocalRefereeOutcomeSummaryPayload,
+  buildLocalRefereeReceipt,
+  evaluateLocalRefereeContract,
+  labelLocalRefereeCheckType,
+  normalizeLocalRefereeEvidence,
+  parseLocalRefereeContract,
+  parseLocalRefereeContractJson,
+  renderLocalRefereeOutcomeSharePreview,
+  renderLocalRefereeReceipt,
+  renderLocalRefereeReceiptMarkdown,
+  shouldShareLocalRefereeOutcomeSummary,
+  submitLocalRefereeOutcomeSummary,
+} from "./referee/index.js";
+export type {
+  LocalRefereeCheck,
+  LocalRefereeCheckResult,
+  LocalRefereeCheckStatus,
+  LocalRefereeCheckType,
+  LocalRefereeClientKind,
+  LocalRefereeContract,
+  LocalRefereeEvaluation,
+  LocalRefereeEvidence,
+  LocalRefereeOutcome,
+  LocalRefereeOutcomeShareChoice,
+  LocalRefereeOutcomeSharingConfig,
+  LocalRefereeOutcomeSharingPreference,
+  LocalRefereeOutcomeSource,
+  LocalRefereeOutcomeSummaryPayload,
+  LocalRefereeRawEvidence,
+  LocalRefereeReceipt,
+  LocalRefereeValidationStatus,
+  LocalRefereeVerdict,
+  SubmitLocalRefereeOutcomeSummaryOptions,
+  SubmitLocalRefereeOutcomeSummaryResult,
+} from "./referee/index.js";
+
 // Agent-control helpers and constants
 export { resolveHeadsDownCallFallback } from "./agent-control.js";
 export {

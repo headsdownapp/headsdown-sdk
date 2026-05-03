@@ -86,7 +86,6 @@ export class GraphQLClient {
           signal: controller.signal,
         });
       } catch (error) {
-        clearTimeout(timer);
         const networkError =
           error instanceof DOMException && error.name === "AbortError"
             ? new NetworkError(`Request timed out after ${this.timeout}ms`)
