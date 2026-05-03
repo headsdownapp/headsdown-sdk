@@ -304,7 +304,7 @@ describe("GraphQLClient", () => {
           ],
           schedule: {
             wrapUpGuidance: {
-              source: "THRESHOLD",
+              source: "FUTURE_SOURCE",
             },
           },
         }),
@@ -317,7 +317,7 @@ describe("GraphQLClient", () => {
 
       expect(data.agentRunEvents[0].source).toBe("SDK");
       expect(data.agentRunEvents[0].privacyMode).toBe("metadata_only");
-      expect(data.schedule.wrapUpGuidance.source).toBe("threshold");
+      expect(data.schedule.wrapUpGuidance.source).toBe("future_source");
     });
 
     it("normalizes agent-control action mutation enum-backed fields", async () => {

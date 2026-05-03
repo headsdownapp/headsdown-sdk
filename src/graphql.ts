@@ -265,32 +265,22 @@ const ENUM_FIELDS = new Set([
   "valueMetricsState",
 ]);
 
-const SOURCE_ENUM_VALUES = new Set([
-  "FORCED_FULL_DEPTH",
-  "FORCED_WRAP_UP",
-  "INACTIVE",
-  "LOCKED",
-  "OUTSIDE_REACHABLE_HOURS",
-  "THRESHOLD",
-  "UNKNOWN_DEADLINE",
-]);
-
 /** Convert SCREAMING_CASE enum values to lowercase in a response object. */
-function normalizeEnums<T>(data: T): T {
+function normalizeEnums<T>(data: T, parentKey?: string): T {
   if (data === null || data === undefined) return data;
-  if (Array.isArray(data)) return data.map(normalizeEnums) as T;
+  if (Array.isArray(data)) return data.map((item) => normalizeEnums(item, parentKey)) as T;
   if (typeof data !== "object") return data;
 
   const result: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(data as Record<string, unknown>)) {
     if (ENUM_FIELDS.has(key) && typeof value === "string") {
-      result[key] = normalizeEnumValue(key, value);
+      result[key] = normalizeEnumValue(key, value, parentKey);
     } else if (ENUM_FIELDS.has(key) && Array.isArray(value)) {
       result[key] = value.map((item) =>
-        typeof item === "string" ? normalizeEnumValue(key, item) : item,
+        typeof item === "string" ? normalizeEnumValue(key, item, parentKey) : item,
       );
     } else if (typeof value === "object" && value !== null) {
-      result[key] = normalizeEnums(value);
+      result[key] = normalizeEnums(value, key);
     } else {
       result[key] = value;
     }
@@ -298,10 +288,8 @@ function normalizeEnums<T>(data: T): T {
   return result as T;
 }
 
-function normalizeEnumValue(key: string, value: string): string {
-  if (key === "source") {
-    return SOURCE_ENUM_VALUES.has(value) ? value.toLowerCase() : value;
-  }
+function normalizeEnumValue(key: string, value: string, parentKey?: string): string {
+  if (key === "source" && parentKey !== "wrapUpGuidance") return value;
 
   return /^[A-Z0-9_]+$/.test(value) ? value.toLowerCase() : value;
 }
