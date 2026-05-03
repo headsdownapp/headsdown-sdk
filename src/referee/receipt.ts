@@ -93,6 +93,33 @@ function assertSafeToken(value: unknown, path: string): asserts value is string 
   }
 }
 
+function assertIsoTimestamp(value: unknown, path: string): asserts value is string {
+  assertSafeToken(value, path);
+  const normalizedValue = value.includes(".") ? value : value.replace("Z", ".000Z");
+  const parsed = new Date(value);
+  if (
+    !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(value) ||
+    Number.isNaN(parsed.getTime()) ||
+    parsed.toISOString() !== normalizedValue
+  ) {
+    throw new Error(`Local Referee receipt requires an ISO timestamp at ${path}.`);
+  }
+}
+
+function assertContractRef(value: unknown, path: string): asserts value is string {
+  assertSafeToken(value, path);
+  if (!/^contract_[a-f0-9]{16}$/.test(value)) {
+    throw new Error(`Local Referee receipt requires a contract ref at ${path}.`);
+  }
+}
+
+function assertCheckId(value: unknown, path: string): asserts value is string {
+  assertSafeToken(value, path);
+  if (!/^check_\d+$/.test(value)) {
+    throw new Error(`Local Referee receipt requires a check id at ${path}.`);
+  }
+}
+
 function assertEnum(value: unknown, allowed: Set<string>, path: string): asserts value is string {
   if (typeof value !== "string" || !allowed.has(value)) {
     throw new Error(`Local Referee receipt contains unsupported value at ${path}.`);
@@ -116,8 +143,8 @@ export function assertLocalRefereeReceipt(value: unknown): asserts value is Loca
   assertExactKeys(receipt, RECEIPT_KEYS, "receipt");
   if (receipt.schemaVersion !== 1)
     throw new Error("Local Referee receipt schemaVersion must be 1.");
-  assertSafeToken(receipt.generatedAt, "receipt.generatedAt");
-  assertSafeToken(receipt.contractRef, "receipt.contractRef");
+  assertIsoTimestamp(receipt.generatedAt, "receipt.generatedAt");
+  assertContractRef(receipt.contractRef, "receipt.contractRef");
   assertEnum(receipt.verdict, RECEIPT_VERDICTS, "receipt.verdict");
 
   const evidence = asRecord(receipt.evidence);
@@ -159,7 +186,7 @@ export function assertLocalRefereeReceipt(value: unknown): asserts value is Loca
     const check = asRecord(value);
     if (!check) throw new Error(`Local Referee receipt check ${index + 1} must be an object.`);
     assertExactKeys(check, RECEIPT_CHECK_KEYS, `receipt.checks[${index}]`);
-    assertSafeToken(check.id, `receipt.checks[${index}].id`);
+    assertCheckId(check.id, `receipt.checks[${index}].id`);
     assertEnum(check.type, RECEIPT_CHECK_TYPES, `receipt.checks[${index}].type`);
     assertEnum(check.status, RECEIPT_STATUSES, `receipt.checks[${index}].status`);
     assertSafeToken(check.reasonCode, `receipt.checks[${index}].reasonCode`);
@@ -172,21 +199,36 @@ export function assertLocalRefereeReceipt(value: unknown): asserts value is Loca
     throw new Error("Local Referee receipt verdict does not match passed checks.");
 }
 
+function assertEvaluationMatchesContract(
+  evaluation: LocalRefereeEvaluation,
+  contract: LocalRefereeContract,
+): void {
+  if (evaluation.checks.length !== contract.checks.length) {
+    throw new Error("Local Referee evaluation does not match contract checks.");
+  }
+
+  for (const [index, check] of evaluation.checks.entries()) {
+    if (check.type !== contract.checks[index]?.type) {
+      throw new Error("Local Referee evaluation does not match contract checks.");
+    }
+  }
+}
+
 export function buildLocalRefereeReceipt(input: {
   contract: LocalRefereeContract;
   evidence: LocalRefereeEvidence;
   evaluation: LocalRefereeEvaluation;
   now?: Date;
 }): LocalRefereeReceipt {
-  const hasGitCommitCheck = input.contract.checks.some(
-    (check) => check.type === "git_commit_present",
-  );
+  const contract = parseLocalRefereeContract(input.contract);
+  assertEvaluationMatchesContract(input.evaluation, contract);
+  const hasGitCommitCheck = contract.checks.some((check) => check.type === "git_commit_present");
   const manualReviewRoundTripsAvoided = input.evidence.manualReviewRoundTripsAvoided;
 
-  return {
+  const receipt: LocalRefereeReceipt = {
     schemaVersion: 1,
     generatedAt: (input.now ?? new Date()).toISOString(),
-    contractRef: buildLocalRefereeContractRef(input.contract),
+    contractRef: buildLocalRefereeContractRef(contract),
     verdict: input.evaluation.verdict,
     evidence: {
       filesTouchedBucket: input.evidence.filesTouchedBucket,
@@ -201,6 +243,9 @@ export function buildLocalRefereeReceipt(input: {
     },
     checks: input.evaluation.checks,
   };
+
+  assertLocalRefereeReceipt(receipt);
+  return receipt;
 }
 
 export function renderLocalRefereeReceipt(receipt: LocalRefereeReceipt): string {

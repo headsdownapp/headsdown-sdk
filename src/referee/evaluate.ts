@@ -1,4 +1,8 @@
-import type { LocalRefereeCheck, LocalRefereeContract } from "./contract.js";
+import {
+  parseLocalRefereeContract,
+  type LocalRefereeCheck,
+  type LocalRefereeContract,
+} from "./contract.js";
 import type { LocalRefereeEvidence } from "./evidence.js";
 
 export type LocalRefereeCheckStatus = "passed" | "failed";
@@ -114,7 +118,10 @@ export function evaluateLocalRefereeContract(
   contract: LocalRefereeContract,
   evidence: LocalRefereeEvidence,
 ): LocalRefereeEvaluation {
-  const checks = contract.checks.map((check, index) => evaluateCheck(check, evidence, index));
+  const normalizedContract = parseLocalRefereeContract(contract);
+  const checks = normalizedContract.checks.map((check, index) =>
+    evaluateCheck(check, evidence, index),
+  );
   return {
     verdict: checks.every((check) => check.status === "passed") ? "passed" : "needs_review",
     checks,

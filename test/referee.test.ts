@@ -36,7 +36,7 @@ function receiptFixture(overrides: Partial<LocalRefereeReceipt> = {}): LocalRefe
   return {
     schemaVersion: 1,
     generatedAt: "2026-01-01T00:00:00.000Z",
-    contractRef: "contract_test",
+    contractRef: "contract_1234567890abcdef",
     verdict: "passed",
     evidence: {
       filesTouchedBucket: "1_to_2",
@@ -246,6 +246,22 @@ describe("Local Referee evaluation", () => {
     }
   });
 
+  it("normalizes raw contract check names before evaluation", () => {
+    const rawContract = JSON.parse(
+      '{"version":1,"checks":[{"type":"git commit present","required":true}]}',
+    );
+
+    expect(
+      evaluateLocalRefereeContract(
+        rawContract,
+        normalizeLocalRefereeEvidence({ gitCommitPresent: true }),
+      ),
+    ).toMatchObject({
+      verdict: "passed",
+      checks: [{ type: "git_commit_present", status: "passed" }],
+    });
+  });
+
   it("fails scope checks closed when count evidence is unavailable", () => {
     const contract = contractWith([
       { type: "max_files_touched", max: 5 },
@@ -269,7 +285,7 @@ describe("Local Referee receipts", () => {
       [
         "HEADSDOWN LOCAL REFEREE RECEIPT",
         "Verdict: passed",
-        "Contract: contract_test",
+        "Contract: contract_1234567890abcdef",
         "Generated: 2026-01-01T00:00:00.000Z",
         "Evidence:",
         "- Files touched: 1_to_2",
@@ -297,6 +313,12 @@ describe("Local Referee receipts", () => {
       }),
     ).toThrow("safe token");
     expect(() =>
+      renderLocalRefereeReceipt({
+        ...receiptFixture(),
+        contractRef: "contract_test",
+      }),
+    ).toThrow("contract ref");
+    expect(() =>
       renderLocalRefereeReceiptMarkdown({
         ...receiptFixture(),
         checks: [
@@ -309,6 +331,31 @@ describe("Local Referee receipts", () => {
         ],
       }),
     ).toThrow("safe token");
+    expect(() =>
+      renderLocalRefereeReceiptMarkdown({
+        ...receiptFixture(),
+        checks: [
+          {
+            id: "first_check",
+            type: "validation_status",
+            status: "passed",
+            reasonCode: "validation_status_matched",
+          },
+        ],
+      }),
+    ).toThrow("check id");
+    expect(() =>
+      renderLocalRefereeReceipt({
+        ...receiptFixture(),
+        generatedAt: "not_a_timestamp",
+      }),
+    ).toThrow("ISO timestamp");
+    expect(() =>
+      renderLocalRefereeReceipt({
+        ...receiptFixture(),
+        generatedAt: "2026-02-31T00:00:00.000Z",
+      }),
+    ).toThrow("ISO timestamp");
     expect(() => renderLocalRefereeReceipt({ ...receiptFixture(), checks: [] })).toThrow(
       "requires at least one check",
     );
@@ -328,7 +375,28 @@ describe("Local Referee receipts", () => {
     ).toThrow("verdict does not match failed checks");
   });
 
-  it("builds contract refs from normalized contract fields only", () => {
+  it("rejects receipt builds when the evaluation came from a different contract", () => {
+    const contract = contractWith([{ type: "validation_status", required: "passed" }]);
+    const evidence = normalizeLocalRefereeEvidence({
+      validationStatus: "passed",
+      outcome: "completed",
+    });
+    const mismatchedEvaluation = evaluateLocalRefereeContract(
+      contractWith([{ type: "outcome", required: "completed" }]),
+      evidence,
+    );
+
+    expect(() =>
+      buildLocalRefereeReceipt({
+        contract,
+        evidence,
+        evaluation: mismatchedEvaluation,
+        now: new Date("2026-01-01T00:00:00Z"),
+      }),
+    ).toThrow("evaluation does not match contract checks");
+  });
+
+  it("builds receipts and contract refs from normalized contract fields only", () => {
     const contract = contractWith([{ type: "validation_status", required: "passed" }]);
     const contractWithIgnoredRuntimeFields = {
       ...contract,
@@ -339,6 +407,23 @@ describe("Local Referee receipts", () => {
     expect(buildLocalRefereeContractRef(contractWithIgnoredRuntimeFields)).toBe(
       buildLocalRefereeContractRef(contract),
     );
+
+    const rawContractWithSpacedCheckName = JSON.parse(
+      '{"version":1,"checks":[{"type":"git commit present","required":true}]}',
+    );
+    const evidence = normalizeLocalRefereeEvidence({ gitCommitPresent: true });
+    const evaluation = evaluateLocalRefereeContract(
+      contractWith([{ type: "git_commit_present", required: true }]),
+      evidence,
+    );
+    const receipt = buildLocalRefereeReceipt({
+      contract: rawContractWithSpacedCheckName,
+      evidence,
+      evaluation,
+      now: new Date("2026-01-01T00:00:00Z"),
+    });
+
+    expect(receipt.evidence.gitCommitPresent).toBe(true);
   });
 
   it("renders the canonical concise markdown receipt", () => {
@@ -382,10 +467,13 @@ describe("Local Referee receipts", () => {
     );
   });
 
-  it("keeps labels canonical and avoids misleading network language", () => {
+  it("keeps labels canonical and rejects unsupported runtime labels", () => {
     expect(LOCAL_REFEREE_CHECK_LABELS.max_files_touched).toBe("Scope within contract");
     expect(labelLocalRefereeCheckType("max_tool_calls")).toBe("Scope within contract");
     expect(labelLocalRefereeCheckType("network_required")).toBe("Network requirement satisfied");
+    expect(() => labelLocalRefereeCheckType(JSON.parse('"unknown_check"'))).toThrow(
+      "Unsupported Local Referee check type",
+    );
   });
 });
 

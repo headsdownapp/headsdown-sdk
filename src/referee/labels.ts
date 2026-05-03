@@ -11,5 +11,7 @@ export const LOCAL_REFEREE_CHECK_LABELS: Record<LocalRefereeCheckType, string> =
 };
 
 export function labelLocalRefereeCheckType(type: LocalRefereeCheckType): string {
-  return LOCAL_REFEREE_CHECK_LABELS[type];
+  const label = (LOCAL_REFEREE_CHECK_LABELS as Record<string, string | undefined>)[type];
+  if (!label) throw new Error(`Unsupported Local Referee check type: ${String(type)}.`);
+  return label;
 }
