@@ -59,7 +59,7 @@ function countChecks(receipt: LocalRefereeReceipt, status: "passed" | "failed"):
 function manualReviewRoundTripEstimate(receipt: LocalRefereeReceipt): string {
   const failed = countChecks(receipt, "failed");
   if (failed >= 3) return "multiple";
-  if (failed >= 1 || receipt.verdict === "needs_review") return "one";
+  if (failed >= 1) return "one";
   return "none";
 }
 

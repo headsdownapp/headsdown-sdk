@@ -32,10 +32,10 @@ export interface LocalRefereeEvidence {
 
 function normalizeOptionalNonNegativeInteger(value: unknown): number | null {
   if (value === undefined || value === null || value === "") return null;
-  if (typeof value === "number" && Number.isFinite(value)) return Math.max(0, Math.floor(value));
+  if (typeof value === "number" && Number.isFinite(value) && value >= 0) return Math.floor(value);
   if (typeof value === "string" && value.trim().length > 0) {
     const parsed = Number(value);
-    if (Number.isFinite(parsed)) return Math.max(0, Math.floor(parsed));
+    if (Number.isFinite(parsed) && parsed >= 0) return Math.floor(parsed);
   }
   return null;
 }
@@ -88,7 +88,7 @@ function normalizeOutcome(value: unknown): LocalRefereeOutcome {
 }
 
 export function bucketCount(count: number): string {
-  if (count <= 0) return "0";
+  if (!Number.isFinite(count) || count <= 0) return "0";
   if (count <= 2) return "1_to_2";
   if (count <= 5) return "3_to_5";
   if (count <= 10) return "6_to_10";
@@ -96,7 +96,7 @@ export function bucketCount(count: number): string {
 }
 
 export function bucketMinutes(minutes: number | null): string {
-  if (minutes === null) return "unknown";
+  if (minutes === null || !Number.isFinite(minutes) || minutes < 0) return "unknown";
   if (minutes < 15) return "under_15";
   if (minutes <= 30) return "15_to_30";
   if (minutes <= 60) return "30_to_60";

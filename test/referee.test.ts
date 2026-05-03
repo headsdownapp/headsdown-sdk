@@ -8,6 +8,8 @@ import {
   assertLocalRefereeOutcomeSummaryPayload,
   assertLocalRefereeOutcomeSummaryPayloadIsSafe,
   assertLocalRefereeReceipt,
+  bucketCount,
+  bucketMinutes,
   buildLocalRefereeContractRef,
   buildLocalRefereeOutcomeSummaryPayload,
   buildLocalRefereeReceipt,
@@ -162,6 +164,21 @@ describe("Local Referee evidence normalization", () => {
       toolCalls: 0,
       toolCallsKnown: false,
     });
+    expect(
+      normalizeLocalRefereeEvidence({ filesTouched: -1, toolCalls: Number.NaN }),
+    ).toMatchObject({
+      filesTouched: 0,
+      filesTouchedKnown: false,
+      toolCalls: 0,
+      toolCallsKnown: false,
+    });
+  });
+
+  it("buckets invalid runtime numbers safely", () => {
+    expect(bucketCount(Number.NaN)).toBe("0");
+    expect(bucketCount(Number.POSITIVE_INFINITY)).toBe("0");
+    expect(bucketMinutes(Number.NaN)).toBe("unknown");
+    expect(bucketMinutes(-1)).toBe("unknown");
   });
 });
 
