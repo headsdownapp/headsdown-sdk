@@ -273,11 +273,11 @@ function normalizeEnums<T>(data: T, parentKey?: string): T {
 
   const result: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(data as Record<string, unknown>)) {
-    if (ENUM_FIELDS.has(key) && typeof value === "string") {
-      result[key] = normalizeEnumValue(key, value, parentKey);
-    } else if (ENUM_FIELDS.has(key) && Array.isArray(value)) {
+    if (isEnumField(key, parentKey) && typeof value === "string") {
+      result[key] = normalizeEnumValue(value);
+    } else if (isEnumField(key, parentKey) && Array.isArray(value)) {
       result[key] = value.map((item) =>
-        typeof item === "string" ? normalizeEnumValue(key, item, parentKey) : item,
+        typeof item === "string" ? normalizeEnumValue(item) : item,
       );
     } else if (typeof value === "object" && value !== null) {
       result[key] = normalizeEnums(value, key);
@@ -288,9 +288,13 @@ function normalizeEnums<T>(data: T, parentKey?: string): T {
   return result as T;
 }
 
-function normalizeEnumValue(key: string, value: string, parentKey?: string): string {
-  if (key === "source" && parentKey !== "wrapUpGuidance") return value;
+function isEnumField(key: string, parentKey: string | undefined): boolean {
+  if (key === "source") return parentKey === "wrapUpGuidance";
+  if (key === "actionKey") return parentKey === "result";
+  return ENUM_FIELDS.has(key);
+}
 
+function normalizeEnumValue(value: string): string {
   return /^[A-Z0-9_]+$/.test(value) ? value.toLowerCase() : value;
 }
 

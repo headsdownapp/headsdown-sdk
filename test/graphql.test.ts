@@ -320,6 +320,39 @@ describe("GraphQLClient", () => {
       expect(data.schedule.wrapUpGuidance.source).toBe("future_source");
     });
 
+    it("preserves free-string action keys while normalizing action result enums", async () => {
+      const client = new GraphQLClient({
+        ...BASE_OPTIONS,
+        fetch: mockGraphQL({
+          autopilotPolicy: {
+            identityActionOverrides: [
+              { actionKey: "DEPLOYMENT", strategy: "DEFER_FOR_HUMAN_REVIEW" },
+            ],
+          },
+          applyHeadsdownAction: {
+            result: {
+              actionKey: "PAUSE_AND_SUMMARIZE",
+            },
+          },
+        }),
+      });
+
+      const data = await client.request<{
+        autopilotPolicy: {
+          identityActionOverrides: Array<{ actionKey: string; strategy: string }>;
+        };
+        applyHeadsdownAction: { result: { actionKey: string } };
+      }>(
+        "query { autopilotPolicy { identityActionOverrides { actionKey strategy } } applyHeadsdownAction { result { actionKey } } }",
+      );
+
+      expect(data.autopilotPolicy.identityActionOverrides[0].actionKey).toBe("DEPLOYMENT");
+      expect(data.autopilotPolicy.identityActionOverrides[0].strategy).toBe(
+        "DEFER_FOR_HUMAN_REVIEW",
+      );
+      expect(data.applyHeadsdownAction.result.actionKey).toBe("pause_and_summarize");
+    });
+
     it("normalizes agent-control action mutation enum-backed fields", async () => {
       const client = new GraphQLClient({
         ...BASE_OPTIONS,
