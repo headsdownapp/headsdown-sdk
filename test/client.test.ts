@@ -1163,7 +1163,7 @@ describe("HeadsDownClient", () => {
                     client: { kind: "pi", name: "Pi", version: "0.2.0" },
                     actor: { kind: "agent", ref: "pi" },
                     runId: "run_42",
-                    source: "pi_skill",
+                    source: "PiSkill",
                     privacyMode: "METADATA_ONLY",
                     idempotencyKey: "run_42:deferred_decision.resolved:decision_abcdef1234567890",
                     correlationId: null,
@@ -1193,11 +1193,12 @@ describe("HeadsDownClient", () => {
 
       expect(events).toHaveLength(1);
       expect(events[0]?.eventType).toBe("deferred_decision.resolved");
+      expect(events[0]?.source).toBe("PiSkill");
 
       const body = JSON.parse(capturedBody!);
       expect(body.variables.runId).toBe("run_42");
       expect(body.variables.eventType).toBe("deferred_decision.resolved");
-      expect(body.variables.resolutionKind).toBe("approved");
+      expect(body.variables.resolutionKind).toBe("APPROVED");
       expect(body.variables.limit).toBe(10);
     });
   });

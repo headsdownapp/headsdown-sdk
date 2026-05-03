@@ -185,11 +185,16 @@ const PROHIBITED_KEYS = new Set([
   "message",
   "messages",
   "content",
+  "body",
+  "text",
+  "description",
   "code",
   "diff",
   "patch",
+  "snippet",
   "file",
   "files",
+  "file_contents",
   "file_path",
   "file_paths",
   "path",
@@ -199,12 +204,17 @@ const PROHIBITED_KEYS = new Set([
   "repository_name",
   "branch",
   "branch_name",
+  "directory",
+  "directory_name",
   "terminal_output",
   "stdout",
   "stderr",
   "log",
   "logs",
+  "build_log",
+  "build_logs",
   "test_log",
+  "output",
   "stacktrace",
   "traceback",
   "url",
@@ -212,15 +222,72 @@ const PROHIBITED_KEYS = new Set([
   "commit_message",
   "pr_body",
   "issue_body",
+  "ticket_body",
+  "ticket_description",
   "calendar_title",
+  "calendar_description",
+  "calendar_location",
+  "attendee",
+  "attendees",
+  "location",
+  "locations",
+  "meeting_link",
+  "meeting_links",
   "slack_message",
   "email_body",
+  "chat_message",
+  "notification_body",
+  "dm_content",
   "screenshot",
   "screen_recording",
   "secret",
+  "secrets",
   "token",
+  "tokens",
+  "access_token",
+  "access_tokens",
+  "refresh_token",
+  "refresh_tokens",
   "api_key",
+  "api_keys",
+  "password",
+  "cookie",
   "environment",
+  "environment_variable",
+  "environment_variables",
+  "env_var",
+  "env_vars",
+]);
+
+const PROHIBITED_COMPACT_KEYS = new Set(
+  Array.from(PROHIBITED_KEYS, (key) => key.replace(/_/g, "")),
+);
+
+const PROHIBITED_KEY_TOKENS = new Set([
+  "body",
+  "code",
+  "content",
+  "contents",
+  "cookie",
+  "description",
+  "diff",
+  "log",
+  "logs",
+  "output",
+  "password",
+  "patch",
+  "prompt",
+  "prompts",
+  "secret",
+  "secrets",
+  "snippet",
+  "stderr",
+  "stdout",
+  "stacktrace",
+  "text",
+  "token",
+  "tokens",
+  "traceback",
 ]);
 
 const UNSAFE_VALUE_PATTERNS = [
@@ -264,9 +331,7 @@ export function buildAgentRunEventInput(input: AgentRunEventInput): RequiredEnve
     progressPayload,
   });
 
-  assertPrivacySafe(variablesInput);
-
-  return variablesInput as RequiredEnvelopeInput;
+  return privacySafeClone(variablesInput, "input") as RequiredEnvelopeInput;
 }
 
 export function startedEvent(
@@ -386,25 +451,59 @@ export function bucketScopeGrowth(count: number | undefined): AgentRunScopeGrowt
 }
 
 export function assertPrivacySafe(value: unknown, path = "input"): void {
-  if (value === null || value === undefined) return;
+  void privacySafeClone(value, path);
+}
+
+function privacySafeClone(value: unknown, path: string): unknown {
+  if (value === null || value === undefined) return value;
 
   if (Array.isArray(value)) {
-    value.forEach((entry, index) => assertPrivacySafe(entry, `${path}[${index}]`));
-    return;
+    assertPlainJsonArray(value, path);
+    const clone: unknown[] = [];
+    Object.setPrototypeOf(clone, null);
+
+    for (let index = 0; index < value.length; index += 1) {
+      clone[index] = privacySafeClone(value[index], `${path}[${index}]`);
+    }
+
+    return clone;
   }
 
   if (typeof value === "object") {
-    for (const [key, entry] of Object.entries(value as Record<string, unknown>)) {
-      const normalizedKey = key.toLowerCase().replace(/[\s-]+/g, "_");
-      if (PROHIBITED_KEYS.has(normalizedKey)) {
+    if (!isPlainRecord(value)) {
+      throw new ValidationError(
+        "Agent run events can only include plain JSON-compatible metadata objects.",
+        path,
+      );
+    }
+
+    const clone = Object.create(null) as Record<string, unknown>;
+
+    for (const [key, entry] of plainRecordEntries(value, path)) {
+      if (isProhibitedPrivacyKey(key)) {
         throw new ValidationError(
           `Agent run events cannot include raw-content field '${key}'.`,
           path,
         );
       }
-      assertPrivacySafe(entry, `${path}.${key}`);
+      clone[key] = privacySafeClone(entry, `${path}.${key}`);
     }
-    return;
+
+    return clone;
+  }
+
+  if (typeof value === "function" || typeof value === "symbol" || typeof value === "bigint") {
+    throw new ValidationError(
+      "Agent run events can only include JSON-compatible metadata values.",
+      path,
+    );
+  }
+
+  if (typeof value === "number" && !Number.isFinite(value)) {
+    throw new ValidationError(
+      "Agent run events can only include finite numeric metadata values.",
+      path,
+    );
   }
 
   if (typeof value === "string" && UNSAFE_VALUE_PATTERNS.some((pattern) => pattern.test(value))) {
@@ -413,6 +512,112 @@ export function assertPrivacySafe(value: unknown, path = "input"): void {
       path,
     );
   }
+
+  return value;
+}
+
+function isProhibitedPrivacyKey(key: string): boolean {
+  const normalizedKey = normalizePrivacyKey(key);
+  const compactKey = normalizedKey.replace(/_/g, "");
+
+  return (
+    PROHIBITED_KEYS.has(normalizedKey) ||
+    PROHIBITED_COMPACT_KEYS.has(compactKey) ||
+    normalizedKey.split("_").some((token) => PROHIBITED_KEY_TOKENS.has(token))
+  );
+}
+
+function normalizePrivacyKey(key: string): string {
+  return key
+    .replace(/([a-z0-9])([A-Z])/g, "$1_$2")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+}
+
+function plainRecordEntries(
+  value: Record<string, unknown>,
+  path: string,
+): Array<[string, unknown]> {
+  assertNoJsonSerializer(value, path);
+
+  const entries: Array<[string, unknown]> = [];
+  const descriptors = Object.getOwnPropertyDescriptors(value);
+
+  for (const key of Reflect.ownKeys(descriptors)) {
+    if (typeof key !== "string") {
+      throw new ValidationError(
+        "Agent run events can only include string-keyed metadata fields.",
+        path,
+      );
+    }
+
+    const descriptor = descriptors[key];
+    assertJsonDataProperty(key, descriptor, path);
+    entries.push([key, descriptor.value]);
+  }
+
+  return entries;
+}
+
+function assertPlainJsonArray(value: unknown[], path: string): void {
+  assertNoJsonSerializer(value, path);
+
+  const descriptors = Object.getOwnPropertyDescriptors(value);
+
+  for (let index = 0; index < value.length; index += 1) {
+    if (!Object.hasOwn(descriptors, String(index))) {
+      throw new ValidationError(
+        "Agent run events can only include dense JSON-compatible metadata arrays.",
+        path,
+      );
+    }
+  }
+
+  for (const key of Reflect.ownKeys(descriptors)) {
+    if (key === "length") continue;
+
+    if (typeof key !== "string" || !isArrayIndexKey(key)) {
+      throw new ValidationError(
+        "Agent run events can only include plain JSON-compatible metadata arrays.",
+        path,
+      );
+    }
+
+    assertJsonDataProperty(key, descriptors[key], path);
+  }
+}
+
+function assertJsonDataProperty(
+  key: string,
+  descriptor: PropertyDescriptor | undefined,
+  path: string,
+): asserts descriptor is PropertyDescriptor & { value: unknown } {
+  if (!descriptor || key === "toJSON" || !descriptor.enumerable || !("value" in descriptor)) {
+    throw new ValidationError(
+      "Agent run events can only include plain JSON-compatible metadata properties.",
+      path,
+    );
+  }
+}
+
+function assertNoJsonSerializer(value: object, path: string): void {
+  if ("toJSON" in value) {
+    throw new ValidationError(
+      "Agent run events cannot include custom JSON serialization hooks.",
+      path,
+    );
+  }
+}
+
+function isArrayIndexKey(key: string): boolean {
+  const index = Number(key);
+  return Number.isInteger(index) && index >= 0 && index < 2 ** 32 - 1 && String(index) === key;
+}
+
+function isPlainRecord(value: object): value is Record<string, unknown> {
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
 }
 
 function validateBaseInput(input: AgentRunEventInput): void {
@@ -433,11 +638,10 @@ function validateBaseInput(input: AgentRunEventInput): void {
 }
 
 function normalizePayload(payload: Record<string, unknown> | undefined): Record<string, unknown> {
-  if (!payload || Object.keys(payload).length === 0) {
+  if (!payload || !isPlainRecord(payload) || Object.keys(payload).length === 0) {
     throw new ValidationError("payload is required for this agent run event.", "payload");
   }
-  assertPrivacySafe(payload, "payload");
-  return payload;
+  return privacySafeClone(payload, "payload") as Record<string, unknown>;
 }
 
 function normalizeProgressPayload(
@@ -450,14 +654,15 @@ function normalizeProgressPayload(
     );
   }
 
-  for (const [field, value] of Object.entries(payload)) {
+  const normalized = privacySafeClone(payload, "progressPayload") as AgentRunProgressMetadata;
+
+  for (const [field, value] of Object.entries(normalized)) {
     if (typeof value === "number" && (!Number.isInteger(value) || value < 0)) {
       throw new ValidationError(`${field} must be a non-negative integer.`, field);
     }
   }
 
-  assertPrivacySafe(payload, "progressPayload");
-  return payload;
+  return normalized;
 }
 
 function randomUuid(): string {

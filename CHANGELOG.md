@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- Added the `@headsdown/sdk/agent` subpath for pure agent adapter helpers, including shared HeadsDown call/action rendering and privacy-safe event builder exports.
+
 ## 0.7.0
 
 ### Added

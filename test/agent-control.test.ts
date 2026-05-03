@@ -90,6 +90,37 @@ describe("resolveHeadsDownCallFallback", () => {
     expect(fallback.reason).toBe("known_key");
   });
 
+  it("does not copy primary intent onto a recommended fallback action", () => {
+    const fallback = resolveHeadsDownCallFallback(
+      makeCall({
+        key: "off_the_clock",
+        knownKey: "off_the_clock",
+        primaryActionKnownKey: null,
+        primaryActionIntent: "start_run",
+        recommendedActionKnownKey: "queue_for_morning",
+        allowedActionKnownKeys: ["queue_for_morning"],
+      }),
+    );
+
+    expect(fallback.primaryActionKey).toBe("queue_for_morning");
+    expect(fallback.primaryActionIntent).toBe("none");
+  });
+
+  it("does not copy server intents onto unknown-key safe actions", () => {
+    const fallback = resolveHeadsDownCallFallback(
+      makeCall({
+        primaryActionKnownKey: "keep_queued",
+        primaryActionIntent: "start_run",
+        allowedActionKnownKeys: ["keep_queued"],
+        severity: "action_required",
+        reasonCodes: ["approval_required"],
+      }),
+    );
+
+    expect(fallback.primaryActionKey).toBe("keep_queued");
+    expect(fallback.primaryActionIntent).toBe("none");
+  });
+
   it("preserves known secondary action semantics", () => {
     const fallback = resolveHeadsDownCallFallback(
       makeCall({

@@ -77,6 +77,26 @@ console.log(`${call.title}: ${call.body}`);
 console.log(`HeadsDown call: ${call.primaryActionKey ?? call.primaryActionIntent}`);
 ```
 
+### Agent adapter helpers
+
+Use the `@headsdown/sdk/agent` subpath when building a native agent adapter. It exposes pure HeadsDown semantics without plugin, hook, filesystem, timer, or UI dependencies.
+
+```typescript
+import { renderHeadsDownCallForAgent } from "@headsdown/sdk/agent";
+
+const overview = await client.getAgentControlOverview();
+const render = renderHeadsDownCallForAgent(overview.headsdownCall);
+
+console.log(`${render.title}: ${render.body}`);
+if (render.primaryAction) {
+  console.log(`Next action: ${render.primaryAction.label}`);
+}
+```
+
+Adapters should keep platform wiring local. Put host lifecycle code, commands, MCP handlers, prompt injection, polling, local persistence, and UI behavior in the adapter. Use this SDK surface for shared call/action rendering, event builders, privacy-safe validators, and versioned metadata contracts.
+
+The agent helpers fail closed for future server values: unknown call keys fall back to conservative review-oriented rendering, and unknown raw action keys are never surfaced as executable actions. Render copy is used only when the payload is marked privacy-safe and does not look like a path, URL, log, secret, or raw content.
+
 ### Apply canonical HeadsDown actions
 
 Use the built-in action helpers so clients do not hand-roll mutation payloads. Helpers send canonical action keys and derive idempotency keys by default.

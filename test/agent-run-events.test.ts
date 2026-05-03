@@ -165,6 +165,128 @@ describe("agent run event helpers", () => {
     ).toThrow(ValidationError);
   });
 
+  it("rejects prohibited camelCase and compact raw-content aliases", () => {
+    for (const payload of [
+      { filePath: "/private/repo/src/foo.ts" },
+      { fileContent: "export const safe = false;" },
+      { promptText: "summarize this private transcript" },
+      { commandOutput: "tests passed" },
+      { apiKey: "hd_secret" },
+      { nested: { calendarDescription: "private planning notes" } },
+      { items: [{ terminalOutput: "stdout from a command" }] },
+      { "api.key": "hd_secret" },
+      { "file/path": "/private/repo/src/foo.ts" },
+    ]) {
+      expect(() =>
+        buildAgentRunEventInput({
+          eventType: "agent_run.started",
+          runId: "run_3",
+          payload,
+        }),
+      ).toThrow(ValidationError);
+    }
+  });
+
+  it("rejects serializable objects before JSON can expand them", () => {
+    class UnsafeSerializable {
+      toJSON() {
+        return { file_path: "/private/repo/src/foo.ts" };
+      }
+    }
+
+    const rootToJson = { task_category: "coding_agent_change" };
+    Object.defineProperty(rootToJson, "toJSON", {
+      value: () => ({ file_path: "/private/repo/src/foo.ts" }),
+    });
+
+    const nestedToJson = { task_category: "coding_agent_change", nested: {} };
+    Object.defineProperty(nestedToJson.nested, "toJSON", {
+      value: () => ({ prompt_text: "private prompt" }),
+    });
+
+    for (const payload of [{ wrapped: new UnsafeSerializable() }, rootToJson, nestedToJson]) {
+      expect(() =>
+        buildAgentRunEventInput({
+          eventType: "agent_run.started",
+          runId: "run_3",
+          payload,
+        }),
+      ).toThrow(ValidationError);
+    }
+  });
+
+  it("rejects accessor metadata properties before JSON can observe changing values", () => {
+    let serializeUnsafeValue = false;
+    const payload = {} as Record<string, unknown>;
+    Object.defineProperty(payload, "task_category", {
+      enumerable: true,
+      get: () => (serializeUnsafeValue ? "/private/repo/src/foo.ts" : "coding_agent_change"),
+    });
+    serializeUnsafeValue = true;
+
+    expect(() =>
+      buildAgentRunEventInput({
+        eventType: "agent_run.started",
+        runId: "run_3",
+        payload,
+      }),
+    ).toThrow(ValidationError);
+  });
+
+  it("rejects arrays that could read inherited index values during JSON serialization", () => {
+    const inheritedIndexArray: unknown[] = [];
+    const prototype = Object.create(Array.prototype) as unknown[];
+    Object.defineProperty(prototype, "0", {
+      configurable: true,
+      get: () => "/private/repo/src/foo.ts",
+    });
+    Object.setPrototypeOf(inheritedIndexArray, prototype);
+    inheritedIndexArray.length = 1;
+
+    expect(() =>
+      buildAgentRunEventInput({
+        eventType: "agent_run.started",
+        runId: "run_3",
+        payload: { categories: inheritedIndexArray },
+      }),
+    ).toThrow(ValidationError);
+  });
+
+  it("rejects inherited JSON serialization hooks", () => {
+    const objectToJson = Object.getOwnPropertyDescriptor(Object.prototype, "toJSON");
+    const arrayToJson = Object.getOwnPropertyDescriptor(Array.prototype, "toJSON");
+
+    try {
+      Object.defineProperty(Object.prototype, "toJSON", {
+        configurable: true,
+        value: () => ({ file_path: "/private/repo/src/foo.ts" }),
+      });
+      expect(() =>
+        buildAgentRunEventInput({
+          eventType: "agent_run.started",
+          runId: "run_3",
+          payload: { task_category: "coding_agent_change" },
+        }),
+      ).toThrow(ValidationError);
+
+      delete (Object.prototype as { toJSON?: unknown }).toJSON;
+      Object.defineProperty(Array.prototype, "toJSON", {
+        configurable: true,
+        value: () => [{ file_path: "/private/repo/src/foo.ts" }],
+      });
+      expect(() =>
+        buildAgentRunEventInput({
+          eventType: "agent_run.started",
+          runId: "run_3",
+          payload: { categories: ["coding_agent_change"] },
+        }),
+      ).toThrow(ValidationError);
+    } finally {
+      restorePrototypeProperty(Object.prototype, "toJSON", objectToJson);
+      restorePrototypeProperty(Array.prototype, "toJSON", arrayToJson);
+    }
+  });
+
   it("builds deferred decision resolved events with deterministic idempotency key", () => {
     const event = deferredDecisionResolvedEvent(
       { runId: "run_42" },
@@ -233,3 +355,15 @@ describe("agent run event helpers", () => {
     expect(bucketScopeGrowth(2)).toBe("1_to_2_files");
   });
 });
+
+function restorePrototypeProperty(
+  prototype: object,
+  key: string,
+  descriptor: PropertyDescriptor | undefined,
+): void {
+  if (descriptor) {
+    Object.defineProperty(prototype, key, descriptor);
+  } else {
+    delete (prototype as Record<string, unknown>)[key];
+  }
+}

@@ -266,24 +266,36 @@ const ENUM_FIELDS = new Set([
 ]);
 
 /** Convert SCREAMING_CASE enum values to lowercase in a response object. */
-function normalizeEnums<T>(data: T): T {
+function normalizeEnums<T>(data: T, parentKey?: string): T {
   if (data === null || data === undefined) return data;
-  if (Array.isArray(data)) return data.map(normalizeEnums) as T;
+  if (Array.isArray(data)) return data.map((item) => normalizeEnums(item, parentKey)) as T;
   if (typeof data !== "object") return data;
 
   const result: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(data as Record<string, unknown>)) {
-    if (ENUM_FIELDS.has(key) && typeof value === "string") {
-      result[key] = value.toLowerCase();
-    } else if (ENUM_FIELDS.has(key) && Array.isArray(value)) {
-      result[key] = value.map((item) => (typeof item === "string" ? item.toLowerCase() : item));
+    if (isEnumField(key, parentKey) && typeof value === "string") {
+      result[key] = normalizeEnumValue(value);
+    } else if (isEnumField(key, parentKey) && Array.isArray(value)) {
+      result[key] = value.map((item) =>
+        typeof item === "string" ? normalizeEnumValue(item) : item,
+      );
     } else if (typeof value === "object" && value !== null) {
-      result[key] = normalizeEnums(value);
+      result[key] = normalizeEnums(value, key);
     } else {
       result[key] = value;
     }
   }
   return result as T;
+}
+
+function isEnumField(key: string, parentKey: string | undefined): boolean {
+  if (key === "source") return parentKey === "wrapUpGuidance";
+  if (key === "actionKey") return parentKey === "result";
+  return ENUM_FIELDS.has(key);
+}
+
+function normalizeEnumValue(value: string): string {
+  return /^[A-Z0-9_]+$/.test(value) ? value.toLowerCase() : value;
 }
 
 /** Convert lowercase enum values to SCREAMING_CASE for GraphQL input. */
