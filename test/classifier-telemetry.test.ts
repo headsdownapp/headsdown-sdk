@@ -46,11 +46,69 @@ describe("classifier telemetry manifest", () => {
       "llm_fallback",
       "unknown_variant_fallback",
     ]);
-    expect(CLASSIFIER_TELEMETRY_DECISION_KEYS).toContain("permanent_command_pattern");
-    expect(CLASSIFIER_TELEMETRY_DECISION_KEYS).toContain("unclassified_unknown");
-    expect(CLASSIFIER_TELEMETRY_MATCHER_KEYS).toContain("bash_permanent_command_pattern");
-    expect(CLASSIFIER_TELEMETRY_MATCHER_KEYS).toContain("bash_unknown_command");
-    expect(CLASSIFIER_TELEMETRY_CATALOG_MATCH_KEYS).toContain("fixture_identity_publish");
+    expect(CLASSIFIER_TELEMETRY_DECISION_KEYS).toEqual([
+      "ask_user_baseline",
+      "ask_user_recovery_after_failure",
+      "ask_user_tooling_choice",
+      "classification_failed",
+      "computer_use_external_side_effect",
+      "computer_use_local",
+      "critical_command_pattern",
+      "destructive_local",
+      "destructive_public",
+      "edit_delete",
+      "edit_local_write",
+      "external_side_effect",
+      "known_safe_webfetch",
+      "malformed_ask_user_action_shape",
+      "malformed_bash_action_shape",
+      "malformed_computer_use_action_shape",
+      "malformed_edit_action_shape",
+      "malformed_mcp_action_shape",
+      "malformed_webfetch_action_shape",
+      "mcp_read_only_declared",
+      "mcp_side_effect_possible",
+      "permanent_command_pattern",
+      "read_only_bash",
+      "routine_local_bash",
+      "unknown_bash_command",
+      "unknown_variant_side_effect_possible",
+      "unknown_variant_unverified_read_only",
+      "unknown_web_domain",
+      "unclassified_unknown",
+      "unhandled_known_tool_kind",
+    ]);
+    expect(CLASSIFIER_TELEMETRY_MATCHER_KEYS).toEqual([
+      "ask_user_context",
+      "bash_critical_command_pattern",
+      "bash_permanent_command_pattern",
+      "bash_read_only_pattern",
+      "bash_routine_local_pattern",
+      "bash_unknown_command",
+      "computer_use_side_effect_flags",
+      "edit_operation",
+      "malformed_action_shape",
+      "mcp_read_only_declaration",
+      "side_effect_flags",
+      "unknown_variant_risk",
+      "unhandled_tool_kind",
+      "webfetch_known_safe_flag",
+      "webfetch_unknown_target",
+    ]);
+    expect(CLASSIFIER_TELEMETRY_CATALOG_MATCH_KEYS).toEqual([
+      "fixture_known_read",
+      "fixture_local_directory_create",
+      "fixture_local_package_install",
+      "fixture_unknown_network_fetch",
+      "fixture_local_delete",
+      "fixture_identity_publish",
+      "fixture_high_risk_publish",
+      "fixture_destructive_data_operation",
+      "fixture_ask_user_recovery_after_failure",
+      "fixture_ask_user_tooling_choice",
+      "fixture_ask_user_scope_clarification",
+      "fixture_ask_user_approval_request",
+    ]);
     expect(CLASSIFIER_TELEMETRY_FAILURE_REASON_CODES).toEqual([
       "classification_failed",
       "malformed_action_shape",
@@ -282,7 +340,14 @@ describe("classifier telemetry manifest", () => {
     expect(() =>
       buildClassifierTelemetryManifest({
         classifiedAction,
-        metadata: { matcherKey: "integration_defined_matcher" } as never,
+        metadata: { catalogMatchKey: "integration_defined_catalog" } as never,
+      }),
+    ).toThrow(ValidationError);
+
+    expect(() =>
+      buildClassifierTelemetryManifest({
+        classifiedAction,
+        metadata: { matcherKey: "edit_operation" } as never,
       }),
     ).toThrow(ValidationError);
 

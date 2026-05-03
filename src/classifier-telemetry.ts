@@ -156,7 +156,6 @@ export interface ClassifierTelemetryManifest {
 }
 
 export interface ClassifierTelemetryDerivationMetadata {
-  matcherKey?: ClassifierTelemetryMatcherKey;
   catalogMatchKey?: ClassifierTelemetryCatalogMatchKey;
 }
 
@@ -180,7 +179,7 @@ const INPUT_FIELDS = new Set([
 
 const CLASSIFIED_ACTION_FIELDS = new Set(["outcome", "reasonCode", "source", "toolKind"]);
 
-const METADATA_FIELDS = new Set(["matcherKey", "catalogMatchKey"]);
+const METADATA_FIELDS = new Set(["catalogMatchKey"]);
 
 const RAW_CONTENT_KEY_PARTS = [
   "arg",
@@ -333,12 +332,12 @@ export function buildClassifierTelemetryManifest(
     manifest.severity = classifierOutcome;
   }
 
-  const matcherKey = metadata?.matcherKey ?? MATCHER_KEY_BY_DECISION_KEY[classifierDecisionKey];
+  const matcherKey = MATCHER_KEY_BY_DECISION_KEY[classifierDecisionKey];
   if (matcherKey !== undefined) {
     manifest.matcherKey = assertKnownValue(
       matcherKey,
       CLASSIFIER_TELEMETRY_MATCHER_KEYS,
-      "classifierTelemetry.metadata.matcherKey",
+      "classifierTelemetry.matcherKey",
     );
   }
 
