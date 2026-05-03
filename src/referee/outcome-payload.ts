@@ -1,4 +1,4 @@
-import type { LocalRefereeReceipt } from "./receipt.js";
+import { assertLocalRefereeReceipt, type LocalRefereeReceipt } from "./receipt.js";
 
 export type LocalRefereeClientKind = string;
 
@@ -68,6 +68,8 @@ export function buildLocalRefereeOutcomeSummaryPayload(input: {
   client: LocalRefereeOutcomeSummaryPayload["client"];
   executionMode?: "local_only" | "hosted";
 }): LocalRefereeOutcomeSummaryPayload {
+  assertLocalRefereeReceipt(input.receipt);
+
   const payload: LocalRefereeOutcomeSummaryPayload = {
     schemaVersion: 1,
     finalState: input.receipt.verdict,

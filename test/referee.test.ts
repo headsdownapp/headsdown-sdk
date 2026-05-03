@@ -8,6 +8,7 @@ import {
   assertLocalRefereeOutcomeSummaryPayload,
   assertLocalRefereeOutcomeSummaryPayloadIsSafe,
   assertLocalRefereeReceipt,
+  buildLocalRefereeContractRef,
   buildLocalRefereeOutcomeSummaryPayload,
   buildLocalRefereeReceipt,
   evaluateLocalRefereeContract,
@@ -287,7 +288,7 @@ describe("Local Referee receipts", () => {
     );
   });
 
-  it("rejects unsafe caller-provided receipt fields before rendering", () => {
+  it("rejects unsafe or inconsistent caller-provided receipt fields before rendering", () => {
     expect(() => assertLocalRefereeReceipt(receiptFixture())).not.toThrow();
     expect(() =>
       renderLocalRefereeReceipt({
@@ -308,6 +309,36 @@ describe("Local Referee receipts", () => {
         ],
       }),
     ).toThrow("safe token");
+    expect(() => renderLocalRefereeReceipt({ ...receiptFixture(), checks: [] })).toThrow(
+      "requires at least one check",
+    );
+    expect(() =>
+      renderLocalRefereeReceipt({
+        ...receiptFixture(),
+        verdict: "passed",
+        checks: [
+          {
+            id: "check_1",
+            type: "validation_status",
+            status: "failed",
+            reasonCode: "validation_status_mismatch",
+          },
+        ],
+      }),
+    ).toThrow("verdict does not match failed checks");
+  });
+
+  it("builds contract refs from normalized contract fields only", () => {
+    const contract = contractWith([{ type: "validation_status", required: "passed" }]);
+    const contractWithIgnoredRuntimeFields = {
+      ...contract,
+      ignoredRuntimeField: "ignored_value",
+      checks: [{ ...contract.checks[0], ignoredRuntimeField: "ignored_value" }],
+    } as unknown as typeof contract;
+
+    expect(buildLocalRefereeContractRef(contractWithIgnoredRuntimeFields)).toBe(
+      buildLocalRefereeContractRef(contract),
+    );
   });
 
   it("renders the canonical concise markdown receipt", () => {
@@ -351,9 +382,10 @@ describe("Local Referee receipts", () => {
     );
   });
 
-  it("keeps labels canonical for both scope checks", () => {
+  it("keeps labels canonical and avoids misleading network language", () => {
     expect(LOCAL_REFEREE_CHECK_LABELS.max_files_touched).toBe("Scope within contract");
     expect(labelLocalRefereeCheckType("max_tool_calls")).toBe("Scope within contract");
+    expect(labelLocalRefereeCheckType("network_required")).toBe("Network requirement satisfied");
   });
 });
 
@@ -377,6 +409,12 @@ describe("Local Referee outcome payloads and sharing", () => {
       client: { kind: "claude", version: "0.9.0" },
     });
     expect(() => assertLocalRefereeOutcomeSummaryPayload(payload)).not.toThrow();
+    expect(() =>
+      buildLocalRefereeOutcomeSummaryPayload({
+        receipt: { ...receiptFixture(), contractRef: "https://example.invalid/private" },
+        client: { kind: "claude", version: "0.9.0" },
+      }),
+    ).toThrow("safe token");
   });
 
   it("rejects unknown payload fields and unsafe client tokens before submission", () => {

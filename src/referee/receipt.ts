@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import type { LocalRefereeContract } from "./contract.js";
+import { parseLocalRefereeContract, type LocalRefereeContract } from "./contract.js";
 import type { LocalRefereeEvaluation, LocalRefereeCheckStatus } from "./evaluate.js";
 import type { LocalRefereeEvidence } from "./evidence.js";
 import { LOCAL_REFEREE_CHECK_LABELS, labelLocalRefereeCheckType } from "./labels.js";
@@ -24,7 +24,8 @@ export interface LocalRefereeReceipt {
 }
 
 export function buildLocalRefereeContractRef(contract: LocalRefereeContract): string {
-  const digest = createHash("sha256").update(JSON.stringify(contract)).digest("hex").slice(0, 16);
+  const normalized = parseLocalRefereeContract(contract);
+  const digest = createHash("sha256").update(JSON.stringify(normalized)).digest("hex").slice(0, 16);
   return `contract_${digest}`;
 }
 
@@ -50,6 +51,7 @@ const RECEIPT_EVIDENCE_KEYS = new Set([
 const RECEIPT_CHECK_KEYS = new Set(["id", "type", "status", "reasonCode"]);
 const RECEIPT_VERDICTS = new Set(["passed", "needs_review"]);
 const RECEIPT_STATUSES = new Set(["passed", "failed"]);
+const RECEIPT_CHECK_TYPES = new Set(Object.keys(LOCAL_REFEREE_CHECK_LABELS));
 const RECEIPT_VALIDATION_STATUSES = new Set(["passed", "failed", "unknown"]);
 const RECEIPT_OUTCOMES = new Set(["completed", "partially_completed", "blocked", "unknown"]);
 const RECEIPT_COUNT_BUCKETS = new Set(["0", "1_to_2", "3_to_5", "6_to_10", "over_10"]);
@@ -149,19 +151,25 @@ export function assertLocalRefereeReceipt(value: unknown): asserts value is Loca
 
   if (!Array.isArray(receipt.checks))
     throw new Error("Local Referee receipt checks must be an array.");
+  if (receipt.checks.length === 0)
+    throw new Error("Local Referee receipt requires at least one check.");
+
+  let failedCheckCount = 0;
   for (const [index, value] of receipt.checks.entries()) {
     const check = asRecord(value);
     if (!check) throw new Error(`Local Referee receipt check ${index + 1} must be an object.`);
     assertExactKeys(check, RECEIPT_CHECK_KEYS, `receipt.checks[${index}]`);
     assertSafeToken(check.id, `receipt.checks[${index}].id`);
-    assertEnum(
-      check.type,
-      new Set(Object.keys(LOCAL_REFEREE_CHECK_LABELS)),
-      `receipt.checks[${index}].type`,
-    );
+    assertEnum(check.type, RECEIPT_CHECK_TYPES, `receipt.checks[${index}].type`);
     assertEnum(check.status, RECEIPT_STATUSES, `receipt.checks[${index}].status`);
     assertSafeToken(check.reasonCode, `receipt.checks[${index}].reasonCode`);
+    if (check.status === "failed") failedCheckCount += 1;
   }
+
+  if (receipt.verdict === "passed" && failedCheckCount > 0)
+    throw new Error("Local Referee receipt verdict does not match failed checks.");
+  if (receipt.verdict === "needs_review" && failedCheckCount === 0)
+    throw new Error("Local Referee receipt verdict does not match passed checks.");
 }
 
 export function buildLocalRefereeReceipt(input: {

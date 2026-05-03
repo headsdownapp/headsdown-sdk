@@ -5,7 +5,7 @@ export const LOCAL_REFEREE_CHECK_LABELS: Record<LocalRefereeCheckType, string> =
   max_files_touched: "Scope within contract",
   max_tool_calls: "Scope within contract",
   require_tests: "Validation completed",
-  network_required: "Local-only execution preserved",
+  network_required: "Network requirement satisfied",
   outcome: "Definition of done satisfied",
   git_commit_present: "Commit present",
 };
