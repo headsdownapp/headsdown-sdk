@@ -21,6 +21,7 @@ export type AgentRunEventType =
   | "agent_run.cancelled"
   | "steering_outcome.reported"
   | "deferred_decision.resolved"
+  | "deferred_decision.re_attempted"
   | (string & {});
 
 export type AgentRunFileCountBucket = "0" | "1_to_2" | "3_to_5" | "6_to_10" | "over_10" | "unknown";
@@ -77,6 +78,19 @@ export interface DeferredDecisionResolvedPayload {
   refined_decision_category?: string;
   notes_bucket?: DeferredDecisionNotesBucket;
   local_session_summary?: LocalSessionSummary;
+}
+
+export type DeferredDecisionReAttemptOutcome = "superseded" | "succeeded" | "failed" | "abandoned";
+
+/**
+ * Outcome for one refined deferred-decision re-attempt within the supplied run context.
+ * The event idempotency key is `{runId}:deferred_decision.re_attempted:{decision_id}`, so callers that need per-session attempts should pass a session-scoped runId.
+ */
+export interface DeferredDecisionReAttemptedPayload {
+  decision_id: string;
+  outcome: DeferredDecisionReAttemptOutcome;
+  local_session_summary?: LocalSessionSummary;
+  notes_bucket?: DeferredDecisionNotesBucket;
 }
 
 export interface AgentRunProgressMetadata {
@@ -419,6 +433,18 @@ export function deferredDecisionResolvedEvent(
     ...context,
     eventType: "deferred_decision.resolved",
     idempotencyKey: `${context.runId}:deferred_decision.resolved:${payload.decision_id}`,
+    payload: payload as unknown as Record<string, unknown>,
+  };
+}
+
+export function deferredDecisionReAttemptedEvent(
+  context: AgentRunEventContext,
+  payload: DeferredDecisionReAttemptedPayload,
+): AgentRunEventInput {
+  return {
+    ...context,
+    eventType: "deferred_decision.re_attempted",
+    idempotencyKey: `${context.runId}:deferred_decision.re_attempted:${payload.decision_id}`,
     payload: payload as unknown as Record<string, unknown>,
   };
 }

@@ -10,6 +10,7 @@
 - Added `submitLocalRefereeOutcomeSummary` for privacy-filtered hosted outcome submission with a typed endpoint-unavailable result when the endpoint is unavailable.
 - Added parameterized Local Referee client metadata so integrations can report privacy-safe client kind and version metadata without changing the outcome schema.
 - Added an additive classifier telemetry manifest with SDK-owned vocabularies, a conversion helper for existing classifier results, and documentation for consumers that can keep using the SDK 0.6.0 minimal classifier subset until they adopt the richer manifest.
+- Added shared deferred-decision re-attempt outcome helpers: `DeferredDecisionReAttemptOutcome`, `DeferredDecisionReAttemptedPayload`, `deferredDecisionReAttemptedEvent`, and `client.reportDeferredDecisionReAttempted()`.
 
 ### Fixed
 
