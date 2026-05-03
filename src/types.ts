@@ -507,6 +507,21 @@ export interface Contract {
   insertedAt: string;
 }
 
+/** Temporary availability override used for short-lived manual mode changes. */
+export interface AvailabilityOverride {
+  id: string;
+  mode: Mode;
+  reason: string | null;
+  source: string;
+  expiresAt: string;
+  cancelledAt: string | null;
+  expiredAt: string | null;
+  createdById: string;
+  cancelledById: string | null;
+  insertedAt: string;
+  updatedAt: string;
+}
+
 /** Reachability window resolved by the scheduler. */
 export interface ReachabilityWindow {
   id: string;
@@ -749,6 +764,17 @@ export interface ContractInput {
   ruleSetType?: string;
   ruleSetParams?: Record<string, unknown>;
 }
+
+type AvailabilityOverrideWindow =
+  | { durationMinutes: number; expiresAt?: never }
+  | { durationMinutes?: never; expiresAt: string };
+
+/** Input for creating a temporary availability override. */
+export type AvailabilityOverrideInput = AvailabilityOverrideWindow & {
+  mode: Mode;
+  reason?: string;
+  source?: string;
+};
 
 /** Input for overriding a verdict. */
 export interface OverrideInput {

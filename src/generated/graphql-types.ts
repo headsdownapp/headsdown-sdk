@@ -1573,6 +1573,66 @@ export type ScheduleQuery = {
   } | null;
 };
 
+export type ActiveAvailabilityOverrideQueryVariables = Exact<{ [key: string]: never }>;
+
+export type ActiveAvailabilityOverrideQuery = {
+  activeAvailabilityOverride: {
+    id: string;
+    mode: Mode;
+    reason: string | null;
+    source: string;
+    expiresAt: string;
+    cancelledAt: string | null;
+    expiredAt: string | null;
+    createdById: string;
+    cancelledById: string | null;
+    insertedAt: string;
+    updatedAt: string;
+  } | null;
+};
+
+export type CreateAvailabilityOverrideMutationVariables = Exact<{
+  input: AvailabilityOverrideInput;
+}>;
+
+export type CreateAvailabilityOverrideMutation = {
+  createAvailabilityOverride: {
+    id: string;
+    mode: Mode;
+    reason: string | null;
+    source: string;
+    expiresAt: string;
+    cancelledAt: string | null;
+    expiredAt: string | null;
+    createdById: string;
+    cancelledById: string | null;
+    insertedAt: string;
+    updatedAt: string;
+  } | null;
+};
+
+export type CancelAvailabilityOverrideMutationVariables = Exact<{
+  id: string | number;
+  reason: string | null | undefined;
+  source: string | null | undefined;
+}>;
+
+export type CancelAvailabilityOverrideMutation = {
+  cancelAvailabilityOverride: {
+    id: string;
+    mode: Mode;
+    reason: string | null;
+    source: string;
+    expiresAt: string;
+    cancelledAt: string | null;
+    expiredAt: string | null;
+    createdById: string;
+    cancelledById: string | null;
+    insertedAt: string;
+    updatedAt: string;
+  } | null;
+};
+
 export type AgentControlOverviewQueryVariables = Exact<{ [key: string]: never }>;
 
 export type AgentControlOverviewQuery = {

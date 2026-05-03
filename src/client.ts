@@ -22,6 +22,7 @@ import { CredentialStore, DeviceFlow } from "./auth.js";
 import { ApiError, AuthError, ValidationError } from "./errors.js";
 import { GraphQLClient, toGraphQLEnum } from "./graphql.js";
 import {
+  ACTIVE_AVAILABILITY_OVERRIDE_QUERY,
   ACTIVE_CONTRACT_QUERY,
   ACTIVE_DELEGATION_GRANTS_QUERY,
   AGENT_CONTROL_OVERVIEW_QUERY,
@@ -30,7 +31,9 @@ import {
   AUTO_RESPONDER_SETTINGS_QUERY,
   AVAILABILITY_QUERY,
   CALIBRATION_PROFILES_QUERY,
+  CANCEL_AVAILABILITY_OVERRIDE_MUTATION,
   COMPANY_QUERY,
+  CREATE_AVAILABILITY_OVERRIDE_MUTATION,
   CREATE_CONTRACT_MUTATION,
   CREATE_DELEGATION_GRANT_MUTATION,
   DIGEST_SUMMARIES_QUERY,
@@ -61,6 +64,8 @@ import type {
   InterventionReplay,
   AllowForDurationActionOptions,
   AutoResponderSettings,
+  AvailabilityOverride,
+  AvailabilityOverrideInput,
   CreateTemporaryExceptionActionOptions,
   CalibrationProfile,
   ClientOptions,
@@ -109,6 +114,7 @@ import type {
   ReportAgentRunEventPayload,
 } from "./agent-run-events.js";
 import type {
+  ActiveAvailabilityOverrideQuery,
   ActiveContractQuery,
   AgentControlOverviewQuery,
   AgentRunEventsQuery,
@@ -121,7 +127,9 @@ import type {
   AutoResponderSettingsQuery,
   AvailabilityQuery,
   CalibrationProfilesQuery,
+  CancelAvailabilityOverrideMutation,
   CompanyQuery,
+  CreateAvailabilityOverrideMutation,
   CreateContractMutation,
   DigestSummariesQuery,
   DismissDigestEntryMutation,
@@ -447,6 +455,78 @@ export class HeadsDownClient {
         return { contract: null, schedule };
       }
       throw error;
+    }
+  }
+
+  // === Availability Overrides ===
+
+  /** Get the active temporary availability override, if one exists. */
+  async getActiveAvailabilityOverride(): Promise<AvailabilityOverride | null> {
+    const data = await this.graphql.request<ActiveAvailabilityOverrideQuery>(
+      ACTIVE_AVAILABILITY_OVERRIDE_QUERY,
+    );
+    return (data.activeAvailabilityOverride as AvailabilityOverride | null) ?? null;
+  }
+
+  /** Create a temporary availability override for the authenticated user. */
+  async createAvailabilityOverride(
+    input: AvailabilityOverrideInput,
+  ): Promise<AvailabilityOverride> {
+    validateAvailabilityOverrideInput(input);
+
+    const variables = {
+      input: stripUndefined({
+        mode: toGraphQLEnum(input.mode),
+        durationMinutes: input.durationMinutes,
+        expiresAt: input.expiresAt,
+        reason: input.reason,
+        source: input.source ?? "sdk",
+      }),
+    };
+
+    try {
+      const data = await this.graphql.request<CreateAvailabilityOverrideMutation>(
+        CREATE_AVAILABILITY_OVERRIDE_MUTATION,
+        variables,
+      );
+
+      if (!data.createAvailabilityOverride) {
+        throw new ApiError("HeadsDown API returned no createAvailabilityOverride data.");
+      }
+
+      return data.createAvailabilityOverride as AvailabilityOverride;
+    } catch (error) {
+      throw mapAvailabilityOverrideAuthError(error);
+    }
+  }
+
+  /** Cancel a temporary availability override by id. */
+  async cancelAvailabilityOverride(
+    id: string,
+    reason?: string,
+    source = "sdk",
+  ): Promise<AvailabilityOverride> {
+    if (!id?.trim()) {
+      throw new ValidationError("Availability override ID is required.", "id");
+    }
+
+    try {
+      const data = await this.graphql.request<CancelAvailabilityOverrideMutation>(
+        CANCEL_AVAILABILITY_OVERRIDE_MUTATION,
+        stripUndefined({
+          id,
+          reason,
+          source,
+        }),
+      );
+
+      if (!data.cancelAvailabilityOverride) {
+        throw new ApiError("HeadsDown API returned no cancelAvailabilityOverride data.");
+      }
+
+      return data.cancelAvailabilityOverride as AvailabilityOverride;
+    } catch (error) {
+      throw mapAvailabilityOverrideAuthError(error);
     }
   }
 
@@ -1196,6 +1276,43 @@ const AVAILABILITY_FIELDS = new Set([
   "lock",
 ]);
 
+function validateAvailabilityOverrideInput(input: AvailabilityOverrideInput): void {
+  if (!input || typeof input !== "object") {
+    throw new ValidationError("Availability override input is required.", "input");
+  }
+
+  if (!input.mode) {
+    throw new ValidationError("Availability override mode is required.", "mode");
+  }
+
+  if (
+    input.mode !== "online" &&
+    input.mode !== "busy" &&
+    input.mode !== "limited" &&
+    input.mode !== "offline"
+  ) {
+    throw new ValidationError("Availability override mode is invalid.", "mode");
+  }
+
+  const hasDuration = input.durationMinutes !== undefined;
+  const hasExpiresAt = input.expiresAt !== undefined;
+
+  if (hasDuration === hasExpiresAt) {
+    throw new ValidationError(
+      "Exactly one of durationMinutes or expiresAt is required.",
+      "durationMinutes",
+    );
+  }
+
+  if (hasDuration && (!Number.isInteger(input.durationMinutes) || input.durationMinutes <= 0)) {
+    throw new ValidationError("durationMinutes must be a positive integer.", "durationMinutes");
+  }
+
+  if (hasExpiresAt && (!input.expiresAt || Number.isNaN(Date.parse(input.expiresAt)))) {
+    throw new ValidationError("expiresAt must be a valid timestamp.", "expiresAt");
+  }
+}
+
 function validateDelegationGrantInput(input: DelegationGrantInput): void {
   if (!input.permissions || input.permissions.length === 0) {
     throw new ValidationError(
@@ -1291,6 +1408,18 @@ function mapPresetAuthError(error: unknown): Error {
   if (error instanceof ApiError && error.message.includes("Missing actor context")) {
     return new AuthError(
       "applyPreset with API key authorization requires actor context. Set actorContext on the client or use withActor().",
+    );
+  }
+
+  return error instanceof Error ? error : new ApiError(String(error));
+}
+
+function mapAvailabilityOverrideAuthError(error: unknown): Error {
+  if (error instanceof AuthError) return error;
+
+  if (error instanceof ApiError && error.message.includes("Missing actor context")) {
+    return new AuthError(
+      "Availability override create/cancel requires actor context or delegated permission. Set actorContext on the client or use withActor().",
     );
   }
 
