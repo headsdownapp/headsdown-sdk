@@ -49,6 +49,7 @@ describe("classifier telemetry manifest", () => {
     expect(CLASSIFIER_TELEMETRY_DECISION_KEYS).toContain("permanent_command_pattern");
     expect(CLASSIFIER_TELEMETRY_DECISION_KEYS).toContain("unclassified_unknown");
     expect(CLASSIFIER_TELEMETRY_MATCHER_KEYS).toContain("bash_permanent_command_pattern");
+    expect(CLASSIFIER_TELEMETRY_MATCHER_KEYS).toContain("bash_unknown_command");
     expect(CLASSIFIER_TELEMETRY_CATALOG_MATCH_KEYS).toContain("fixture_identity_publish");
     expect(CLASSIFIER_TELEMETRY_FAILURE_REASON_CODES).toEqual([
       "classification_failed",
@@ -128,6 +129,24 @@ describe("classifier telemetry manifest", () => {
     });
   });
 
+  it("accepts classifier versions that match existing classifier compatibility parsing", () => {
+    expect(
+      buildClassifierTelemetryManifest({
+        classifierVersion: "1.1",
+        actionShapeVersion: "1.1",
+        classifiedAction: {
+          outcome: "routine",
+          reasonCode: "edit_local_write",
+          source: "deterministic",
+          toolKind: "edit",
+        },
+      }),
+    ).toMatchObject({
+      classifierVersion: "1.1",
+      actionShapeVersion: "1.1",
+    });
+  });
+
   it("omits unavailable optional fields instead of serializing undefined", () => {
     const manifest = buildClassifierTelemetryManifest({
       classifiedAction: {
@@ -158,6 +177,24 @@ describe("classifier telemetry manifest", () => {
     expect(JSON.stringify(manifest)).not.toContain("undefined");
   });
 
+  it("keeps network reads as the action family and reports unknown targets separately", () => {
+    expect(
+      buildClassifierTelemetryManifest({
+        classifiedAction: {
+          outcome: "notable",
+          reasonCode: "unknown_web_domain",
+          source: "deterministic",
+          toolKind: "webfetch",
+        },
+        actionShape: { tool_kind: "webfetch", url: "SHOULD_NOT_APPEAR_URL" },
+      }),
+    ).toMatchObject({
+      actionFamily: "network_read",
+      networkTargetClass: "unknown_external",
+      matcherKey: "webfetch_unknown_target",
+    });
+  });
+
   it("uses failure reason codes instead of severity for classification failures", () => {
     const manifest = buildClassifierTelemetryManifest({
       classifiedAction: {
@@ -179,6 +216,23 @@ describe("classifier telemetry manifest", () => {
       matcherKey: "unknown_variant_risk",
     });
     expect(manifest).not.toHaveProperty("severity");
+  });
+
+  it("uses the dedicated matcher key for unknown bash commands", () => {
+    expect(
+      buildClassifierTelemetryManifest({
+        classifiedAction: {
+          outcome: "classification_failed",
+          reasonCode: "unknown_bash_command",
+          source: "deterministic",
+          toolKind: "bash",
+        },
+      }),
+    ).toMatchObject({
+      classifierDecisionKey: "unknown_bash_command",
+      failureReasonCode: "unknown_bash_command",
+      matcherKey: "bash_unknown_command",
+    });
   });
 
   it("omits raw action-shape content from the telemetry payload", () => {
@@ -229,6 +283,50 @@ describe("classifier telemetry manifest", () => {
       buildClassifierTelemetryManifest({
         classifiedAction,
         metadata: { matcherKey: "integration_defined_matcher" } as never,
+      }),
+    ).toThrow(ValidationError);
+
+    expect(() =>
+      buildClassifierTelemetryManifest({
+        classifiedAction,
+        metadata: { actionFamily: "public_publish" } as never,
+      }),
+    ).toThrow(ValidationError);
+  });
+
+  it("rejects malformed classified actions and mismatched action-shape metadata", () => {
+    expect(() =>
+      buildClassifierTelemetryManifest({
+        classifiedAction: {
+          outcome: "integration_defined_outcome",
+          reasonCode: "edit_local_write",
+          source: "deterministic",
+          toolKind: "edit",
+        } as never,
+      }),
+    ).toThrow(ValidationError);
+
+    expect(() =>
+      buildClassifierTelemetryManifest({
+        classifiedAction: {
+          outcome: "routine",
+          reasonCode: "edit_local_write",
+          source: "deterministic",
+          toolKind: "edit",
+          rawCommand: "SHOULD_NOT_APPEAR_COMMAND",
+        } as never,
+      }),
+    ).toThrow(ValidationError);
+
+    expect(() =>
+      buildClassifierTelemetryManifest({
+        classifiedAction: {
+          outcome: "routine",
+          reasonCode: "edit_local_write",
+          source: "deterministic",
+          toolKind: "edit",
+        },
+        actionShape: { tool_kind: "bash", command: "SHOULD_NOT_APPEAR_COMMAND" },
       }),
     ).toThrow(ValidationError);
   });

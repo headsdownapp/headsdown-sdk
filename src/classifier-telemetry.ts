@@ -3,6 +3,7 @@ import {
   type ActionShape,
   type ClassifiedAction,
   type ClassifierEscalationStep,
+  type ClassifierOutcome,
   type ClassifierSeverity,
   type EscalationDecision,
 } from "./autopilot-classifier.js";
@@ -72,6 +73,7 @@ export const CLASSIFIER_TELEMETRY_MATCHER_KEYS = [
   "bash_permanent_command_pattern",
   "bash_read_only_pattern",
   "bash_routine_local_pattern",
+  "bash_unknown_command",
   "computer_use_side_effect_flags",
   "edit_operation",
   "malformed_action_shape",
@@ -154,11 +156,8 @@ export interface ClassifierTelemetryManifest {
 }
 
 export interface ClassifierTelemetryDerivationMetadata {
-  actionFamily?: ClassifierTelemetryActionFamily;
-  networkTargetClass?: ClassifierTelemetryNetworkTargetClass;
   matcherKey?: ClassifierTelemetryMatcherKey;
   catalogMatchKey?: ClassifierTelemetryCatalogMatchKey;
-  confidenceBucket?: ClassifierTelemetryConfidenceBucket;
 }
 
 export interface BuildClassifierTelemetryManifestInput {
@@ -179,13 +178,9 @@ const INPUT_FIELDS = new Set([
   "metadata",
 ]);
 
-const METADATA_FIELDS = new Set([
-  "actionFamily",
-  "networkTargetClass",
-  "matcherKey",
-  "catalogMatchKey",
-  "confidenceBucket",
-]);
+const CLASSIFIED_ACTION_FIELDS = new Set(["outcome", "reasonCode", "source", "toolKind"]);
+
+const METADATA_FIELDS = new Set(["matcherKey", "catalogMatchKey"]);
 
 const RAW_CONTENT_KEY_PARTS = [
   "arg",
@@ -217,6 +212,15 @@ const CLASSIFIER_ESCALATION_STEPS: ClassifierEscalationStep[] = [
   "defer_for_human_review",
 ];
 
+const CLASSIFIER_OUTCOMES = [
+  "trivial",
+  "routine",
+  "notable",
+  "permanent",
+  "critical",
+  "classification_failed",
+] as const satisfies readonly ClassifierOutcome[];
+
 const MATCHER_KEY_BY_DECISION_KEY: Partial<
   Record<ClassifierTelemetryDecisionKey, ClassifierTelemetryMatcherKey>
 > = {
@@ -243,7 +247,7 @@ const MATCHER_KEY_BY_DECISION_KEY: Partial<
   permanent_command_pattern: "bash_permanent_command_pattern",
   read_only_bash: "bash_read_only_pattern",
   routine_local_bash: "bash_routine_local_pattern",
-  unknown_bash_command: "bash_critical_command_pattern",
+  unknown_bash_command: "bash_unknown_command",
   unknown_variant_side_effect_possible: "unknown_variant_risk",
   unknown_variant_unverified_read_only: "unknown_variant_risk",
   unknown_web_domain: "webfetch_unknown_target",
@@ -270,6 +274,7 @@ export function buildClassifierTelemetryManifest(
   input: BuildClassifierTelemetryManifestInput,
 ): ClassifierTelemetryManifest {
   assertExpectedObject(input, INPUT_FIELDS, "classifierTelemetry");
+  assertExpectedObject(input.classifiedAction, CLASSIFIED_ACTION_FIELDS, "classifiedAction");
 
   const metadata = input.metadata;
   if (metadata !== undefined) {
@@ -285,33 +290,30 @@ export function buildClassifierTelemetryManifest(
     "classifierTelemetry.actionShapeVersion",
   );
   const toolKind = normalizeToolKind(input.classifiedAction.toolKind);
+  validateActionShapeToolKind(input.actionShape, toolKind);
+
+  const classifierOutcome = assertKnownValue(
+    input.classifiedAction.outcome,
+    CLASSIFIER_OUTCOMES,
+    "classifiedAction.outcome",
+  );
   const classifierLayer = assertKnownValue(
     input.classifiedAction.source,
     CLASSIFIER_TELEMETRY_CLASSIFIER_LAYERS,
     "classifiedAction.source",
   );
   const classifierDecisionKey = normalizeDecisionKey(input.classifiedAction.reasonCode);
-  const confidenceBucket = metadata?.confidenceBucket
-    ? assertKnownValue(
-        metadata.confidenceBucket,
-        CLASSIFIER_TELEMETRY_CONFIDENCE_BUCKETS,
-        "classifierTelemetry.metadata.confidenceBucket",
-      )
-    : deriveConfidenceBucket(input.classifiedAction);
-  const actionFamily = metadata?.actionFamily
-    ? assertKnownValue(
-        metadata.actionFamily,
-        CLASSIFIER_TELEMETRY_ACTION_FAMILIES,
-        "classifierTelemetry.metadata.actionFamily",
-      )
-    : deriveActionFamily(input.actionShape, input.classifiedAction, classifierDecisionKey);
-  const networkTargetClass = metadata?.networkTargetClass
-    ? assertKnownValue(
-        metadata.networkTargetClass,
-        CLASSIFIER_TELEMETRY_NETWORK_TARGET_CLASSES,
-        "classifierTelemetry.metadata.networkTargetClass",
-      )
-    : deriveNetworkTargetClass(input.actionShape, input.classifiedAction, classifierDecisionKey);
+  const confidenceBucket = deriveConfidenceBucket(classifierOutcome, classifierLayer);
+  const actionFamily = deriveActionFamily(
+    input.actionShape,
+    input.classifiedAction,
+    classifierDecisionKey,
+  );
+  const networkTargetClass = deriveNetworkTargetClass(
+    input.actionShape,
+    input.classifiedAction,
+    classifierDecisionKey,
+  );
 
   const manifest: ClassifierTelemetryManifest = {
     classifierVersion,
@@ -324,11 +326,11 @@ export function buildClassifierTelemetryManifest(
     confidenceBucket,
   };
 
-  if (input.classifiedAction.outcome === "classification_failed") {
+  if (classifierOutcome === "classification_failed") {
     manifest.failureReasonCode =
       FAILURE_REASON_BY_DECISION_KEY[classifierDecisionKey] ?? "classification_failed";
   } else {
-    manifest.severity = input.classifiedAction.outcome;
+    manifest.severity = classifierOutcome;
   }
 
   const matcherKey = metadata?.matcherKey ?? MATCHER_KEY_BY_DECISION_KEY[classifierDecisionKey];
@@ -354,18 +356,16 @@ export function buildClassifierTelemetryManifest(
       CLASSIFIER_TELEMETRY_ESCALATION_REASON_CODES,
       "escalationDecision.reasonCode",
     );
-    manifest.escalationSteps = input.escalationDecision.steps.map((step, index) =>
-      assertKnownValue(step, CLASSIFIER_ESCALATION_STEPS, `escalationDecision.steps.${index}`),
-    );
+    manifest.escalationSteps = normalizeEscalationSteps(input.escalationDecision.steps);
   }
 
   return manifest;
 }
 
 function normalizeVersion(value: unknown, field: string): string {
-  if (typeof value !== "string" || !/^\d+\.\d+\.\d+$/.test(value)) {
+  if (typeof value !== "string" || !/^\d+\.\d+(?:\.\d+)?$/.test(value)) {
     throw new ValidationError(
-      "Classifier telemetry versions must use major.minor.patch format.",
+      "Classifier telemetry versions must use major.minor or major.minor.patch format.",
       field,
     );
   }
@@ -384,17 +384,41 @@ function normalizeToolKind(value: unknown): string {
   return value;
 }
 
-function normalizeDecisionKey(reasonCode: string): ClassifierTelemetryDecisionKey {
+function validateActionShapeToolKind(actionShape: ActionShape | undefined, toolKind: string): void {
+  if (actionShape === undefined) return;
+
+  if (typeof actionShape !== "object" || actionShape === null || Array.isArray(actionShape)) {
+    throw new ValidationError("classifierTelemetry.actionShape must be an object.", "actionShape");
+  }
+
+  const actionShapeToolKind = (actionShape as { tool_kind?: unknown }).tool_kind;
+  if (actionShapeToolKind !== toolKind) {
+    throw new ValidationError(
+      "classifierTelemetry.actionShape.tool_kind must match classifiedAction.toolKind.",
+      "actionShape.tool_kind",
+    );
+  }
+}
+
+function normalizeDecisionKey(reasonCode: unknown): ClassifierTelemetryDecisionKey {
+  if (typeof reasonCode !== "string" || reasonCode.length === 0) {
+    throw new ValidationError(
+      "classifiedAction.reasonCode must be a non-empty string.",
+      "classifiedAction.reasonCode",
+    );
+  }
+
   if (isKnownValue(reasonCode, CLASSIFIER_TELEMETRY_DECISION_KEYS)) return reasonCode;
   return "unclassified_unknown";
 }
 
 function deriveConfidenceBucket(
-  classifiedAction: ClassifiedAction,
+  outcome: ClassifierOutcome,
+  classifierLayer: ClassifierTelemetryClassifierLayer,
 ): ClassifierTelemetryConfidenceBucket {
-  if (classifiedAction.outcome === "classification_failed") return "low";
-  if (classifiedAction.source === "llm_fallback") return "medium";
-  if (classifiedAction.source === "unknown_variant_fallback") return "low";
+  if (outcome === "classification_failed") return "low";
+  if (classifierLayer === "llm_fallback") return "medium";
+  if (classifierLayer === "unknown_variant_fallback") return "low";
   return "high";
 }
 
@@ -428,8 +452,7 @@ function deriveActionFamily(
     actionShape?.external_side_effect === true ||
     decisionKey === "external_side_effect" ||
     decisionKey === "mcp_side_effect_possible" ||
-    decisionKey === "computer_use_external_side_effect" ||
-    decisionKey === "unknown_web_domain"
+    decisionKey === "computer_use_external_side_effect"
   ) {
     return "external_side_effect";
   }
@@ -479,6 +502,19 @@ function deriveNetworkTargetClass(
   return "unknown_external";
 }
 
+function normalizeEscalationSteps(value: unknown): ClassifierEscalationStep[] {
+  if (!Array.isArray(value)) {
+    throw new ValidationError(
+      "escalationDecision.steps must be an array.",
+      "escalationDecision.steps",
+    );
+  }
+
+  return value.map((step, index) =>
+    assertKnownValue(step, CLASSIFIER_ESCALATION_STEPS, `escalationDecision.steps.${index}`),
+  );
+}
+
 function assertExpectedObject(value: unknown, allowedFields: Set<string>, field: string): void {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     throw new ValidationError("Classifier telemetry input must be an object.", field);
@@ -490,13 +526,13 @@ function assertExpectedObject(value: unknown, allowedFields: Set<string>, field:
     const normalized = key.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
     if (RAW_CONTENT_KEY_PARTS.some((part) => normalized.includes(part))) {
       throw new ValidationError(
-        "Classifier telemetry metadata cannot include raw local content.",
+        "Classifier telemetry input cannot include raw local content.",
         `${field}.${key}`,
       );
     }
 
     throw new ValidationError(
-      "Classifier telemetry metadata includes an unknown field.",
+      "Classifier telemetry input includes an unknown field.",
       `${field}.${key}`,
     );
   }
