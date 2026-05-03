@@ -37,7 +37,7 @@ describe("autopilot classifier substrate", () => {
     expect(fragments.taxonomyFragment).toContain("Tier 1 (Trivial / trivial)");
     expect(fragments.taxonomyFragment).toContain("force-push origin main => critical");
     expect(fragments.taxonomyFragment).toContain(
-      "ask_user{recovery, last=edit:failed} => permanent",
+      "ask_user{recovery_decision, last=edit:failed} => permanent",
     );
     expect(fragments.taxonomyFragment).toContain(
       "ask_user{tooling_choice, last=bash:succeeded} => routine",
@@ -150,7 +150,9 @@ describe("autopilot classifier substrate", () => {
     };
 
     it("classifies fixture cases to expected severities", () => {
-      expect(classifyFixtureAction("ask_user{recovery, last=edit:failed}")).toBe("permanent");
+      expect(classifyFixtureAction("ask_user{recovery_decision, last=edit:failed}")).toBe(
+        "permanent",
+      );
       expect(classifyFixtureAction("ask_user{tooling_choice, last=bash:succeeded}")).toBe(
         "routine",
       );

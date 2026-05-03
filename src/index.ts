@@ -64,6 +64,32 @@ export {
 } from "./autopilot-policy.js";
 export type { AutopilotPolicyResponse } from "./autopilot-policy.js";
 export {
+  AUTOPILOT_ACTION_SHAPE_VERSION,
+  CLASSIFIER_TELEMETRY_ACTION_FAMILIES,
+  CLASSIFIER_TELEMETRY_CATALOG_MATCH_KEYS,
+  CLASSIFIER_TELEMETRY_CLASSIFIER_LAYERS,
+  CLASSIFIER_TELEMETRY_CONFIDENCE_BUCKETS,
+  CLASSIFIER_TELEMETRY_DECISION_KEYS,
+  CLASSIFIER_TELEMETRY_ESCALATION_REASON_CODES,
+  CLASSIFIER_TELEMETRY_FAILURE_REASON_CODES,
+  CLASSIFIER_TELEMETRY_MATCHER_KEYS,
+  CLASSIFIER_TELEMETRY_NETWORK_TARGET_CLASSES,
+  buildClassifierTelemetryManifest,
+} from "./classifier-telemetry.js";
+export type {
+  BuildClassifierTelemetryManifestInput,
+  ClassifierTelemetryActionFamily,
+  ClassifierTelemetryCatalogMatchKey,
+  ClassifierTelemetryClassifierLayer,
+  ClassifierTelemetryConfidenceBucket,
+  ClassifierTelemetryDecisionKey,
+  ClassifierTelemetryEscalationReasonCode,
+  ClassifierTelemetryFailureReasonCode,
+  ClassifierTelemetryManifest,
+  ClassifierTelemetryMatcherKey,
+  ClassifierTelemetryNetworkTargetClass,
+} from "./classifier-telemetry.js";
+export {
   buildActionIdempotencyKey,
   mapHeadsDownActionError,
   mapHeadsDownActionPayloadError,
