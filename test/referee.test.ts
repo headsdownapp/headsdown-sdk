@@ -104,6 +104,7 @@ describe("Local Referee contract parsing", () => {
       { version: 1, checks: [{ type: "raw_log_contains", required: "secret" }] },
       { version: 1, checks: [{ type: "max_files_touched", max: -1 }] },
       { version: 1, checks: [{ type: "max_tool_calls", max: 1.5 }] },
+      { version: 1, checks: [{ type: "max_files_touched", max: Number.MAX_SAFE_INTEGER + 1 }] },
       { version: 1, checks: [{ type: "network_required" }] },
       { version: 1, checks: [{ type: "git_commit_present", required: "yes" }] },
     ];
@@ -147,11 +148,15 @@ describe("Local Referee evidence normalization", () => {
     });
   });
 
-  it("normalizes missing optional minutes and manual review counts as unknown", () => {
+  it("normalizes optional minutes without losing bucket precision", () => {
     expect(normalizeLocalRefereeEvidence({ elapsedMinutes: "not-a-number" })).toMatchObject({
       elapsedMinutes: null,
       elapsedMinutesBucket: "unknown",
       manualReviewRoundTripsAvoided: null,
+    });
+    expect(normalizeLocalRefereeEvidence({ elapsedMinutes: 30.5 })).toMatchObject({
+      elapsedMinutes: 30.5,
+      elapsedMinutesBucket: "30_to_60",
     });
   });
 
@@ -161,22 +166,36 @@ describe("Local Referee evidence normalization", () => {
     ).toMatchObject({
       filesTouched: 0,
       filesTouchedKnown: false,
+      filesTouchedBucket: "unknown",
       toolCalls: 0,
       toolCallsKnown: false,
+      toolCallsBucket: "unknown",
     });
     expect(
       normalizeLocalRefereeEvidence({ filesTouched: -1, toolCalls: Number.NaN }),
     ).toMatchObject({
       filesTouched: 0,
       filesTouchedKnown: false,
+      filesTouchedBucket: "unknown",
       toolCalls: 0,
       toolCallsKnown: false,
+      toolCallsBucket: "unknown",
+    });
+    expect(normalizeLocalRefereeEvidence({ filesTouched: 1.5, toolCalls: "2.5" })).toMatchObject({
+      filesTouched: 0,
+      filesTouchedKnown: false,
+      filesTouchedBucket: "unknown",
+      toolCalls: 0,
+      toolCallsKnown: false,
+      toolCallsBucket: "unknown",
     });
   });
 
   it("buckets invalid runtime numbers safely", () => {
-    expect(bucketCount(Number.NaN)).toBe("0");
-    expect(bucketCount(Number.POSITIVE_INFINITY)).toBe("0");
+    expect(bucketCount(Number.NaN)).toBe("unknown");
+    expect(bucketCount(Number.POSITIVE_INFINITY)).toBe("unknown");
+    expect(bucketCount(1.5)).toBe("unknown");
+    expect(bucketCount(Number.MAX_SAFE_INTEGER + 1)).toBe("unknown");
     expect(bucketMinutes(Number.NaN)).toBe("unknown");
     expect(bucketMinutes(-1)).toBe("unknown");
   });
@@ -284,7 +303,8 @@ describe("Local Referee evaluation", () => {
       { type: "max_files_touched", max: 5 },
       { type: "max_tool_calls", max: 10 },
     ]);
-    const evaluation = evaluateLocalRefereeContract(contract, normalizeLocalRefereeEvidence({}));
+    const evidence = normalizeLocalRefereeEvidence({});
+    const evaluation = evaluateLocalRefereeContract(contract, evidence);
 
     expect(evaluation).toMatchObject({
       verdict: "needs_review",
@@ -293,6 +313,14 @@ describe("Local Referee evaluation", () => {
         { status: "failed", reasonCode: "tool_calls_unknown" },
       ],
     });
+    expect(
+      buildLocalRefereeReceipt({
+        contract,
+        evidence,
+        evaluation,
+        now: new Date("2026-01-01T00:00:00Z"),
+      }).evidence,
+    ).toMatchObject({ filesTouchedBucket: "unknown", toolCallsBucket: "unknown" });
   });
 });
 
@@ -353,6 +381,19 @@ describe("Local Referee receipts", () => {
         ...receiptFixture(),
         checks: [
           {
+            id: "check_1",
+            type: "validation_status",
+            status: "passed",
+            reasonCode: "PROJECT.GIT",
+          },
+        ],
+      }),
+    ).toThrow("safe token");
+    expect(() =>
+      renderLocalRefereeReceiptMarkdown({
+        ...receiptFixture(),
+        checks: [
+          {
             id: "first_check",
             type: "validation_status",
             status: "passed",
@@ -361,6 +402,19 @@ describe("Local Referee receipts", () => {
         ],
       }),
     ).toThrow("check id");
+    expect(() =>
+      renderLocalRefereeReceiptMarkdown({
+        ...receiptFixture(),
+        checks: [
+          {
+            id: "check_2",
+            type: "validation_status",
+            status: "passed",
+            reasonCode: "validation_status_matched",
+          },
+        ],
+      }),
+    ).toThrow("sequential check ids");
     expect(() =>
       renderLocalRefereeReceipt({
         ...receiptFixture(),
@@ -581,6 +635,12 @@ describe("Local Referee outcome payloads and sharing", () => {
     expect(() =>
       assertLocalRefereeOutcomeSummaryPayload({
         ...payload,
+        controlDecisionCounts: { passed: Number.MAX_SAFE_INTEGER + 1, failed: 0 },
+      }),
+    ).toThrow("non-negative integer");
+    expect(() =>
+      assertLocalRefereeOutcomeSummaryPayload({
+        ...payload,
         controlDecisionCounts: { passed: 1, failed: 1 },
       }),
     ).toThrow("completionExceptionCount must match failed decisions");
@@ -632,6 +692,7 @@ describe("Local Referee outcome payloads and sharing", () => {
   it("rejects every prohibited value pattern recursively", () => {
     const prohibitedValues = [
       "https://example.invalid/resource",
+      "ssh://example.invalid/resource",
       "git@example.invalid:team/project",
       "C:\\workspace\\project",
       "/Users/example/project",

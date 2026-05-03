@@ -106,7 +106,6 @@ export async function submitLocalRefereeOutcomeSummary(
         signal: controller.signal,
       });
     } catch (error) {
-      clearTimeout(timer);
       const networkError =
         error instanceof DOMException && error.name === "AbortError"
           ? new NetworkError(`Request timed out after ${timeout}ms`)

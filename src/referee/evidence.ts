@@ -32,10 +32,20 @@ export interface LocalRefereeEvidence {
 
 function normalizeOptionalNonNegativeInteger(value: unknown): number | null {
   if (value === undefined || value === null || value === "") return null;
-  if (typeof value === "number" && Number.isFinite(value) && value >= 0) return Math.floor(value);
+  if (typeof value === "number" && Number.isSafeInteger(value) && value >= 0) return value;
   if (typeof value === "string" && value.trim().length > 0) {
     const parsed = Number(value);
-    if (Number.isFinite(parsed) && parsed >= 0) return Math.floor(parsed);
+    if (Number.isSafeInteger(parsed) && parsed >= 0) return parsed;
+  }
+  return null;
+}
+
+function normalizeOptionalNonNegativeNumber(value: unknown): number | null {
+  if (value === undefined || value === null || value === "") return null;
+  if (typeof value === "number" && Number.isFinite(value) && value >= 0) return value;
+  if (typeof value === "string" && value.trim().length > 0) {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed) && parsed >= 0) return parsed;
   }
   return null;
 }
@@ -46,7 +56,7 @@ function normalizeCountEvidence(value: unknown): { count: number; known: boolean
 }
 
 function normalizeOptionalMinutes(value: unknown): number | null {
-  return normalizeOptionalNonNegativeInteger(value);
+  return normalizeOptionalNonNegativeNumber(value);
 }
 
 function normalizeBoolean(value: unknown, fallback = false): boolean {
@@ -88,7 +98,8 @@ function normalizeOutcome(value: unknown): LocalRefereeOutcome {
 }
 
 export function bucketCount(count: number): string {
-  if (!Number.isFinite(count) || count <= 0) return "0";
+  if (!Number.isSafeInteger(count) || count < 0) return "unknown";
+  if (count === 0) return "0";
   if (count <= 2) return "1_to_2";
   if (count <= 5) return "3_to_5";
   if (count <= 10) return "6_to_10";
@@ -114,10 +125,10 @@ export function normalizeLocalRefereeEvidence(
   return {
     filesTouched: filesTouched.count,
     filesTouchedKnown: filesTouched.known,
-    filesTouchedBucket: bucketCount(filesTouched.count),
+    filesTouchedBucket: filesTouched.known ? bucketCount(filesTouched.count) : "unknown",
     toolCalls: toolCalls.count,
     toolCallsKnown: toolCalls.known,
-    toolCallsBucket: bucketCount(toolCalls.count),
+    toolCallsBucket: toolCalls.known ? bucketCount(toolCalls.count) : "unknown",
     validationStatus: normalizeValidationStatus(raw.validationStatus),
     testsRun: normalizeBoolean(raw.testsRun),
     networkRequired: normalizeBoolean(raw.networkRequired),

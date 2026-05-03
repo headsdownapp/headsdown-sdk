@@ -23,7 +23,7 @@ export interface LocalRefereeOutcomeSummaryPayload {
 export const PROHIBITED_KEY_PATTERN =
   /(?:prompt|source|code|diff|file|path|repo|repository|branch|terminal|output|log|issue|pr|url|message|content|hash)/i;
 export const PROHIBITED_VALUE_PATTERN =
-  /(?:https?:\/\/|git@|\b[A-Za-z]:\\|\/(?:Users|home|private|tmp|var|src|lib|test)\/|\.git\b|BEGIN [A-Z ]+PRIVATE KEY|diff --git|@@\s+-\d+|console\.log|defmodule\s+|function\s+\w+|class\s+\w+)/i;
+  /(?:[A-Za-z][A-Za-z0-9+.-]*:\/\/|git@|\b[A-Za-z]:\\|\/(?:Users|home|private|tmp|var|src|lib|test)\/|\.git\b|BEGIN [A-Z ]+PRIVATE KEY|diff --git|@@\s+-\d+|console\.log|defmodule\s+|function\s+\w+|class\s+\w+)/i;
 
 const PAYLOAD_KEYS = new Set([
   "schemaVersion",
@@ -107,7 +107,7 @@ function assertExactKeys(
 }
 
 function assertNonNegativeInteger(value: unknown, path: string): asserts value is number {
-  if (typeof value !== "number" || !Number.isInteger(value) || value < 0) {
+  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 0) {
     throw new Error(`Outcome summary requires a non-negative integer at ${path}.`);
   }
 }
@@ -123,7 +123,7 @@ function assertSafeToken(value: unknown, path: string): asserts value is string 
     typeof value !== "string" ||
     !SAFE_TOKEN_PATTERN.test(value) ||
     value.includes("://") ||
-    value.includes(".git")
+    value.toLowerCase().includes(".git")
   ) {
     throw new Error(`Outcome summary requires a safe token at ${path}.`);
   }

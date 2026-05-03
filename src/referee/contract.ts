@@ -56,7 +56,7 @@ function parseCheckType(value: unknown, index: number): LocalRefereeCheckType {
 }
 
 function parseMax(value: unknown, index: number, field: string): number {
-  if (typeof value !== "number" || !Number.isInteger(value) || value < 0)
+  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 0)
     throw new LocalRefereeContractError(
       `check ${index + 1} requires a non-negative integer ${field}.`,
     );

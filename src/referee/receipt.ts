@@ -58,7 +58,7 @@ const RECEIPT_STATUSES = new Set(["passed", "failed"]);
 const RECEIPT_CHECK_TYPES = new Set(Object.keys(LOCAL_REFEREE_CHECK_LABELS));
 const RECEIPT_VALIDATION_STATUSES = new Set(["passed", "failed", "unknown"]);
 const RECEIPT_OUTCOMES = new Set(["completed", "partially_completed", "blocked", "unknown"]);
-const RECEIPT_COUNT_BUCKETS = new Set(["0", "1_to_2", "3_to_5", "6_to_10", "over_10"]);
+const RECEIPT_COUNT_BUCKETS = new Set(["0", "1_to_2", "3_to_5", "6_to_10", "over_10", "unknown"]);
 const RECEIPT_TIME_BUCKETS = new Set([
   "under_15",
   "15_to_30",
@@ -91,7 +91,7 @@ function assertSafeToken(value: unknown, path: string): asserts value is string 
     typeof value !== "string" ||
     !RECEIPT_SAFE_TOKEN_PATTERN.test(value) ||
     value.includes("://") ||
-    value.includes(".git")
+    value.toLowerCase().includes(".git")
   ) {
     throw new Error(`Local Referee receipt requires a safe token at ${path}.`);
   }
@@ -136,7 +136,10 @@ function assertBoolean(value: unknown, path: string): asserts value is boolean {
 }
 
 function assertOptionalNonNegativeInteger(value: unknown, path: string): void {
-  if (value !== undefined && (typeof value !== "number" || !Number.isInteger(value) || value < 0)) {
+  if (
+    value !== undefined &&
+    (typeof value !== "number" || !Number.isSafeInteger(value) || value < 0)
+  ) {
     throw new Error(`Local Referee receipt requires a non-negative integer at ${path}.`);
   }
 }
@@ -192,6 +195,11 @@ export function assertLocalRefereeReceipt(value: unknown): asserts value is Loca
     if (!check) throw new Error(`Local Referee receipt check ${index + 1} must be an object.`);
     assertExactKeys(check, RECEIPT_CHECK_KEYS, `receipt.checks[${index}]`);
     assertCheckId(check.id, `receipt.checks[${index}].id`);
+    if (check.id !== `check_${index + 1}`) {
+      throw new Error(
+        `Local Referee receipt requires sequential check ids at receipt.checks[${index}].id.`,
+      );
+    }
     assertEnum(check.type, RECEIPT_CHECK_TYPES, `receipt.checks[${index}].type`);
     assertEnum(check.status, RECEIPT_STATUSES, `receipt.checks[${index}].status`);
     assertSafeToken(check.reasonCode, `receipt.checks[${index}].reasonCode`);
