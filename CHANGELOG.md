@@ -2,8 +2,13 @@
 
 ## Unreleased
 
+## 0.9.0
+
 ### Added
 
+- Added the `@headsdown/sdk/referee` subpath with shared local Referee contract parsing, evidence normalization, evaluation, structured and markdown receipt rendering, outcome payload shaping, preview text, share-decision helpers, and recursive privacy filtering.
+- Added `submitLocalRefereeOutcomeSummary` for privacy-filtered hosted outcome submission with a typed endpoint-unavailable result when the endpoint is unavailable.
+- Added parameterized Local Referee client metadata so integrations can report privacy-safe client kind and version metadata without changing the outcome schema.
 - Added an additive classifier telemetry manifest with SDK-owned vocabularies, a conversion helper for existing classifier results, and documentation for consumers that can keep using the SDK 0.6.0 minimal classifier subset until they adopt the richer manifest.
 
 ### Fixed
