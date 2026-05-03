@@ -2,15 +2,16 @@
 
 ## Unreleased
 
-### Added
-
-- Added the `@headsdown/sdk/agent` subpath for pure agent adapter helpers, including shared HeadsDown call/action rendering and privacy-safe event builder exports.
-
 ## 0.7.0
 
 ### Added
 
+- Added the `@headsdown/sdk/agent` subpath for pure agent adapter helpers, including shared HeadsDown call/action rendering and privacy-safe event builder exports.
 - Added `fetchAutopilotPolicy`, `AUTOPILOT_POLICY_QUERY`, `assertAutopilotPolicy`, and `AutopilotPolicyResponse` for typed per-mode autopilot policy reads.
+
+### Fixed
+
+- Tightened metadata-only agent event validation and context-aware enum handling for agent run event helpers.
 
 ## 0.6.0
 
