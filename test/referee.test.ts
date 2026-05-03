@@ -394,6 +394,19 @@ describe("Local Referee receipts", () => {
         ...receiptFixture(),
         checks: [
           {
+            id: "check_1",
+            type: "validation_status",
+            status: "passed",
+            reasonCode: "validation_status_mismatch",
+          },
+        ],
+      }),
+    ).toThrow("unsupported reason code");
+    expect(() =>
+      renderLocalRefereeReceiptMarkdown({
+        ...receiptFixture(),
+        checks: [
+          {
             id: "first_check",
             type: "validation_status",
             status: "passed",
@@ -619,13 +632,13 @@ describe("Local Referee outcome payloads and sharing", () => {
 
     expect(() =>
       assertLocalRefereeOutcomeSummaryPayload({ ...payload, apiKey: "hd_secret" }),
-    ).toThrow("unsupported field");
+    ).toThrow("prohibited field");
     expect(() =>
       assertLocalRefereeOutcomeSummaryPayload({
         ...payload,
         client: { ...payload.client, version: "src/index.ts" },
       }),
-    ).toThrow("safe token");
+    ).toThrow("prohibited content");
     expect(() =>
       assertLocalRefereeOutcomeSummaryPayload({
         ...payload,
@@ -661,7 +674,7 @@ describe("Local Referee outcome payloads and sharing", () => {
   it("rejects every prohibited key pattern recursively", () => {
     const prohibitedKeys = [
       "prompt",
-      "source",
+      "sourceCode",
       "code",
       "diff",
       "file",
@@ -672,12 +685,17 @@ describe("Local Referee outcome payloads and sharing", () => {
       "terminal",
       "output",
       "log",
-      "issue",
-      "pr",
+      "issueBody",
+      "prBody",
       "url",
       "message",
       "content",
       "hash",
+      "secret",
+      "accessToken",
+      "apiKey",
+      "password",
+      "envVar",
     ];
 
     for (const key of prohibitedKeys) {
@@ -711,6 +729,9 @@ describe("Local Referee outcome payloads and sharing", () => {
       "defmodule Example do",
       "function example()",
       "class Example",
+      "hello world",
+      "api_key",
+      "hd_test_key",
     ];
 
     for (const value of prohibitedValues) {
@@ -718,6 +739,10 @@ describe("Local Referee outcome payloads and sharing", () => {
         assertLocalRefereeOutcomeSummaryPayloadIsSafe({ safe: [{ nested: value }] }),
       ).toThrow("prohibited content");
     }
+
+    expect(() => assertLocalRefereeOutcomeSummaryPayloadIsSafe({ safe: Number.NaN })).toThrow(
+      "unsupported number",
+    );
   });
 
   it("renders the share preview only after payload validation and resolves every share choice", () => {
@@ -735,7 +760,7 @@ describe("Local Referee outcome payloads and sharing", () => {
         ...payload,
         client: { ...payload.client, version: "src/index.ts" },
       }),
-    ).toThrow("safe token");
+    ).toThrow("prohibited content");
     expect(shouldShareLocalRefereeOutcomeSummary({})).toBe(false);
     expect(shouldShareLocalRefereeOutcomeSummary({ config: { preference: "always_share" } })).toBe(
       true,

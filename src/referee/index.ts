@@ -34,8 +34,6 @@ export {
 export type { LocalRefereeReceipt } from "./receipt.js";
 
 export {
-  PROHIBITED_KEY_PATTERN,
-  PROHIBITED_VALUE_PATTERN,
   assertLocalRefereeOutcomeSummaryPayload,
   assertLocalRefereeOutcomeSummaryPayloadIsSafe,
   buildLocalRefereeOutcomeSummaryPayload,

@@ -1,5 +1,9 @@
 import { createHash } from "node:crypto";
-import { parseLocalRefereeContract, type LocalRefereeContract } from "./contract.js";
+import {
+  parseLocalRefereeContract,
+  type LocalRefereeCheckType,
+  type LocalRefereeContract,
+} from "./contract.js";
 import {
   evaluateLocalRefereeContract,
   type LocalRefereeEvaluation,
@@ -59,6 +63,39 @@ const RECEIPT_CHECK_TYPES = new Set(Object.keys(LOCAL_REFEREE_CHECK_LABELS));
 const RECEIPT_VALIDATION_STATUSES = new Set(["passed", "failed", "unknown"]);
 const RECEIPT_OUTCOMES = new Set(["completed", "partially_completed", "blocked", "unknown"]);
 const RECEIPT_COUNT_BUCKETS = new Set(["0", "1_to_2", "3_to_5", "6_to_10", "over_10", "unknown"]);
+const RECEIPT_REASON_CODES: Record<
+  LocalRefereeCheckType,
+  Record<LocalRefereeCheckStatus, Set<string>>
+> = {
+  validation_status: {
+    passed: new Set(["validation_status_matched"]),
+    failed: new Set(["validation_status_mismatch"]),
+  },
+  max_files_touched: {
+    passed: new Set(["files_within_limit"]),
+    failed: new Set(["files_over_limit", "files_touched_unknown"]),
+  },
+  max_tool_calls: {
+    passed: new Set(["tool_calls_within_limit"]),
+    failed: new Set(["tool_calls_over_limit", "tool_calls_unknown"]),
+  },
+  require_tests: {
+    passed: new Set(["tests_requirement_matched"]),
+    failed: new Set(["tests_requirement_mismatch"]),
+  },
+  network_required: {
+    passed: new Set(["network_requirement_matched"]),
+    failed: new Set(["network_requirement_mismatch"]),
+  },
+  outcome: {
+    passed: new Set(["outcome_matched"]),
+    failed: new Set(["outcome_mismatch"]),
+  },
+  git_commit_present: {
+    passed: new Set(["git_commit_requirement_matched"]),
+    failed: new Set(["git_commit_requirement_mismatch"]),
+  },
+};
 const RECEIPT_TIME_BUCKETS = new Set([
   "under_15",
   "15_to_30",
@@ -144,6 +181,18 @@ function assertOptionalNonNegativeInteger(value: unknown, path: string): void {
   }
 }
 
+function assertCheckReasonCode(
+  type: LocalRefereeCheckType,
+  status: LocalRefereeCheckStatus,
+  value: unknown,
+  path: string,
+): asserts value is string {
+  assertSafeToken(value, path);
+  if (!RECEIPT_REASON_CODES[type][status].has(value)) {
+    throw new Error(`Local Referee receipt contains unsupported reason code at ${path}.`);
+  }
+}
+
 export function assertLocalRefereeReceipt(value: unknown): asserts value is LocalRefereeReceipt {
   const receipt = asRecord(value);
   if (!receipt) throw new Error("Local Referee receipt must be an object.");
@@ -202,7 +251,12 @@ export function assertLocalRefereeReceipt(value: unknown): asserts value is Loca
     }
     assertEnum(check.type, RECEIPT_CHECK_TYPES, `receipt.checks[${index}].type`);
     assertEnum(check.status, RECEIPT_STATUSES, `receipt.checks[${index}].status`);
-    assertSafeToken(check.reasonCode, `receipt.checks[${index}].reasonCode`);
+    assertCheckReasonCode(
+      check.type as LocalRefereeCheckType,
+      check.status as LocalRefereeCheckStatus,
+      check.reasonCode,
+      `receipt.checks[${index}].reasonCode`,
+    );
     if (check.status === "failed") failedCheckCount += 1;
     if (check.type === "git_commit_present") hasGitCommitCheck = true;
   }

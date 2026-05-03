@@ -20,10 +20,102 @@ export interface LocalRefereeOutcomeSummaryPayload {
   };
 }
 
-export const PROHIBITED_KEY_PATTERN =
-  /(?:prompt|source|code|diff|file|path|repo|repository|branch|terminal|output|log|issue|pr|url|message|content|hash)/i;
-export const PROHIBITED_VALUE_PATTERN =
-  /(?:[A-Za-z][A-Za-z0-9+.-]*:\/\/|git@|\b[A-Za-z]:\\|\/(?:Users|home|private|tmp|var|src|lib|test)\/|\.git\b|BEGIN [A-Z ]+PRIVATE KEY|diff --git|@@\s+-\d+|console\.log|defmodule\s+|function\s+\w+|class\s+\w+)/i;
+const PROHIBITED_KEYS = new Set([
+  "prompt",
+  "prompts",
+  "source_code",
+  "code",
+  "diff",
+  "patch",
+  "file",
+  "files",
+  "file_path",
+  "path",
+  "repo",
+  "repository",
+  "branch",
+  "terminal",
+  "stdout",
+  "stderr",
+  "output",
+  "log",
+  "logs",
+  "issue_body",
+  "pr_body",
+  "ticket_body",
+  "url",
+  "message",
+  "content",
+  "contents",
+  "hash",
+  "secret",
+  "secrets",
+  "token",
+  "tokens",
+  "access_token",
+  "access_tokens",
+  "refresh_token",
+  "refresh_tokens",
+  "api_key",
+  "api_keys",
+  "password",
+  "cookie",
+  "environment",
+  "environment_variable",
+  "environment_variables",
+  "env_var",
+  "env_vars",
+]);
+const PROHIBITED_COMPACT_KEYS = new Set(
+  Array.from(PROHIBITED_KEYS, (key) => key.replace(/_/g, "")),
+);
+const PROHIBITED_KEY_TOKENS = new Set([
+  "body",
+  "code",
+  "content",
+  "contents",
+  "cookie",
+  "description",
+  "diff",
+  "file",
+  "files",
+  "hash",
+  "log",
+  "logs",
+  "message",
+  "output",
+  "password",
+  "patch",
+  "path",
+  "prompt",
+  "prompts",
+  "repo",
+  "repository",
+  "secret",
+  "secrets",
+  "stderr",
+  "stdout",
+  "terminal",
+  "text",
+  "token",
+  "tokens",
+  "url",
+]);
+const PROHIBITED_VALUE_PATTERNS = [
+  /(?:^|\s)(?:[./~]|[A-Za-z]:\\)[^\s]+/,
+  /^[^\s]+\/[^\s]+$/,
+  /\b[A-Za-z][A-Za-z0-9+.-]*:\/\//i,
+  /\bgit@/i,
+  /\b(?:stdout|stderr|stacktrace|traceback|diff --git)\b/i,
+  /BEGIN [A-Z ]+PRIVATE KEY/i,
+  /@@\s+-\d+/,
+  /console\.log/i,
+  /\bdefmodule\s+\w+/i,
+  /\bfunction\s+\w+/i,
+  /\bclass\s+\w+/i,
+  /\b(?:secret|api[_-]?key|token|password|cookie)\b/i,
+  /\bhd_[A-Za-z0-9_.:-]{6,}\b/i,
+];
 
 const PAYLOAD_KEYS = new Set([
   "schemaVersion",
@@ -56,10 +148,9 @@ function countChecks(receipt: LocalRefereeReceipt, status: "passed" | "failed"):
   return receipt.checks.filter((check) => check.status === status).length;
 }
 
-function manualReviewRoundTripEstimate(receipt: LocalRefereeReceipt): string {
-  const failed = countChecks(receipt, "failed");
-  if (failed >= 3) return "multiple";
-  if (failed >= 1) return "one";
+function manualReviewRoundTripEstimate(failedCount: number): string {
+  if (failedCount >= 3) return "multiple";
+  if (failedCount >= 1) return "one";
   return "none";
 }
 
@@ -70,17 +161,19 @@ export function buildLocalRefereeOutcomeSummaryPayload(input: {
 }): LocalRefereeOutcomeSummaryPayload {
   assertLocalRefereeReceipt(input.receipt);
 
+  const passedCount = countChecks(input.receipt, "passed");
+  const failedCount = countChecks(input.receipt, "failed");
   const payload: LocalRefereeOutcomeSummaryPayload = {
     schemaVersion: 1,
     finalState: input.receipt.verdict,
     controlDecisionCounts: {
-      passed: countChecks(input.receipt, "passed"),
-      failed: countChecks(input.receipt, "failed"),
+      passed: passedCount,
+      failed: failedCount,
     },
-    completionExceptionCount: countChecks(input.receipt, "failed"),
+    completionExceptionCount: failedCount,
     validationStatus: input.receipt.evidence.validationStatus,
     elapsedTimeBucket: input.receipt.evidence.elapsedMinutesBucket,
-    manualReviewRoundTripEstimate: manualReviewRoundTripEstimate(input.receipt),
+    manualReviewRoundTripEstimate: manualReviewRoundTripEstimate(failedCount),
     executionMode: input.executionMode ?? "local_only",
     client: input.client,
   };
@@ -119,14 +212,36 @@ function assertEnum(value: unknown, allowed: Set<string>, path: string): asserts
 }
 
 function assertSafeToken(value: unknown, path: string): asserts value is string {
-  if (
-    typeof value !== "string" ||
-    !SAFE_TOKEN_PATTERN.test(value) ||
-    value.includes("://") ||
-    value.toLowerCase().includes(".git")
-  ) {
+  if (typeof value !== "string" || !isSafeToken(value)) {
     throw new Error(`Outcome summary requires a safe token at ${path}.`);
   }
+}
+
+function isSafeToken(value: string): boolean {
+  return (
+    SAFE_TOKEN_PATTERN.test(value) &&
+    !value.includes("://") &&
+    !value.toLowerCase().includes(".git")
+  );
+}
+
+function normalizePrivacyKey(key: string): string {
+  return key
+    .replace(/([a-z0-9])([A-Z])/g, "$1_$2")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+}
+
+function isProhibitedPrivacyKey(key: string): boolean {
+  const normalizedKey = normalizePrivacyKey(key);
+  const compactKey = normalizedKey.replace(/_/g, "");
+
+  return (
+    PROHIBITED_KEYS.has(normalizedKey) ||
+    PROHIBITED_COMPACT_KEYS.has(compactKey) ||
+    normalizedKey.split("_").some((token) => PROHIBITED_KEY_TOKENS.has(token))
+  );
 }
 
 export function assertLocalRefereeOutcomeSummaryPayload(
@@ -191,13 +306,20 @@ export function assertLocalRefereeOutcomeSummaryPayloadIsSafe(
   if (value === null || value === undefined) return;
 
   if (typeof value === "string") {
-    if (PROHIBITED_VALUE_PATTERN.test(value)) {
+    if (!isSafeToken(value) || PROHIBITED_VALUE_PATTERNS.some((pattern) => pattern.test(value))) {
       throw new Error(`Outcome summary contains prohibited content at ${path}.`);
     }
     return;
   }
 
-  if (typeof value === "number" || typeof value === "boolean") return;
+  if (typeof value === "number") {
+    if (!Number.isFinite(value)) {
+      throw new Error(`Outcome summary contains unsupported number at ${path}.`);
+    }
+    return;
+  }
+
+  if (typeof value === "boolean") return;
 
   if (Array.isArray(value)) {
     value.forEach((item, index) =>
@@ -208,7 +330,7 @@ export function assertLocalRefereeOutcomeSummaryPayloadIsSafe(
 
   if (typeof value === "object") {
     for (const [key, nestedValue] of Object.entries(value as Record<string, unknown>)) {
-      if (PROHIBITED_KEY_PATTERN.test(key)) {
+      if (isProhibitedPrivacyKey(key)) {
         throw new Error(`Outcome summary contains prohibited field '${key}' at ${path}.`);
       }
       assertLocalRefereeOutcomeSummaryPayloadIsSafe(nestedValue, `${path}.${key}`);

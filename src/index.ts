@@ -48,8 +48,6 @@ export {
   LOCAL_REFEREE_CHECK_LABELS,
   LOCAL_REFEREE_CONTRACT_PATH,
   LocalRefereeContractError,
-  PROHIBITED_KEY_PATTERN,
-  PROHIBITED_VALUE_PATTERN,
   assertLocalRefereeOutcomeSummaryPayload,
   assertLocalRefereeOutcomeSummaryPayloadIsSafe,
   assertLocalRefereeReceipt,
