@@ -61,7 +61,11 @@ function normalizeOptionalMinutes(value: unknown): number | null {
 
 function normalizeBoolean(value: unknown, fallback = false): boolean {
   if (typeof value === "boolean") return value;
-  if (typeof value === "number" && Number.isFinite(value)) return value !== 0;
+  if (typeof value === "number" && Number.isFinite(value)) {
+    if (value === 1) return true;
+    if (value === 0) return false;
+    return fallback;
+  }
   if (typeof value === "string") {
     const normalized = value.trim().toLowerCase();
     if (["true", "yes", "y", "1", "passed", "run", "present", "committed"].includes(normalized))

@@ -233,14 +233,14 @@ function normalizePrivacyKey(key: string): string {
     .replace(/^_+|_+$/g, "");
 }
 
-function isProhibitedPrivacyKey(key: string): boolean {
-  const normalizedKey = normalizePrivacyKey(key);
-  const compactKey = normalizedKey.replace(/_/g, "");
+function containsProhibitedPrivacyToken(value: string): boolean {
+  const normalizedValue = normalizePrivacyKey(value);
+  const compactValue = normalizedValue.replace(/_/g, "");
 
   return (
-    PROHIBITED_KEYS.has(normalizedKey) ||
-    PROHIBITED_COMPACT_KEYS.has(compactKey) ||
-    normalizedKey.split("_").some((token) => PROHIBITED_KEY_TOKENS.has(token))
+    PROHIBITED_KEYS.has(normalizedValue) ||
+    PROHIBITED_COMPACT_KEYS.has(compactValue) ||
+    normalizedValue.split("_").some((token) => PROHIBITED_KEY_TOKENS.has(token))
   );
 }
 
@@ -306,7 +306,11 @@ export function assertLocalRefereeOutcomeSummaryPayloadIsSafe(
   if (value === null || value === undefined) return;
 
   if (typeof value === "string") {
-    if (!isSafeToken(value) || PROHIBITED_VALUE_PATTERNS.some((pattern) => pattern.test(value))) {
+    if (
+      !isSafeToken(value) ||
+      containsProhibitedPrivacyToken(value) ||
+      PROHIBITED_VALUE_PATTERNS.some((pattern) => pattern.test(value))
+    ) {
       throw new Error(`Outcome summary contains prohibited content at ${path}.`);
     }
     return;
@@ -330,7 +334,7 @@ export function assertLocalRefereeOutcomeSummaryPayloadIsSafe(
 
   if (typeof value === "object") {
     for (const [key, nestedValue] of Object.entries(value as Record<string, unknown>)) {
-      if (isProhibitedPrivacyKey(key)) {
+      if (containsProhibitedPrivacyToken(key)) {
         throw new Error(`Outcome summary contains prohibited field '${key}' at ${path}.`);
       }
       assertLocalRefereeOutcomeSummaryPayloadIsSafe(nestedValue, `${path}.${key}`);

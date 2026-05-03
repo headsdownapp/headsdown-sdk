@@ -191,6 +191,20 @@ describe("Local Referee evidence normalization", () => {
     });
   });
 
+  it("does not treat malformed boolean evidence as true", () => {
+    expect(
+      normalizeLocalRefereeEvidence({
+        testsRun: 2,
+        networkRequired: -1,
+        gitCommitPresent: Number.NaN,
+      }),
+    ).toMatchObject({
+      testsRun: false,
+      networkRequired: false,
+      gitCommitPresent: false,
+    });
+  });
+
   it("buckets invalid runtime numbers safely", () => {
     expect(bucketCount(Number.NaN)).toBe("unknown");
     expect(bucketCount(Number.POSITIVE_INFINITY)).toBe("unknown");
@@ -731,6 +745,8 @@ describe("Local Referee outcome payloads and sharing", () => {
       "class Example",
       "hello world",
       "api_key",
+      "access_token",
+      "secret_value",
       "hd_test_key",
     ];
 
