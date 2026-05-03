@@ -292,6 +292,34 @@ describe("GraphQLClient", () => {
       expect(overview.valueMetricsState).toBe("privacy_restricted");
     });
 
+    it("preserves uppercase free-string source values while normalizing source enums", async () => {
+      const client = new GraphQLClient({
+        ...BASE_OPTIONS,
+        fetch: mockGraphQL({
+          agentRunEvents: [
+            {
+              source: "SDK",
+              privacyMode: "METADATA_ONLY",
+            },
+          ],
+          schedule: {
+            wrapUpGuidance: {
+              source: "THRESHOLD",
+            },
+          },
+        }),
+      });
+
+      const data = await client.request<{
+        agentRunEvents: Array<{ source: string; privacyMode: string }>;
+        schedule: { wrapUpGuidance: { source: string } };
+      }>("query { agentRunEvents { source privacyMode } schedule { wrapUpGuidance { source } } }");
+
+      expect(data.agentRunEvents[0].source).toBe("SDK");
+      expect(data.agentRunEvents[0].privacyMode).toBe("metadata_only");
+      expect(data.schedule.wrapUpGuidance.source).toBe("threshold");
+    });
+
     it("normalizes agent-control action mutation enum-backed fields", async () => {
       const client = new GraphQLClient({
         ...BASE_OPTIONS,
