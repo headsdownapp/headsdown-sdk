@@ -5,7 +5,9 @@ import {
   bucketFileCount,
   bucketScopeGrowth,
   buildAgentRunEventInput,
+  deferredDecisionReAttemptedEvent,
   deferredDecisionResolvedEvent,
+  DeferredDecisionReAttemptOutcome,
   DeferredDecisionResolutionKind,
 } from "../src/index.js";
 
@@ -333,6 +335,88 @@ describe("agent run event helpers", () => {
       refined_urgency_bucket: "elevated",
       refined_decision_category: "validation",
     });
+  });
+
+  it("builds deferred decision re-attempted events with deterministic idempotency key", () => {
+    const event = deferredDecisionReAttemptedEvent(
+      { runId: "run_42" },
+      {
+        decision_id: "decision_abcdef1234567890",
+        outcome: "succeeded",
+        notes_bucket: "wrong_framing",
+      },
+    );
+
+    expect(event.eventType).toBe("deferred_decision.re_attempted");
+    expect(event.idempotencyKey).toBe(
+      "run_42:deferred_decision.re_attempted:decision_abcdef1234567890",
+    );
+    expect(event.payload).toEqual({
+      decision_id: "decision_abcdef1234567890",
+      outcome: "succeeded",
+      notes_bucket: "wrong_framing",
+    });
+  });
+
+  it("reports deferred decision re-attempted events through the client", async () => {
+    const { fetch, calls } = captureGraphQL({
+      reportAgentRunEvent: { ok: true, error: null, event: null },
+    });
+    const client = new HeadsDownClient({ ...CLIENT_OPTS, fetch });
+
+    await client.reportDeferredDecisionReAttempted(
+      { runId: "run_42" },
+      {
+        decision_id: "decision_abcdef1234567890",
+        outcome: "superseded",
+      },
+    );
+
+    const input = calls[0]!.variables!.input as Record<string, unknown>;
+    expect(input.eventType).toBe("deferred_decision.re_attempted");
+    expect(input.idempotencyKey).toBe(
+      "run_42:deferred_decision.re_attempted:decision_abcdef1234567890",
+    );
+    expect(input.payload).toEqual({
+      decision_id: "decision_abcdef1234567890",
+      outcome: "superseded",
+    });
+  });
+
+  it("rejects unsafe re-attempt payload values before submission", () => {
+    const event = deferredDecisionReAttemptedEvent(
+      { runId: "run_42" },
+      {
+        decision_id: "decision_abcdef1234567890",
+        outcome: "failed",
+        local_session_summary: {
+          version: 1,
+          sessionId: "session_123",
+          generatedAt: new Date().toISOString(),
+          stale: false,
+          toolCallCount: 1,
+          fileChangeCount: 0,
+          deferredDecisionCount: 1,
+          continuationArtifactAvailable: false,
+          validationLocallyPassed: false,
+          approvedProposalRef: null,
+          outcomeCategory: "deferred_for_review",
+          token: "redacted",
+        } as never,
+      },
+    );
+
+    expect(() => buildAgentRunEventInput(event)).toThrow(ValidationError);
+  });
+
+  it("keeps re-attempt outcome narrowed at compile time", () => {
+    const allowed: DeferredDecisionReAttemptOutcome[] = [
+      "superseded",
+      "succeeded",
+      "failed",
+      "abandoned",
+    ];
+    expect(allowed).toHaveLength(4);
   });
 
   it("keeps resolution kind narrowed at compile time", () => {
