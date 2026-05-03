@@ -1008,7 +1008,7 @@ export class HeadsDownClient {
     const variables = stripUndefined({
       runId: args.runId,
       eventType: args.eventType,
-      resolutionKind: args.resolutionKind,
+      resolutionKind: args.resolutionKind ? toGraphQLEnum(args.resolutionKind) : undefined,
       flaggedForReview: args.flaggedForReview,
       insertedAfter: args.insertedAfter,
       insertedBefore: args.insertedBefore,

@@ -274,9 +274,11 @@ function normalizeEnums<T>(data: T): T {
   const result: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(data as Record<string, unknown>)) {
     if (ENUM_FIELDS.has(key) && typeof value === "string") {
-      result[key] = value.toLowerCase();
+      result[key] = normalizeEnumValue(value);
     } else if (ENUM_FIELDS.has(key) && Array.isArray(value)) {
-      result[key] = value.map((item) => (typeof item === "string" ? item.toLowerCase() : item));
+      result[key] = value.map((item) =>
+        typeof item === "string" ? normalizeEnumValue(item) : item,
+      );
     } else if (typeof value === "object" && value !== null) {
       result[key] = normalizeEnums(value);
     } else {
@@ -284,6 +286,10 @@ function normalizeEnums<T>(data: T): T {
     }
   }
   return result as T;
+}
+
+function normalizeEnumValue(value: string): string {
+  return /^[A-Z0-9_]+$/.test(value) ? value.toLowerCase() : value;
 }
 
 /** Convert lowercase enum values to SCREAMING_CASE for GraphQL input. */
