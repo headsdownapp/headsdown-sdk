@@ -155,6 +155,27 @@ export function assertLocalRefereeOutcomeSummaryPayload(
   assertExactKeys(counts, COUNT_KEYS, "payload.controlDecisionCounts");
   assertNonNegativeInteger(counts.passed, "payload.controlDecisionCounts.passed");
   assertNonNegativeInteger(counts.failed, "payload.controlDecisionCounts.failed");
+  if (counts.passed + counts.failed === 0) {
+    throw new Error("Outcome summary requires at least one control decision.");
+  }
+
+  if (payload.completionExceptionCount !== counts.failed) {
+    throw new Error("Outcome summary completionExceptionCount must match failed decisions.");
+  }
+  if (payload.finalState === "passed" && counts.failed > 0) {
+    throw new Error("Outcome summary finalState does not match failed decisions.");
+  }
+  if (payload.finalState === "needs_review" && counts.failed === 0) {
+    throw new Error("Outcome summary finalState does not match passed decisions.");
+  }
+
+  const expectedReviewEstimate =
+    counts.failed >= 3 ? "multiple" : counts.failed >= 1 ? "one" : "none";
+  if (payload.manualReviewRoundTripEstimate !== expectedReviewEstimate) {
+    throw new Error(
+      "Outcome summary manualReviewRoundTripEstimate does not match failed decisions.",
+    );
+  }
 
   const client = asRecord(payload.client);
   if (!client) throw new Error("Outcome summary client must be an object.");

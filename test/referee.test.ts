@@ -334,7 +334,7 @@ describe("Local Referee receipts", () => {
       ...contract,
       ignoredRuntimeField: "ignored_value",
       checks: [{ ...contract.checks[0], ignoredRuntimeField: "ignored_value" }],
-    } as unknown as typeof contract;
+    };
 
     expect(buildLocalRefereeContractRef(contractWithIgnoredRuntimeFields)).toBe(
       buildLocalRefereeContractRef(contract),
@@ -432,6 +432,30 @@ describe("Local Referee outcome payloads and sharing", () => {
         client: { ...payload.client, version: "src/index.ts" },
       }),
     ).toThrow("safe token");
+    expect(() =>
+      assertLocalRefereeOutcomeSummaryPayload({
+        ...payload,
+        controlDecisionCounts: { passed: 0, failed: 0 },
+      }),
+    ).toThrow("requires at least one control decision");
+    expect(() =>
+      assertLocalRefereeOutcomeSummaryPayload({
+        ...payload,
+        controlDecisionCounts: { passed: 1, failed: 1 },
+      }),
+    ).toThrow("completionExceptionCount must match failed decisions");
+    expect(() =>
+      assertLocalRefereeOutcomeSummaryPayload({
+        ...payload,
+        finalState: "needs_review",
+      }),
+    ).toThrow("finalState does not match passed decisions");
+    expect(() =>
+      assertLocalRefereeOutcomeSummaryPayload({
+        ...payload,
+        manualReviewRoundTripEstimate: "one",
+      }),
+    ).toThrow("manualReviewRoundTripEstimate does not match failed decisions");
   });
 
   it("rejects every prohibited key pattern recursively", () => {
