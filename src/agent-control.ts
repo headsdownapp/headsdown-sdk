@@ -173,6 +173,22 @@ function fallbackBody(key: HeadsDownCallKey, body: string): string {
   return "HeadsDown needs a human decision before this agent continues.";
 }
 
+function resolvedPrimaryActionIntent(
+  call: HeadsDownCall,
+  resolved: Pick<HeadsDownCallFallback, "effectiveKey" | "reason">,
+  primaryAction: HeadsDownActionKey | null,
+): AgentControlUiIntent {
+  if (!primaryAction) {
+    return resolved.effectiveKey === "needs_your_yes" ? "review_request" : "view_details";
+  }
+
+  if (resolved.reason === "known_key" && call.primaryActionKnownKey === primaryAction) {
+    return call.primaryActionIntent;
+  }
+
+  return "none";
+}
+
 export function resolveHeadsDownCallFallback(call: HeadsDownCall): HeadsDownCallFallback {
   const resolved = fallbackKey(call);
   const primaryAction = resolved.reason === "known_key" ? knownAction(call) : safestAction(call);
@@ -185,11 +201,7 @@ export function resolveHeadsDownCallFallback(call: HeadsDownCall): HeadsDownCall
     title: fallbackTitle(resolved.effectiveKey, call.title),
     body: fallbackBody(resolved.effectiveKey, call.body),
     primaryActionKey: primaryAction,
-    primaryActionIntent: primaryAction
-      ? call.primaryActionIntent
-      : resolved.effectiveKey === "needs_your_yes"
-        ? "review_request"
-        : "view_details",
+    primaryActionIntent: resolvedPrimaryActionIntent(call, resolved, primaryAction),
     secondaryActionKey: secondaryAction,
     secondaryActionIntent:
       resolved.reason === "known_key" ? call.secondaryActionIntent : "view_details",
