@@ -19,7 +19,9 @@
       ],
       "optional": [
         "duration_seconds",
-        "turn_count"
+        "turn_count",
+        "reason",
+        "ended_at"
       ],
       "enums": {
         "outcome": [
@@ -27,6 +29,14 @@
           "failed",
           "cancelled",
           "timed_out"
+        ],
+        "reason": [
+          "clear",
+          "resume",
+          "logout",
+          "prompt_input_exit",
+          "bypass_permissions_disabled",
+          "other"
         ]
       }
     },

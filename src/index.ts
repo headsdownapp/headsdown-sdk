@@ -257,6 +257,7 @@ export type {
   PermissionDeniedEvent,
   PermissionDeniedResolution,
   SessionEndedEvent,
+  SessionEndedReason,
   SessionOutcome,
   SessionStartedEvent,
   ToolDurationBucket,
