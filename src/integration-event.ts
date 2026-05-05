@@ -37,7 +37,9 @@ export interface SessionEndedEvent {
   type: "session_ended";
   session_id: string;
   outcome: SessionOutcome;
+  /** Must be a non-negative integer. Fractional seconds are rejected at runtime. */
   duration_seconds?: number;
+  /** Must be a non-negative integer. */
   turn_count?: number;
 }
 
@@ -47,6 +49,7 @@ export interface TurnStartedEvent {
   type: "turn_started";
   turn_id: string;
   session_id: string;
+  /** Must be a non-negative integer. */
   sequence?: number;
 }
 
@@ -54,7 +57,9 @@ export interface TurnEndedEvent {
   type: "turn_ended";
   turn_id: string;
   session_id: string;
+  /** Must be a non-negative integer. */
   tool_calls_count: number;
+  /** Must be a non-negative integer. Fractional seconds are rejected at runtime. */
   duration_seconds?: number;
 }
 
@@ -63,6 +68,7 @@ export interface TurnFailedEvent {
   turn_id: string;
   session_id: string;
   reason: TurnFailedReason;
+  /** Must be a non-negative integer. Fractional seconds are rejected at runtime. */
   duration_seconds?: number;
 }
 
@@ -158,8 +164,10 @@ export type ContextSizeBucket =
 
 /**
  * Nominal alias for fields whose values are privacy-safe categorical labels
- * (not raw user content). Structurally a string, but the alias documents
- * intent and gives reviewers something to grep for.
+ * (not raw user content). Structurally just a `string`: this alias does not
+ * give the type system any extra leverage, it documents intent and gives
+ * reviewers a grep target. The actual constraint is the `SAFE_TOKEN_PATTERN`
+ * regex enforced at runtime by `requireBucketLabel`.
  */
 export type BucketLabel = string;
 

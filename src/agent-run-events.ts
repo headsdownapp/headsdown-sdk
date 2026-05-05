@@ -489,7 +489,73 @@ export function bucketScopeGrowth(count: number | undefined): AgentRunScopeGrowt
 }
 
 export function assertPrivacySafe(value: unknown, path = "input"): void {
-  void privacySafeClone(value, path);
+  validatePrivacySafe(value, path);
+}
+
+/**
+ * Walks `value` and rejects unsafe content the same way `privacySafeClone`
+ * does, but does not allocate a clone. Use this when you only need to assert
+ * the input is privacy-safe without producing a serializable copy. Same
+ * rejection rules and same exemption semantics; a follow-up call to
+ * `privacySafeClone` will not redo any work the runtime already proved
+ * impossible by failing here.
+ */
+function validatePrivacySafe(
+  value: unknown,
+  path: string,
+  topLevelExemptKeys?: ReadonlySet<string>,
+): void {
+  if (value === null || value === undefined) return;
+
+  if (Array.isArray(value)) {
+    assertPlainJsonArray(value, path);
+    for (let index = 0; index < value.length; index += 1) {
+      validatePrivacySafe(value[index], `${path}[${index}]`);
+    }
+    return;
+  }
+
+  if (typeof value === "object") {
+    if (!isPlainRecord(value)) {
+      throw new ValidationError(
+        "Agent run events can only include plain JSON-compatible metadata objects.",
+        path,
+      );
+    }
+
+    for (const [key, entry] of plainRecordEntries(value, path)) {
+      const exempt = topLevelExemptKeys?.has(key) ?? false;
+      if (!exempt && isProhibitedPrivacyKey(key)) {
+        throw new ValidationError(
+          `Agent run events cannot include raw-content field '${key}'.`,
+          path,
+        );
+      }
+      validatePrivacySafe(entry, `${path}.${key}`);
+    }
+    return;
+  }
+
+  if (typeof value === "function" || typeof value === "symbol" || typeof value === "bigint") {
+    throw new ValidationError(
+      "Agent run events can only include JSON-compatible metadata values.",
+      path,
+    );
+  }
+
+  if (typeof value === "number" && !Number.isFinite(value)) {
+    throw new ValidationError(
+      "Agent run events can only include finite numeric metadata values.",
+      path,
+    );
+  }
+
+  if (typeof value === "string" && UNSAFE_VALUE_PATTERNS.some((pattern) => pattern.test(value))) {
+    throw new ValidationError(
+      "Agent run events cannot include paths, URLs, logs, secrets, or raw content.",
+      path,
+    );
+  }
 }
 
 /**
