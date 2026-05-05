@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   HeadsDownClient,
+  INTEGRATION_EVENT_MANIFEST,
   INTEGRATION_EVENT_TYPE,
   ValidationError,
   assertIntegrationEvent,
@@ -117,6 +118,56 @@ const ALL_VARIANT_FIXTURES: ReadonlyArray<{
     },
   },
 ];
+
+describe("INTEGRATION_EVENT_MANIFEST", () => {
+  it("manifest variants cover every key in INTEGRATION_EVENT_TYPE", () => {
+    expect(new Set(Object.keys(INTEGRATION_EVENT_MANIFEST.variants))).toEqual(
+      new Set(Object.keys(INTEGRATION_EVENT_TYPE)),
+    );
+  });
+
+  it("manifest wire types match INTEGRATION_EVENT_TYPE values", () => {
+    for (const [variant, spec] of Object.entries(INTEGRATION_EVENT_MANIFEST.variants)) {
+      expect(spec.wire_type).toBe(INTEGRATION_EVENT_TYPE[variant as IntegrationEventVariant]);
+    }
+  });
+
+  it("manifest wire types are uniformly namespaced under integration.*", () => {
+    for (const spec of Object.values(INTEGRATION_EVENT_MANIFEST.variants)) {
+      expect(spec.wire_type.startsWith("integration.")).toBe(true);
+    }
+  });
+
+  it("manifest version is a positive integer", () => {
+    expect(INTEGRATION_EVENT_MANIFEST.version).toBeGreaterThan(0);
+    expect(Number.isInteger(INTEGRATION_EVENT_MANIFEST.version)).toBe(true);
+  });
+
+  it("manifest enum value lists are non-empty when present and use only privacy-safe tokens", () => {
+    const SAFE_TOKEN = /^[A-Za-z0-9_.:-]{1,256}$/;
+
+    for (const [variant, spec] of Object.entries(INTEGRATION_EVENT_MANIFEST.variants)) {
+      for (const [field, values] of Object.entries(spec.enums)) {
+        expect(values.length, `${variant}.${field} enum is empty`).toBeGreaterThan(0);
+        for (const value of values) {
+          expect(value, `${variant}.${field} value '${value}' is unsafe`).toMatch(SAFE_TOKEN);
+        }
+      }
+    }
+  });
+
+  it("required and optional field lists are disjoint per variant", () => {
+    for (const [variant, spec] of Object.entries(INTEGRATION_EVENT_MANIFEST.variants)) {
+      const requiredSet = new Set<string>(spec.required);
+      const overlap = (spec.optional as readonly string[]).filter((field) =>
+        requiredSet.has(field),
+      );
+      expect(overlap, `${variant} has fields in both required and optional: ${overlap}`).toEqual(
+        [],
+      );
+    }
+  });
+});
 
 describe("IntegrationEvent variants", () => {
   it("covers every variant in INTEGRATION_EVENT_TYPE", () => {

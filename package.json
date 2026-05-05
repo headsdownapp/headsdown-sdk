@@ -18,7 +18,8 @@
       "types": "./dist/referee/index.d.ts",
       "import": "./dist/referee/index.js"
     },
-    "./schemas/local-session-summary.schema.json": "./schemas/local-session-summary.schema.json"
+    "./schemas/local-session-summary.schema.json": "./schemas/local-session-summary.schema.json",
+    "./schemas/integration-event-manifest.json": "./schemas/integration-event-manifest.json"
   },
   "files": [
     "dist",
@@ -41,7 +42,9 @@
     "version": "node scripts/update-changelog.mjs && git add CHANGELOG.md",
     "prepare": "npm run build",
     "emit:local-session-summary-schema": "node scripts/emit-local-session-summary-schema.mjs",
-    "prepublishOnly": "npm run build && npm run emit:local-session-summary-schema",
+    "emit:integration-event-manifest": "node scripts/emit-integration-event-manifest.mjs",
+    "emit:schemas": "npm run emit:local-session-summary-schema && npm run emit:integration-event-manifest",
+    "prepublishOnly": "npm run build && npm run emit:schemas",
     "clean": "rm -rf dist"
   },
   "keywords": [

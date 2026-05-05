@@ -230,6 +230,8 @@ export type {
 
 // Vendor-neutral integration-event vocabulary
 export {
+  INTEGRATION_EVENT_MANIFEST,
+  INTEGRATION_EVENT_MANIFEST_VERSION,
   INTEGRATION_EVENT_TYPE,
   assertIntegrationEvent,
   contextCompactedEvent,
@@ -249,6 +251,7 @@ export type {
   ContextCompactedEvent,
   ContextSizeBucket,
   IntegrationEvent,
+  IntegrationEventManifest,
   IntegrationEventTypeWire,
   IntegrationEventVariant,
   PermissionDeniedEvent,

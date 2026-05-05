@@ -13,6 +13,181 @@ import { ValidationError } from "./errors.js";
  * output) is rejected by the privacy filter; see `assertPrivacySafe` in
  * `agent-run-events.ts` for the exact prohibited-key set.
  */
+
+/**
+ * Single-source manifest for the IntegrationEvent vocabulary. Every variant
+ * lists its wire-level event type, required and optional payload fields, and
+ * the closed enum sets per field. Type aliases below are derived from this
+ * structure; runtime validation Sets are derived too. The manifest is also
+ * emitted as JSON via `scripts/emit-integration-event-manifest.mjs` so
+ * hosted (Elixir) can assert parity in its own test suite.
+ *
+ * Adding a new variant or a new enum value: update this manifest only. Types,
+ * Sets, the wire-type namespace, and the JSON schema all derive from here.
+ */
+export const INTEGRATION_EVENT_MANIFEST_VERSION = 1;
+
+const VARIANT_SPECS = {
+  session_started: {
+    wire_type: "integration.session_started",
+    required: ["session_id"],
+    optional: ["capabilities"],
+    enums: {},
+  },
+  session_ended: {
+    wire_type: "integration.session_ended",
+    required: ["session_id", "outcome"],
+    optional: ["duration_seconds", "turn_count"],
+    enums: {
+      outcome: ["succeeded", "failed", "cancelled", "timed_out"],
+    },
+  },
+  turn_started: {
+    wire_type: "integration.turn_started",
+    required: ["turn_id", "session_id"],
+    optional: ["sequence"],
+    enums: {},
+  },
+  turn_ended: {
+    wire_type: "integration.turn_ended",
+    required: ["turn_id", "session_id", "tool_calls_count"],
+    optional: ["duration_seconds"],
+    enums: {},
+  },
+  turn_failed: {
+    wire_type: "integration.turn_failed",
+    required: ["turn_id", "session_id", "reason"],
+    optional: ["duration_seconds"],
+    enums: {
+      reason: ["api_error", "timeout", "cancelled", "rate_limited", "unknown"],
+    },
+  },
+  tool_invoked: {
+    wire_type: "integration.tool_invoked",
+    required: ["tool_id", "session_id", "tool_kind"],
+    optional: ["turn_id", "tool_name_bucket"],
+    enums: {
+      tool_kind: ["read", "write", "external"],
+    },
+  },
+  tool_succeeded: {
+    wire_type: "integration.tool_succeeded",
+    required: ["tool_id", "session_id"],
+    optional: ["turn_id", "duration_ms_bucket"],
+    enums: {
+      duration_ms_bucket: ["under_100ms", "100ms_to_1s", "1s_to_10s", "over_10s", "unknown"],
+    },
+  },
+  tool_failed: {
+    wire_type: "integration.tool_failed",
+    required: ["tool_id", "session_id", "reason"],
+    optional: ["turn_id"],
+    enums: {
+      reason: ["permission_denied", "execution_error", "timeout", "unknown"],
+    },
+  },
+  permission_denied: {
+    wire_type: "integration.permission_denied",
+    required: ["decision_id", "session_id", "action_kind_bucket", "resolution"],
+    optional: [],
+    enums: {
+      resolution: ["user_denied", "auto_denied", "policy"],
+    },
+  },
+  context_compacted: {
+    wire_type: "integration.context_compacted",
+    required: ["session_id", "post_context_bucket"],
+    optional: ["turn_id", "prior_context_bucket"],
+    enums: {
+      prior_context_bucket: [
+        "under_10k",
+        "10k_to_50k",
+        "50k_to_100k",
+        "100k_to_200k",
+        "over_200k",
+        "unknown",
+      ],
+      post_context_bucket: [
+        "under_10k",
+        "10k_to_50k",
+        "50k_to_100k",
+        "100k_to_200k",
+        "over_200k",
+        "unknown",
+      ],
+    },
+  },
+} as const;
+
+export const INTEGRATION_EVENT_MANIFEST = {
+  version: INTEGRATION_EVENT_MANIFEST_VERSION,
+  variants: VARIANT_SPECS,
+} as const;
+
+export type IntegrationEventManifest = typeof INTEGRATION_EVENT_MANIFEST;
+export type IntegrationEventVariant = keyof typeof VARIANT_SPECS;
+
+export const INTEGRATION_EVENT_TYPE = {
+  session_started: VARIANT_SPECS.session_started.wire_type,
+  session_ended: VARIANT_SPECS.session_ended.wire_type,
+  turn_started: VARIANT_SPECS.turn_started.wire_type,
+  turn_ended: VARIANT_SPECS.turn_ended.wire_type,
+  turn_failed: VARIANT_SPECS.turn_failed.wire_type,
+  tool_invoked: VARIANT_SPECS.tool_invoked.wire_type,
+  tool_succeeded: VARIANT_SPECS.tool_succeeded.wire_type,
+  tool_failed: VARIANT_SPECS.tool_failed.wire_type,
+  permission_denied: VARIANT_SPECS.permission_denied.wire_type,
+  context_compacted: VARIANT_SPECS.context_compacted.wire_type,
+} as const satisfies Record<IntegrationEventVariant, string>;
+
+export type IntegrationEventTypeWire =
+  (typeof INTEGRATION_EVENT_TYPE)[keyof typeof INTEGRATION_EVENT_TYPE];
+
+// Type aliases derived from the manifest. Adding a new value to an enum in
+// the manifest automatically widens the corresponding type — no separate
+// declaration to keep in sync.
+export type SessionOutcome = (typeof VARIANT_SPECS.session_ended.enums.outcome)[number];
+
+/**
+ * Open string union: known reasons are listed in the manifest. The
+ * `(string & {})` escape hatch lets future integrations report a reason this
+ * SDK version does not yet enumerate without an SDK upgrade. Falling back to
+ * `"unknown"` is still encouraged when the integration does not know the
+ * specific cause.
+ */
+export type TurnFailedReason =
+  | (typeof VARIANT_SPECS.turn_failed.enums.reason)[number]
+  | (string & {});
+
+export type ToolKind = (typeof VARIANT_SPECS.tool_invoked.enums.tool_kind)[number];
+
+export type ToolDurationBucket =
+  (typeof VARIANT_SPECS.tool_succeeded.enums.duration_ms_bucket)[number];
+
+/**
+ * Open string union (see `TurnFailedReason`). Allows new failure categories
+ * without breaking existing callers; integrations that do not know the cause
+ * should pass `"unknown"`.
+ */
+export type ToolFailedReason =
+  | (typeof VARIANT_SPECS.tool_failed.enums.reason)[number]
+  | (string & {});
+
+export type PermissionDeniedResolution =
+  (typeof VARIANT_SPECS.permission_denied.enums.resolution)[number];
+
+export type ContextSizeBucket =
+  (typeof VARIANT_SPECS.context_compacted.enums.post_context_bucket)[number];
+
+/**
+ * Nominal alias for fields whose values are privacy-safe categorical labels
+ * (not raw user content). Structurally just a `string`: this alias does not
+ * give the type system any extra leverage, it documents intent and gives
+ * reviewers a grep target. The actual constraint is the `SAFE_TOKEN_PATTERN`
+ * regex enforced at runtime by `requireBucketLabel`.
+ */
+export type BucketLabel = string;
+
 export type IntegrationEvent =
   | SessionStartedEvent
   | SessionEndedEvent
@@ -24,8 +199,6 @@ export type IntegrationEvent =
   | ToolFailedEvent
   | PermissionDeniedEvent
   | ContextCompactedEvent;
-
-export type IntegrationEventVariant = IntegrationEvent["type"];
 
 export interface SessionStartedEvent {
   type: "session_started";
@@ -42,8 +215,6 @@ export interface SessionEndedEvent {
   /** Must be a non-negative integer. */
   turn_count?: number;
 }
-
-export type SessionOutcome = "succeeded" | "failed" | "cancelled" | "timed_out";
 
 export interface TurnStartedEvent {
   type: "turn_started";
@@ -72,23 +243,6 @@ export interface TurnFailedEvent {
   duration_seconds?: number;
 }
 
-/**
- * Open string union: known reasons are constrained, but a forward-compatible
- * escape hatch (`string & {}`) lets future integrations report a reason this
- * SDK version does not yet enumerate without an SDK upgrade. Falling back to
- * `"unknown"` is still encouraged when the integration does not know the
- * specific cause.
- */
-export type TurnFailedReason =
-  | "api_error"
-  | "timeout"
-  | "cancelled"
-  | "rate_limited"
-  | "unknown"
-  | (string & {});
-
-export type ToolKind = "read" | "write" | "external";
-
 export interface ToolInvokedEvent {
   type: "tool_invoked";
   tool_id: string;
@@ -106,13 +260,6 @@ export interface ToolSucceededEvent {
   duration_ms_bucket?: ToolDurationBucket;
 }
 
-export type ToolDurationBucket =
-  | "under_100ms"
-  | "100ms_to_1s"
-  | "1s_to_10s"
-  | "over_10s"
-  | "unknown";
-
 export interface ToolFailedEvent {
   type: "tool_failed";
   tool_id: string;
@@ -120,18 +267,6 @@ export interface ToolFailedEvent {
   turn_id?: string;
   reason: ToolFailedReason;
 }
-
-/**
- * Open string union (see `TurnFailedReason`). Allows new failure categories
- * without breaking existing callers; integrations that do not know the cause
- * should pass `"unknown"`.
- */
-export type ToolFailedReason =
-  | "permission_denied"
-  | "execution_error"
-  | "timeout"
-  | "unknown"
-  | (string & {});
 
 export interface PermissionDeniedEvent {
   type: "permission_denied";
@@ -143,8 +278,6 @@ export interface PermissionDeniedEvent {
   resolution: PermissionDeniedResolution;
 }
 
-export type PermissionDeniedResolution = "user_denied" | "auto_denied" | "policy";
-
 export interface ContextCompactedEvent {
   type: "context_compacted";
   session_id: string;
@@ -154,80 +287,27 @@ export interface ContextCompactedEvent {
   post_context_bucket: ContextSizeBucket;
 }
 
-export type ContextSizeBucket =
-  | "under_10k"
-  | "10k_to_50k"
-  | "50k_to_100k"
-  | "100k_to_200k"
-  | "over_200k"
-  | "unknown";
+// Runtime Sets derived from the manifest. The freezing guarantee is
+// transitive: editing a manifest array changes the corresponding Set.
+const SESSION_OUTCOMES = new Set<SessionOutcome>(VARIANT_SPECS.session_ended.enums.outcome);
 
-/**
- * Nominal alias for fields whose values are privacy-safe categorical labels
- * (not raw user content). Structurally just a `string`: this alias does not
- * give the type system any extra leverage, it documents intent and gives
- * reviewers a grep target. The actual constraint is the `SAFE_TOKEN_PATTERN`
- * regex enforced at runtime by `requireBucketLabel`.
- */
-export type BucketLabel = string;
+const KNOWN_TURN_FAILED_REASONS = new Set<string>(VARIANT_SPECS.turn_failed.enums.reason);
 
-export const INTEGRATION_EVENT_TYPE = {
-  session_started: "integration.session_started",
-  session_ended: "integration.session_ended",
-  turn_started: "integration.turn_started",
-  turn_ended: "integration.turn_ended",
-  turn_failed: "integration.turn_failed",
-  tool_invoked: "integration.tool_invoked",
-  tool_succeeded: "integration.tool_succeeded",
-  tool_failed: "integration.tool_failed",
-  permission_denied: "integration.permission_denied",
-  context_compacted: "integration.context_compacted",
-} as const satisfies Record<IntegrationEventVariant, string>;
+const TOOL_KINDS = new Set<ToolKind>(VARIANT_SPECS.tool_invoked.enums.tool_kind);
 
-export type IntegrationEventTypeWire =
-  (typeof INTEGRATION_EVENT_TYPE)[keyof typeof INTEGRATION_EVENT_TYPE];
+const TOOL_DURATION_BUCKETS = new Set<ToolDurationBucket>(
+  VARIANT_SPECS.tool_succeeded.enums.duration_ms_bucket,
+);
 
-const SESSION_OUTCOMES = new Set<SessionOutcome>(["succeeded", "failed", "cancelled", "timed_out"]);
+const KNOWN_TOOL_FAILED_REASONS = new Set<string>(VARIANT_SPECS.tool_failed.enums.reason);
 
-const KNOWN_TURN_FAILED_REASONS = new Set([
-  "api_error",
-  "timeout",
-  "cancelled",
-  "rate_limited",
-  "unknown",
-]);
+const PERMISSION_DENIED_RESOLUTIONS = new Set<PermissionDeniedResolution>(
+  VARIANT_SPECS.permission_denied.enums.resolution,
+);
 
-const TOOL_KINDS = new Set<ToolKind>(["read", "write", "external"]);
-
-const TOOL_DURATION_BUCKETS = new Set<ToolDurationBucket>([
-  "under_100ms",
-  "100ms_to_1s",
-  "1s_to_10s",
-  "over_10s",
-  "unknown",
-]);
-
-const KNOWN_TOOL_FAILED_REASONS = new Set([
-  "permission_denied",
-  "execution_error",
-  "timeout",
-  "unknown",
-]);
-
-const PERMISSION_DENIED_RESOLUTIONS = new Set<PermissionDeniedResolution>([
-  "user_denied",
-  "auto_denied",
-  "policy",
-]);
-
-const CONTEXT_SIZE_BUCKETS = new Set<ContextSizeBucket>([
-  "under_10k",
-  "10k_to_50k",
-  "50k_to_100k",
-  "100k_to_200k",
-  "over_200k",
-  "unknown",
-]);
+const CONTEXT_SIZE_BUCKETS = new Set<ContextSizeBucket>(
+  VARIANT_SPECS.context_compacted.enums.post_context_bucket,
+);
 
 /**
  * Hosted accepts opaque identifiers and bucket labels matching this token
