@@ -42,6 +42,8 @@ const ALL_VARIANT_FIXTURES: ReadonlyArray<{
       type: "session_ended",
       session_id: "sess_1",
       outcome: "succeeded",
+      reason: "clear",
+      ended_at: "2026-04-24T17:29:00Z",
       duration_seconds: 120,
       turn_count: 4,
     },
@@ -346,6 +348,35 @@ describe("IntegrationEvent variant validation", () => {
     ).toThrow(/tool_calls_count/);
   });
 
+  it("rejects out-of-range session_ended reason", () => {
+    expect(() =>
+      assertIntegrationEvent({
+        type: "session_ended",
+        session_id: "sess_1",
+        outcome: "succeeded",
+        // @ts-expect-error invalid reason enum value
+        reason: "manual",
+      }),
+    ).toThrow(/reason/);
+  });
+
+  it.each([
+    "2026/04/24 17:29:00",
+    "2026-04-24T17:29:00+02:00",
+    "2026-02-31T17:29:00Z",
+    "2026-04-31T00:00:00Z",
+    "2026-04-24T24:00:00Z",
+  ])("rejects invalid session_ended ended_at timestamp %s", (ended_at) => {
+    expect(() =>
+      assertIntegrationEvent({
+        type: "session_ended",
+        session_id: "sess_1",
+        outcome: "succeeded",
+        ended_at,
+      }),
+    ).toThrow(/ended_at/);
+  });
+
   it("rejects non-array capabilities", () => {
     expect(() =>
       assertIntegrationEvent({
@@ -424,7 +455,7 @@ describe("IntegrationEvent variant validation", () => {
   });
 });
 
-describe("IntegrationEvent open reason unions", () => {
+describe("IntegrationEvent reason enums", () => {
   it("accepts a known turn_failed reason", () => {
     const { payload } = assertIntegrationEvent({
       type: "turn_failed",
@@ -435,14 +466,16 @@ describe("IntegrationEvent open reason unions", () => {
     expect(payload.reason).toBe("rate_limited");
   });
 
-  it("accepts an unknown but privacy-safe turn_failed reason", () => {
-    const { payload } = assertIntegrationEvent({
-      type: "turn_failed",
-      turn_id: "turn_1",
-      session_id: "sess_1",
-      reason: "context_length_exceeded",
-    });
-    expect(payload.reason).toBe("context_length_exceeded");
+  it("rejects unknown turn_failed reasons", () => {
+    expect(() =>
+      assertIntegrationEvent({
+        type: "turn_failed",
+        turn_id: "turn_1",
+        session_id: "sess_1",
+        // @ts-expect-error invalid reason enum value
+        reason: "context_length_exceeded",
+      }),
+    ).toThrow(/reason/);
   });
 
   it("rejects a privacy-unsafe reason value", () => {
@@ -451,19 +484,22 @@ describe("IntegrationEvent open reason unions", () => {
         type: "turn_failed",
         turn_id: "turn_1",
         session_id: "sess_1",
+        // @ts-expect-error invalid reason enum value
         reason: "user said: secret token=abc123",
       }),
     ).toThrow(/reason/);
   });
 
-  it("accepts unknown but privacy-safe tool_failed reasons", () => {
-    const { payload } = assertIntegrationEvent({
-      type: "tool_failed",
-      tool_id: "tool_1",
-      session_id: "sess_1",
-      reason: "transient_network_blip",
-    });
-    expect(payload.reason).toBe("transient_network_blip");
+  it("rejects unknown tool_failed reasons", () => {
+    expect(() =>
+      assertIntegrationEvent({
+        type: "tool_failed",
+        tool_id: "tool_1",
+        session_id: "sess_1",
+        // @ts-expect-error invalid reason enum value
+        reason: "transient_network_blip",
+      }),
+    ).toThrow(/reason/);
   });
 });
 
@@ -480,13 +516,17 @@ describe("per-variant helpers", () => {
     });
   });
 
-  it("sessionEndedEvent carries outcome and counts", () => {
+  it("sessionEndedEvent carries outcome and optional reason/timestamps", () => {
     const input = sessionEndedEvent(CONTEXT, {
       session_id: "sess_1",
       outcome: "cancelled",
+      reason: "resume",
+      ended_at: "2026-04-24T17:29:00Z",
       turn_count: 7,
     });
     expect(input.payload?.outcome).toBe("cancelled");
+    expect(input.payload?.reason).toBe("resume");
+    expect(input.payload?.ended_at).toBe("2026-04-24T17:29:00Z");
     expect(input.payload?.turn_count).toBe(7);
   });
 

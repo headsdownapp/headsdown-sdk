@@ -37,9 +37,17 @@ const VARIANT_SPECS = {
   session_ended: {
     wire_type: "integration.session_ended",
     required: ["session_id", "outcome"],
-    optional: ["duration_seconds", "turn_count"],
+    optional: ["duration_seconds", "turn_count", "reason", "ended_at"],
     enums: {
       outcome: ["succeeded", "failed", "cancelled", "timed_out"],
+      reason: [
+        "clear",
+        "resume",
+        "logout",
+        "prompt_input_exit",
+        "bypass_permissions_disabled",
+        "other",
+      ],
     },
   },
   turn_started: {
@@ -147,31 +155,16 @@ export type IntegrationEventTypeWire =
 // the manifest automatically widens the corresponding type — no separate
 // declaration to keep in sync.
 export type SessionOutcome = (typeof VARIANT_SPECS.session_ended.enums.outcome)[number];
+export type SessionEndedReason = (typeof VARIANT_SPECS.session_ended.enums.reason)[number];
 
-/**
- * Open string union: known reasons are listed in the manifest. The
- * `(string & {})` escape hatch lets future integrations report a reason this
- * SDK version does not yet enumerate without an SDK upgrade. Falling back to
- * `"unknown"` is still encouraged when the integration does not know the
- * specific cause.
- */
-export type TurnFailedReason =
-  | (typeof VARIANT_SPECS.turn_failed.enums.reason)[number]
-  | (string & {});
+export type TurnFailedReason = (typeof VARIANT_SPECS.turn_failed.enums.reason)[number];
 
 export type ToolKind = (typeof VARIANT_SPECS.tool_invoked.enums.tool_kind)[number];
 
 export type ToolDurationBucket =
   (typeof VARIANT_SPECS.tool_succeeded.enums.duration_ms_bucket)[number];
 
-/**
- * Open string union (see `TurnFailedReason`). Allows new failure categories
- * without breaking existing callers; integrations that do not know the cause
- * should pass `"unknown"`.
- */
-export type ToolFailedReason =
-  | (typeof VARIANT_SPECS.tool_failed.enums.reason)[number]
-  | (string & {});
+export type ToolFailedReason = (typeof VARIANT_SPECS.tool_failed.enums.reason)[number];
 
 export type PermissionDeniedResolution =
   (typeof VARIANT_SPECS.permission_denied.enums.resolution)[number];
@@ -210,6 +203,9 @@ export interface SessionEndedEvent {
   type: "session_ended";
   session_id: string;
   outcome: SessionOutcome;
+  reason?: SessionEndedReason;
+  /** Must be an ISO 8601 UTC timestamp string. */
+  ended_at?: string;
   /** Must be a non-negative integer. Fractional seconds are rejected at runtime. */
   duration_seconds?: number;
   /** Must be a non-negative integer. */
@@ -290,8 +286,9 @@ export interface ContextCompactedEvent {
 // Runtime Sets derived from the manifest. The freezing guarantee is
 // transitive: editing a manifest array changes the corresponding Set.
 const SESSION_OUTCOMES = new Set<SessionOutcome>(VARIANT_SPECS.session_ended.enums.outcome);
+const SESSION_ENDED_REASONS = new Set<SessionEndedReason>(VARIANT_SPECS.session_ended.enums.reason);
 
-const KNOWN_TURN_FAILED_REASONS = new Set<string>(VARIANT_SPECS.turn_failed.enums.reason);
+const TURN_FAILED_REASONS = new Set<TurnFailedReason>(VARIANT_SPECS.turn_failed.enums.reason);
 
 const TOOL_KINDS = new Set<ToolKind>(VARIANT_SPECS.tool_invoked.enums.tool_kind);
 
@@ -299,7 +296,7 @@ const TOOL_DURATION_BUCKETS = new Set<ToolDurationBucket>(
   VARIANT_SPECS.tool_succeeded.enums.duration_ms_bucket,
 );
 
-const KNOWN_TOOL_FAILED_REASONS = new Set<string>(VARIANT_SPECS.tool_failed.enums.reason);
+const TOOL_FAILED_REASONS = new Set<ToolFailedReason>(VARIANT_SPECS.tool_failed.enums.reason);
 
 const PERMISSION_DENIED_RESOLUTIONS = new Set<PermissionDeniedResolution>(
   VARIANT_SPECS.permission_denied.enums.resolution,
@@ -318,6 +315,8 @@ const CONTEXT_SIZE_BUCKETS = new Set<ContextSizeBucket>(
 const SAFE_TOKEN_PATTERN = /^[A-Za-z0-9_.:-]{1,256}$/;
 
 const STRICT_OPAQUE_DECISION_ID_PATTERN = /^decision_[A-Za-z0-9]{16,}$/;
+const ISO_8601_UTC_TIMESTAMP_PATTERN =
+  /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d{1,9})?Z$/;
 
 /**
  * Validates an `IntegrationEvent` shape and runs the SDK privacy filter on
@@ -373,6 +372,8 @@ function validateVariant(event: IntegrationEvent): void {
     case "session_ended":
       requireOpaqueId(event.session_id, "session_id");
       requireMember(event.outcome, SESSION_OUTCOMES, "outcome");
+      if (event.reason !== undefined) requireMember(event.reason, SESSION_ENDED_REASONS, "reason");
+      requireOptionalIso8601Timestamp(event.ended_at, "ended_at");
       requireOptionalNonNegativeInteger(event.duration_seconds, "duration_seconds");
       requireOptionalNonNegativeInteger(event.turn_count, "turn_count");
       return;
@@ -390,7 +391,7 @@ function validateVariant(event: IntegrationEvent): void {
     case "turn_failed":
       requireOpaqueId(event.turn_id, "turn_id");
       requireOpaqueId(event.session_id, "session_id");
-      requireOpenReason(event.reason, KNOWN_TURN_FAILED_REASONS, "reason");
+      requireMember(event.reason, TURN_FAILED_REASONS, "reason");
       requireOptionalNonNegativeInteger(event.duration_seconds, "duration_seconds");
       return;
     case "tool_invoked":
@@ -414,7 +415,7 @@ function validateVariant(event: IntegrationEvent): void {
       requireOpaqueId(event.tool_id, "tool_id");
       requireOpaqueId(event.session_id, "session_id");
       if (event.turn_id !== undefined) requireOpaqueId(event.turn_id, "turn_id");
-      requireOpenReason(event.reason, KNOWN_TOOL_FAILED_REASONS, "reason");
+      requireMember(event.reason, TOOL_FAILED_REASONS, "reason");
       return;
     case "permission_denied":
       requireStrictOpaqueDecisionId(event.decision_id);
@@ -475,24 +476,6 @@ function requireMember<T extends string>(
   }
 }
 
-/**
- * Validates an open-union reason field. Rejects non-strings and tokens that
- * fail the privacy regex; accepts unknown reason strings so future
- * integrations can report categories this SDK version has not enumerated.
- */
-function requireOpenReason(value: unknown, known: ReadonlySet<string>, field: string): void {
-  if (typeof value !== "string" || !value.trim()) {
-    throw new ValidationError(`${field} must be a non-empty string.`, field);
-  }
-  if (known.has(value)) return;
-  if (!SAFE_TOKEN_PATTERN.test(value)) {
-    throw new ValidationError(
-      `${field} must be one of ${Array.from(known).join(", ")} or a privacy-safe token.`,
-      field,
-    );
-  }
-}
-
 function requireNonNegativeInteger(value: unknown, field: string): asserts value is number {
   if (typeof value !== "number" || !Number.isInteger(value) || value < 0) {
     throw new ValidationError(`${field} must be a non-negative integer.`, field);
@@ -502,6 +485,41 @@ function requireNonNegativeInteger(value: unknown, field: string): asserts value
 function requireOptionalNonNegativeInteger(value: unknown, field: string): void {
   if (value === undefined) return;
   requireNonNegativeInteger(value, field);
+}
+
+function requireOptionalIso8601Timestamp(value: unknown, field: string): void {
+  if (value === undefined) return;
+  if (typeof value !== "string") {
+    throw new ValidationError(`${field} must be a valid ISO 8601 UTC timestamp string.`, field);
+  }
+
+  const match = ISO_8601_UTC_TIMESTAMP_PATTERN.exec(value);
+  if (!match) {
+    throw new ValidationError(`${field} must be a valid ISO 8601 UTC timestamp string.`, field);
+  }
+
+  const [, yearValue, monthValue, dayValue, hourValue, minuteValue, secondValue] = match;
+  const year = Number(yearValue);
+  const month = Number(monthValue);
+  const day = Number(dayValue);
+  const hour = Number(hourValue);
+  const minute = Number(minuteValue);
+  const second = Number(secondValue);
+
+  const date = new Date(0);
+  date.setUTCFullYear(year, month - 1, day);
+  date.setUTCHours(hour, minute, second, 0);
+
+  if (
+    date.getUTCFullYear() !== year ||
+    date.getUTCMonth() !== month - 1 ||
+    date.getUTCDate() !== day ||
+    date.getUTCHours() !== hour ||
+    date.getUTCMinutes() !== minute ||
+    date.getUTCSeconds() !== second
+  ) {
+    throw new ValidationError(`${field} must be a valid ISO 8601 UTC timestamp string.`, field);
+  }
 }
 
 /**

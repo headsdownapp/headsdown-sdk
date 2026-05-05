@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Added
+
+- Added optional `session_ended.reason` and `session_ended.ended_at` metadata to the IntegrationEvent vocabulary.
+
+### Changed
+
+- Tightened `TurnFailedReason` and `ToolFailedReason` to closed manifest enums so TypeScript callers match hosted validation.
+
 ## 0.10.0
 
 ### Added
