@@ -228,6 +228,49 @@ export type {
   LocalSessionSummaryOutcomeCategory,
 } from "./local-session-summary.js";
 
+// Vendor-neutral integration-event vocabulary
+export {
+  INTEGRATION_EVENT_MANIFEST,
+  INTEGRATION_EVENT_MANIFEST_VERSION,
+  INTEGRATION_EVENT_TYPE,
+  assertIntegrationEvent,
+  contextCompactedEvent,
+  integrationEvent,
+  permissionDeniedEvent,
+  sessionEndedEvent,
+  sessionStartedEvent,
+  toolFailedEvent,
+  toolInvokedEvent,
+  toolSucceededEvent,
+  turnEndedEvent,
+  turnFailedEvent,
+  turnStartedEvent,
+} from "./integration-event.js";
+export type {
+  BucketLabel,
+  ContextCompactedEvent,
+  ContextSizeBucket,
+  IntegrationEvent,
+  IntegrationEventManifest,
+  IntegrationEventTypeWire,
+  IntegrationEventVariant,
+  PermissionDeniedEvent,
+  PermissionDeniedResolution,
+  SessionEndedEvent,
+  SessionOutcome,
+  SessionStartedEvent,
+  ToolDurationBucket,
+  ToolFailedEvent,
+  ToolFailedReason,
+  ToolInvokedEvent,
+  ToolKind,
+  ToolSucceededEvent,
+  TurnEndedEvent,
+  TurnFailedEvent,
+  TurnFailedReason,
+  TurnStartedEvent,
+} from "./integration-event.js";
+
 // Types
 export type {
   // Enums

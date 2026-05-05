@@ -1,0 +1,181 @@
+{
+  "version": 1,
+  "variants": {
+    "session_started": {
+      "wire_type": "integration.session_started",
+      "required": [
+        "session_id"
+      ],
+      "optional": [
+        "capabilities"
+      ],
+      "enums": {}
+    },
+    "session_ended": {
+      "wire_type": "integration.session_ended",
+      "required": [
+        "session_id",
+        "outcome"
+      ],
+      "optional": [
+        "duration_seconds",
+        "turn_count"
+      ],
+      "enums": {
+        "outcome": [
+          "succeeded",
+          "failed",
+          "cancelled",
+          "timed_out"
+        ]
+      }
+    },
+    "turn_started": {
+      "wire_type": "integration.turn_started",
+      "required": [
+        "turn_id",
+        "session_id"
+      ],
+      "optional": [
+        "sequence"
+      ],
+      "enums": {}
+    },
+    "turn_ended": {
+      "wire_type": "integration.turn_ended",
+      "required": [
+        "turn_id",
+        "session_id",
+        "tool_calls_count"
+      ],
+      "optional": [
+        "duration_seconds"
+      ],
+      "enums": {}
+    },
+    "turn_failed": {
+      "wire_type": "integration.turn_failed",
+      "required": [
+        "turn_id",
+        "session_id",
+        "reason"
+      ],
+      "optional": [
+        "duration_seconds"
+      ],
+      "enums": {
+        "reason": [
+          "api_error",
+          "timeout",
+          "cancelled",
+          "rate_limited",
+          "unknown"
+        ]
+      }
+    },
+    "tool_invoked": {
+      "wire_type": "integration.tool_invoked",
+      "required": [
+        "tool_id",
+        "session_id",
+        "tool_kind"
+      ],
+      "optional": [
+        "turn_id",
+        "tool_name_bucket"
+      ],
+      "enums": {
+        "tool_kind": [
+          "read",
+          "write",
+          "external"
+        ]
+      }
+    },
+    "tool_succeeded": {
+      "wire_type": "integration.tool_succeeded",
+      "required": [
+        "tool_id",
+        "session_id"
+      ],
+      "optional": [
+        "turn_id",
+        "duration_ms_bucket"
+      ],
+      "enums": {
+        "duration_ms_bucket": [
+          "under_100ms",
+          "100ms_to_1s",
+          "1s_to_10s",
+          "over_10s",
+          "unknown"
+        ]
+      }
+    },
+    "tool_failed": {
+      "wire_type": "integration.tool_failed",
+      "required": [
+        "tool_id",
+        "session_id",
+        "reason"
+      ],
+      "optional": [
+        "turn_id"
+      ],
+      "enums": {
+        "reason": [
+          "permission_denied",
+          "execution_error",
+          "timeout",
+          "unknown"
+        ]
+      }
+    },
+    "permission_denied": {
+      "wire_type": "integration.permission_denied",
+      "required": [
+        "decision_id",
+        "session_id",
+        "action_kind_bucket",
+        "resolution"
+      ],
+      "optional": [],
+      "enums": {
+        "resolution": [
+          "user_denied",
+          "auto_denied",
+          "policy"
+        ]
+      }
+    },
+    "context_compacted": {
+      "wire_type": "integration.context_compacted",
+      "required": [
+        "session_id",
+        "post_context_bucket"
+      ],
+      "optional": [
+        "turn_id",
+        "prior_context_bucket"
+      ],
+      "enums": {
+        "prior_context_bucket": [
+          "under_10k",
+          "10k_to_50k",
+          "50k_to_100k",
+          "100k_to_200k",
+          "over_200k",
+          "unknown"
+        ],
+        "post_context_bucket": [
+          "under_10k",
+          "10k_to_50k",
+          "50k_to_100k",
+          "100k_to_200k",
+          "over_200k",
+          "unknown"
+        ]
+      }
+    }
+  }
+}
