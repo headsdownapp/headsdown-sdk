@@ -196,6 +196,9 @@ const PROHIBITED_KEYS = new Set([
   "prompt",
   "prompts",
   "model_response",
+  "model_responses",
+  "transcript",
+  "transcripts",
   "message",
   "messages",
   "content",
@@ -206,6 +209,7 @@ const PROHIBITED_KEYS = new Set([
   "diff",
   "patch",
   "snippet",
+  "source",
   "file",
   "files",
   "file_contents",
@@ -214,10 +218,14 @@ const PROHIBITED_KEYS = new Set([
   "path",
   "paths",
   "repo",
+  "repo_name",
   "repository",
   "repository_name",
+  "git_repo",
+  "git_repository",
   "branch",
   "branch_name",
+  "git_branch",
   "directory",
   "directory_name",
   "terminal_output",
@@ -345,7 +353,11 @@ export function buildAgentRunEventInput(input: AgentRunEventInput): RequiredEnve
     progressPayload,
   });
 
-  return privacySafeClone(variablesInput, "input") as RequiredEnvelopeInput;
+  return privacySafeClone(
+    variablesInput,
+    "input",
+    ENVELOPE_TOP_LEVEL_EXEMPT_KEYS,
+  ) as RequiredEnvelopeInput;
 }
 
 export function startedEvent(
@@ -480,7 +492,22 @@ export function assertPrivacySafe(value: unknown, path = "input"): void {
   void privacySafeClone(value, path);
 }
 
-function privacySafeClone(value: unknown, path: string): unknown {
+/**
+ * Envelope-level field names that share a token with `PROHIBITED_KEYS` but
+ * are SDK-controlled and not user content. The exemption applies only at the
+ * immediate top level of `privacySafeClone`; nested occurrences (e.g. a
+ * `source` field inside `payload`) remain rejected.
+ *
+ * Currently only `source` collides; kept as a `Set` so adding future
+ * envelope-level fields is a one-line change.
+ */
+const ENVELOPE_TOP_LEVEL_EXEMPT_KEYS: ReadonlySet<string> = new Set(["source"]);
+
+function privacySafeClone(
+  value: unknown,
+  path: string,
+  topLevelExemptKeys?: ReadonlySet<string>,
+): unknown {
   if (value === null || value === undefined) return value;
 
   if (Array.isArray(value)) {
@@ -506,12 +533,16 @@ function privacySafeClone(value: unknown, path: string): unknown {
     const clone = Object.create(null) as Record<string, unknown>;
 
     for (const [key, entry] of plainRecordEntries(value, path)) {
-      if (isProhibitedPrivacyKey(key)) {
+      const exempt = topLevelExemptKeys?.has(key) ?? false;
+      if (!exempt && isProhibitedPrivacyKey(key)) {
         throw new ValidationError(
           `Agent run events cannot include raw-content field '${key}'.`,
           path,
         );
       }
+      // Exemption applies only at the immediate top level. Nested
+      // walks omit `topLevelExemptKeys` so the same field name nested
+      // inside `payload` is still rejected.
       clone[key] = privacySafeClone(entry, `${path}.${key}`);
     }
 
