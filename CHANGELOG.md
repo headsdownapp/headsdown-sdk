@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+## 0.10.0
+
+### Added
+
+- Added the `IntegrationEvent` vocabulary: a vendor-neutral discriminated union covering session lifecycle (`session_started`, `session_ended`), turn lifecycle (`turn_started`, `turn_ended`, `turn_failed`), tool lifecycle (`tool_invoked`, `tool_succeeded`, `tool_failed`), authorization (`permission_denied`), and context (`context_compacted`).
+- Added per-variant constructor helpers (`sessionStartedEvent`, `turnFailedEvent`, etc.) and a generic `integrationEvent(context, event)` that route through `assertIntegrationEvent` for eager shape, enum, opaque-id, and privacy validation.
+- Added `INTEGRATION_EVENT_TYPE` namespace constants mapping each variant to its wire-level event type (`integration.session_started`, etc.). Wire events ride on the existing `reportAgentRunEvent` GraphQL mutation; no new transport is needed.
+- Added `INTEGRATION_EVENT_MANIFEST` as the single source of truth for variant names, wire types, required and optional payload fields, and per-field enum value sets. Type aliases (`SessionOutcome`, `TurnFailedReason`, etc.) and runtime validation `Set`s are now derived from the manifest, so adding a variant or enum value is a single-edit change.
+- Added `schemas/integration-event-manifest.json`, emitted from `INTEGRATION_EVENT_MANIFEST` by the new `emit:integration-event-manifest` npm script. Hosted backends (and any other language target) can read this JSON to assert their own validators stay in parity with the SDK.
+- Added `BucketLabel` nominal alias documenting fields whose values are privacy-safe categorical labels (the runtime regex enforces the constraint).
+- Added open-string-union escape hatches (`(string & {})`) on `TurnFailedReason` and `ToolFailedReason`, matching the existing `AgentRunEventType` pattern so future integrations can report new categories without an SDK upgrade.
+
+### Changed
+
+- Extended the SDK privacy filter `PROHIBITED_KEYS` set with `model_responses`, `transcript`, `transcripts`, `repo_name`, `git_repo`, `git_repository`, `git_branch`, and `source`, aligning with the hosted prohibited-key list.
+- Added an envelope-level top-level exemption to `privacySafeClone` so SDK-controlled envelope fields like `source: "sdk"` continue to flow through while the same key nested inside a payload is still rejected.
+- Split the privacy walker into a validate-only path (`validatePrivacySafe`, no allocation) and the existing clone path (`privacySafeClone`, with allocation). `assertPrivacySafe` now uses the validate-only path, so eager validation in helpers no longer allocates a clone that gets discarded.
+
 ## 0.9.0
 
 ### Added
