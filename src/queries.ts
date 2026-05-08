@@ -634,6 +634,22 @@ export const PROFILE_QUERY = `
 `;
 
 /** Override a verdict decision. */
+export const REQUEST_SESSION_TIMEBOX_EXTENSION_MUTATION = `
+  mutation RequestSessionTimeboxExtension($sessionId: String!, $requestedExtensionMinutes: Int!) {
+    requestSessionTimeboxExtension(
+      sessionId: $sessionId
+      requestedExtensionMinutes: $requestedExtensionMinutes
+    ) {
+      sessionId
+      pendingTimeboxExtensionRequest {
+        id
+        requestedExtensionMinutes
+        requestedAt
+      }
+    }
+  }
+`;
+
 export const OVERRIDE_VERDICT_MUTATION = `
   mutation OverrideVerdict($input: OverrideInput!) {
     overrideVerdict(input: $input) {

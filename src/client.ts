@@ -48,6 +48,7 @@ import {
   PROFILE_QUERY,
   REPORT_AGENT_RUN_EVENT_MUTATION,
   REPORT_OUTCOME_MUTATION,
+  REQUEST_SESSION_TIMEBOX_EXTENSION_MUTATION,
   REVOKE_DELEGATION_GRANT_MUTATION,
   REVOKE_DELEGATION_GRANTS_MUTATION,
   SCHEDULE_QUERY,
@@ -93,6 +94,8 @@ import type {
   Preset,
   ProposalInput,
   ScheduleResolution,
+  SessionTimeboxExtensionRequestInput,
+  SessionTimeboxExtensionRequestResult,
   TaskOutcome,
   TaskProposal,
   Team,
@@ -308,6 +311,39 @@ export class HeadsDownClient {
       AGENT_CONTROL_OVERVIEW_QUERY,
     );
     return data.agentControlOverview as AgentControlOverview;
+  }
+
+  /**
+   * Request a user-approved extension for a session timebox.
+   * This does not extend the session directly; it creates a metadata-only HeadsDown approval request.
+   */
+  async requestSessionTimeboxExtension(
+    input: SessionTimeboxExtensionRequestInput,
+  ): Promise<SessionTimeboxExtensionRequestResult> {
+    validateSessionTimeboxExtensionRequest(input);
+
+    const data = await this.graphql.request<{
+      requestSessionTimeboxExtension?: {
+        sessionId: string;
+        pendingTimeboxExtensionRequest?: {
+          id: string;
+          requestedExtensionMinutes: number;
+          requestedAt: string;
+        } | null;
+      };
+    }>(REQUEST_SESSION_TIMEBOX_EXTENSION_MUTATION, {
+      sessionId: input.sessionId.trim(),
+      requestedExtensionMinutes: input.requestedExtensionMinutes,
+    });
+
+    const session = data.requestSessionTimeboxExtension;
+    const request = session?.pendingTimeboxExtensionRequest;
+
+    if (!session || !request) {
+      throw new ApiError("HeadsDown API returned no requestSessionTimeboxExtension data.");
+    }
+
+    return { sessionId: session.sessionId, request };
   }
 
   /**
@@ -1276,6 +1312,10 @@ const WRAP_UP_FIELDS = new Set([
   "wrapUpGuidance",
 ]);
 
+const SAFE_SESSION_TOKEN_PATTERN = /^[A-Za-z0-9_.:-]{1,255}$/;
+const TIMEBOX_EXTENSION_REQUEST_FIELDS = new Set(["sessionId", "requestedExtensionMinutes"]);
+const MAX_REQUESTED_EXTENSION_MINUTES = 480;
+
 const AVAILABILITY_FIELDS = new Set([
   "status",
   "statusEmoji",
@@ -1284,6 +1324,48 @@ const AVAILABILITY_FIELDS = new Set([
   "autoRespond",
   "lock",
 ]);
+
+function validateSessionTimeboxExtensionRequest(input: SessionTimeboxExtensionRequestInput): void {
+  if (!input || typeof input !== "object" || Array.isArray(input)) {
+    throw new ValidationError("Session timebox extension request input is required.", "input");
+  }
+
+  for (const key of Object.keys(input)) {
+    if (!TIMEBOX_EXTENSION_REQUEST_FIELDS.has(key)) {
+      throw new ValidationError(
+        "Session timebox extension requests only accept sessionId and requestedExtensionMinutes.",
+        key,
+      );
+    }
+  }
+
+  if (!isSafeSessionToken(input.sessionId)) {
+    throw new ValidationError("sessionId must be a privacy-safe opaque token.", "sessionId");
+  }
+
+  if (
+    !Number.isInteger(input.requestedExtensionMinutes) ||
+    input.requestedExtensionMinutes <= 0 ||
+    input.requestedExtensionMinutes > MAX_REQUESTED_EXTENSION_MINUTES
+  ) {
+    throw new ValidationError(
+      `requestedExtensionMinutes must be an integer between 1 and ${MAX_REQUESTED_EXTENSION_MINUTES}.`,
+      "requestedExtensionMinutes",
+    );
+  }
+}
+
+function isSafeSessionToken(value: unknown): value is string {
+  return (
+    typeof value === "string" &&
+    value.trim() === value &&
+    SAFE_SESSION_TOKEN_PATTERN.test(value) &&
+    !value.includes("/") &&
+    !value.includes("\\") &&
+    !value.includes("://") &&
+    !value.includes(".git")
+  );
+}
 
 function validateAvailabilityOverrideInput(input: AvailabilityOverrideInput): void {
   if (!input || typeof input !== "object") {

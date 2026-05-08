@@ -367,6 +367,18 @@ export interface AgentRunSummary {
   updatedAt: string;
 }
 
+/** Pending session-level timebox extension request, metadata-only. */
+export interface SessionTimeboxExtensionRequest {
+  id: string;
+  requestedExtensionMinutes: number;
+  requestedAt: string;
+}
+
+export interface SessionTimeboxExtensionRequestResult {
+  sessionId: string;
+  request: SessionTimeboxExtensionRequest;
+}
+
 /** Value metric summary from `agentControlOverview.valueMetrics`. */
 export interface ValueMetricSummary {
   metricKey: ValueMetricKey;
@@ -726,6 +738,13 @@ export interface TaskOutcome {
 // === Input Types ===
 
 /** Input for submitting a task proposal. */
+export interface SessionTimeboxExtensionRequestInput {
+  /** Opaque integration-scoped session token. Never derive it from a repo, path, prompt, or message. */
+  sessionId: string;
+  /** Requested additional session time in minutes. */
+  requestedExtensionMinutes: number;
+}
+
 export interface ProposalInput {
   /** What the agent plans to do. Be specific. */
   description: string;
