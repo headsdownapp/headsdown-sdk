@@ -2,8 +2,12 @@
 
 ## Unreleased
 
+## 0.11.0
+
 ### Added
 
+- Added `HeadsDownClient.requestSessionTimeboxExtension()` for requesting more time on an active session timebox using only an opaque session id and requested minute count.
+- Added `SessionTimeboxExtensionRequestInput`, `SessionTimeboxExtensionRequest`, and `SessionTimeboxExtensionRequestResult` types for session timebox extension requests.
 - Added optional `session_ended.reason` and `session_ended.ended_at` metadata to the IntegrationEvent vocabulary.
 
 ### Changed
