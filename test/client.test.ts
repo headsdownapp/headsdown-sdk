@@ -244,6 +244,93 @@ describe("HeadsDownClient", () => {
       expect(result.needsYourYesState).toBe("empty");
     });
 
+    it("requests a session timebox extension without sending content", async () => {
+      let capturedBody = "";
+      const fetchFn = ((_url: string, init: RequestInit) => {
+        capturedBody = String(init.body);
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () =>
+            Promise.resolve({
+              data: {
+                requestSessionTimeboxExtension: {
+                  sessionId: "sess_123",
+                  pendingTimeboxExtensionRequest: {
+                    id: "request_1",
+                    requestedExtensionMinutes: 15,
+                    requestedAt: "2026-04-25T04:20:00Z",
+                  },
+                },
+              },
+            }),
+          text: () => Promise.resolve(""),
+          headers: new Headers(),
+        });
+      }) as unknown as typeof globalThis.fetch;
+
+      const client = new HeadsDownClient({ ...CLIENT_OPTS, fetch: fetchFn });
+      const result = await client.requestSessionTimeboxExtension({
+        sessionId: "sess_123",
+        requestedExtensionMinutes: 15,
+      });
+
+      const body = JSON.parse(capturedBody);
+      expect(body.variables).toEqual({
+        sessionId: "sess_123",
+        requestedExtensionMinutes: 15,
+      });
+      expect(JSON.stringify(body.variables)).not.toContain("prompt");
+      expect(JSON.stringify(body.variables)).not.toContain("metadata");
+      expect(result).toEqual({
+        sessionId: "sess_123",
+        request: {
+          id: "request_1",
+          requestedExtensionMinutes: 15,
+          requestedAt: "2026-04-25T04:20:00Z",
+        },
+      });
+    });
+
+    it("rejects unsafe session timebox extension request inputs before the network call", async () => {
+      let calls = 0;
+      const fetchFn = (() => {
+        calls += 1;
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ data: {} }),
+          text: () => Promise.resolve(""),
+          headers: new Headers(),
+        });
+      }) as unknown as typeof globalThis.fetch;
+      const client = new HeadsDownClient({ ...CLIENT_OPTS, fetch: fetchFn });
+
+      await expect(
+        client.requestSessionTimeboxExtension({
+          sessionId: "repo/path",
+          requestedExtensionMinutes: 15,
+        }),
+      ).rejects.toThrow(ValidationError);
+
+      await expect(
+        client.requestSessionTimeboxExtension({
+          sessionId: "sess_123",
+          requestedExtensionMinutes: 0,
+        }),
+      ).rejects.toThrow(ValidationError);
+
+      await expect(
+        client.requestSessionTimeboxExtension({
+          sessionId: "sess_123",
+          requestedExtensionMinutes: 15,
+          metadata: { prompt: "raw content" },
+        } as never),
+      ).rejects.toThrow(ValidationError);
+
+      expect(calls).toBe(0);
+    });
+
     it("returns intervention replay by proposal id", async () => {
       const replay = {
         runId: "proposal-1",

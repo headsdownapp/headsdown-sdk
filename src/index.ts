@@ -329,6 +329,8 @@ export type {
   HeadsDownCall,
   NeedsYourYesItem,
   AgentRunSummary,
+  SessionTimeboxExtensionRequest,
+  SessionTimeboxExtensionRequestResult,
   ValueMetricSummary,
   InterventionReplayRow,
   InterventionReplay,
@@ -337,6 +339,7 @@ export type {
   HeadsDownActionMutationResult,
   HeadsDownActionMutationPayload,
   // Input types
+  SessionTimeboxExtensionRequestInput,
   ProposalInput,
   ContractInput,
   AvailabilityOverrideInput,
